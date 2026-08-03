@@ -1,0 +1,36 @@
+# systemd unit — for when you move this from your Windows dev machine to
+# a Linux VPS/server. Not usable on Windows directly (systemd is Linux-only).
+#
+# SETUP:
+#   1. Edit the placeholders below: <YOUR_USER>, <ABSOLUTE_PATH_TO_PROJECT>
+#   2. sudo cp deploy/renko-platform.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable renko-platform      # start on boot
+#   5. sudo systemctl start renko-platform
+#
+# USEFUL COMMANDS:
+#   sudo systemctl status renko-platform
+#   sudo systemctl restart renko-platform        # e.g. after updating .env
+#   journalctl -u renko-platform -f              # tail logs live
+#
+# `Restart=always` + `RestartSec=5` is what gives you crash recovery: if
+# the Python process dies for any reason, systemd restarts it 5s later,
+# indefinitely.
+
+[Unit]
+Description=Renko Multi-Symbol Trading Platform
+After=network.target
+
+[Service]
+Type=simple
+User=<YOUR_USER>
+WorkingDirectory=<ABSOLUTE_PATH_TO_PROJECT>
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=<ABSOLUTE_PATH_TO_PROJECT>/venv/bin/python main.py
+Restart=always
+RestartSec=5
+StandardOutput=append:<ABSOLUTE_PATH_TO_PROJECT>/logs/systemd_stdout.log
+StandardError=append:<ABSOLUTE_PATH_TO_PROJECT>/logs/systemd_stderr.log
+
+[Install]
+WantedBy=multi-user.target

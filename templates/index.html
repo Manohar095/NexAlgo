@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CogniX Algo</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">◈</span>
+        <div>
+          <div class="brand-title">CogniX Algo</div>
+          <div class="brand-sub">Precision over Prediction! Isolate the risk, Discipline the edge</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="connDot" class="conn-dot" title="Live feed"></span>
+        <span id="connLabel" class="conn-label">connecting…</span>
+        <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
+        <button id="btnAddSymbol" class="btn btn-primary">+ Add Symbol</button>
+      </div>
+    </header>
+
+    <main class="board">
+      <table class="board-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>LTP</th>
+            <th>Brick</th>
+            <th>Trend</th>
+            <th>Position</th>
+            <th>Entry</th>
+            <th>Stop Loss</th>
+            <th>Qty</th>
+            <th>Mode</th>
+            <th>Status</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="boardBody">
+          <tr class="empty-row"><td colspan="12">No symbols yet. Click “+ Add Symbol” to configure your first Renko strategy.</td></tr>
+        </tbody>
+      </table>
+    </main>
+
+    <section class="logs-panel">
+      <div class="logs-header">
+        <div class="logs-title">Global Log</div>
+        <select id="logFilter">
+          <option value="__all__">All symbols</option>
+        </select>
+      </div>
+      <div id="logStream" class="log-stream"></div>
+    </section>
+  </div>
+
+  <!-- Symbol editor modal -->
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modalTitle">New Symbol</h2>
+        <button id="modalClose" class="icon-btn">✕</button>
+      </div>
+      <form id="symbolForm" class="modal-body">
+        <input type="hidden" id="symbolId" />
+
+        <fieldset>
+          <legend>General</legend>
+          <div class="grid2">
+            <label>Strategy Name <input required id="strategy_name" placeholder="SENSEX CE" /></label>
+            <label>Exchange <input required id="exchange" placeholder="BFO" /></label>
+            <label>Trading Symbol <input required id="trading_symbol" placeholder="SENSEX2670276500PE" /></label>
+            <label>Token <input required id="token" placeholder="820767" /></label>
+            <label>Quantity <input required type="number" min="1" id="quantity" value="20" /></label>
+            <label>Product Type
+              <select id="product_type">
+                <option value="I">Intraday (I)</option>
+                <option value="C">CNC (C)</option>
+                <option value="M">Margin (M)</option>
+              </select>
+            </label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Renko Settings</legend>
+          <div class="grid3">
+            <label>Brick Size <input required type="number" step="0.05" id="brick_size" value="10" /></label>
+            <label>Green→Red Rev <input required type="number" id="green_to_red_rev" value="2" /></label>
+            <label>Red→Green Rev <input required type="number" id="red_to_green_rev" value="2" /></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Entry Settings</legend>
+          <div class="grid3">
+            <label>Buy Brick # <input required type="number" id="buy_brick_no" value="2" /></label>
+            <label>Sell Brick # <input required type="number" id="sell_brick_no" value="-2" /></label>
+            <label>Tick Size <input required type="number" step="0.01" id="tick_size" value="0.05" /></label>
+            <label>Buy Limit Offset (bricks) <input required type="number" id="limit_price_buy_brick_no" value="2" /></label>
+            <label>Sell Limit Offset (bricks) <input required type="number" id="limit_price_sell_brick_no" value="2" /></label>
+            <label>Buy Cancel Brick # <input required type="number" id="buy_order_cancel_brick_no" value="-3" /></label>
+            <label>Sell Cancel Brick # <input required type="number" id="sell_order_cancel_brick_no" value="3" /></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Stop Loss</legend>
+          <div class="grid3">
+            <label>SL Brick Multiplier <input required type="number" step="0.5" id="sl_brick_multiplier" value="4" /></label>
+            <label>SL Limit Offset <input type="number" step="0.01" id="sl_limit_offset" placeholder="defaults to tick size" /></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Trading</legend>
+          <div class="grid3">
+            <label>Trade Mode
+              <select id="trade_mode">
+                <option value="LONG_ONLY">Long Only</option>
+                <option value="SHORT_ONLY">Short Only</option>
+                <option value="LONG_SHORT">Long &amp; Short</option>
+              </select>
+            </label>
+            <label>Squareoff Hour (IST) <input required type="number" min="0" max="23" id="squareoff_hour" value="15" /></label>
+            <label>Squareoff Minute <input required type="number" min="0" max="59" id="squareoff_minute" value="15" /></label>
+            <label>SL-LMT Buffer <input required type="number" step="0.01" id="sl_lmt_buffer" value="1" /></label>
+            <label class="checkbox-row"><input type="checkbox" id="autostart" /> Auto-start with platform</label>
+          </div>
+        </fieldset>
+
+        <div class="modal-footer">
+          <button type="button" id="btnCancel" class="btn btn-ghost">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Symbol</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Broker access-token modal (daily, shared by every symbol) -->
+  <div id="brokerModalOverlay" class="modal-overlay hidden">
+    <div class="modal" style="max-width: 480px;">
+      <div class="modal-header">
+        <h2>Broker Access Token</h2>
+        <button id="brokerModalClose" class="icon-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="token-hint">
+          User ID and password live in <code>.env</code> and don't change.
+          The access token is regenerated every trading day and is shared
+          by every symbol — generate a fresh one below, or paste one
+          manually if you already have it.
+        </p>
+        <div id="brokerTokenStatus" class="token-status">Loading…</div>
+
+        <button type="button" id="btnGenerateToken" class="btn btn-primary btn-full">
+          ⚡ Generate Access Token
+        </button>
+
+        <div class="token-divider"><span>or paste manually</span></div>
+
+        <form id="brokerTokenForm">
+          <label>New Access Token
+            <input id="newAccessToken" type="password" autocomplete="off" placeholder="Paste today's token" />
+          </label>
+          <div class="modal-footer">
+            <button type="button" id="brokerModalCancel" class="btn btn-ghost">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save & Apply</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
