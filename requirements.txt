@@ -1,3 +1,6 @@
+./dist/norenrestapi-0.0.30-py3-none-any.whl
+pandas
+pyyaml
 fastapi>=0.110
 uvicorn[standard]>=0.29
 pydantic>=2.6
