@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from utils.logging_setup import configure_logging
-configure_logging()  # console + logs/renko_platform.log (rotated daily) — set up before anything else logs
+configure_logging()  # console + logs/cognix_algo.log (rotated daily) — set up before anything else logs
 
 from api.routes import router as api_router
 from database import db
