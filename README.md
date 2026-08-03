@@ -1,4 +1,4 @@
-# Zenith Trading Terminal
+# NexAlgo Trading Terminal
 
 A locally hosted, web-based version of your single-symbol Flattrade
 Renko bot (v3, SL-based exit) that can run **any number of symbols
