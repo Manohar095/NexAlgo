@@ -379,45 +379,82 @@ class TradingEngine:
 
     # ================= PERIODIC STATE CHECK (safety net) =================
     def _periodic_state_check(self):
+        """
+        Runs every 5s while the symbol is active. Unlike the old version,
+        this ALWAYS reconciles from the broker first (sync_state() has its
+        own internal 1s throttle, so this is cheap) rather than only
+        syncing when local state already looked stale by some specific
+        pattern. That distinction matters: if a WebSocket order-update
+        message is ever dropped (broker-side blip, network hiccup — rare
+        but real), local state can silently diverge from the broker's
+        truth in ways that don't match any single "known bad" pattern —
+        e.g. an SL that actually filled, but whose COMPLETE message never
+        arrived, leaves position_qty/sl_order_id looking perfectly
+        self-consistent locally (a nonzero position with a live SL id)
+        while being completely wrong. The old guard clauses would never
+        even look at the broker in that case. Syncing unconditionally
+        means the broker is always the source of truth within one cycle
+        (≤5s), not just at restart.
+        """
         while not self._stop_event.is_set():
             if self._stop_event.wait(5):
                 break
             if self.trades_blocked:
                 continue
             with self.state_lock:
-                if self.pending_order_id and not self.deferred_for_oid:
-                    self.sync_state()
-                    if not self.pending_order_id and self.deferred_order:
-                        self._log("INFO", "🔄 Periodic check: pending cleared → replaying deferred")
-                        deferred = self.deferred_order
-                        self.deferred_order   = None
-                        self.deferred_for_oid = None
-                        self.order_queue.put({
-                            "type":    "PLACE",
-                            "side":    deferred["side"],
-                            "trigger": deferred["trigger"],
-                            "limit":   deferred["limit"]
-                        })
+                prev_position = self.position_qty
+                prev_sl       = self.sl_order_id
+                prev_pending  = self.pending_order_id
 
+                self.sync_state()
+
+                drifted = (
+                    prev_position != self.position_qty
+                    or prev_sl != self.sl_order_id
+                    or prev_pending != self.pending_order_id
+                )
+                if drifted:
+                    self._log(
+                        "WARNING",
+                        f"🔧 State drift corrected from broker → "
+                        f"position {prev_position}→{self.position_qty}, "
+                        f"SL {prev_sl}→{self.sl_order_id}, "
+                        f"pending {prev_pending}→{self.pending_order_id}"
+                    )
+
+                # ── Pending entry cleared at the broker while we had a deferred order queued ──
+                if prev_pending and not self.pending_order_id and self.deferred_order:
+                    self._log("INFO", "🔄 Periodic check: pending cleared → replaying deferred")
+                    deferred = self.deferred_order
+                    self.deferred_order   = None
+                    self.deferred_for_oid = None
+                    self.order_queue.put({
+                        "type":    "PLACE",
+                        "side":    deferred["side"],
+                        "trigger": deferred["trigger"],
+                        "limit":   deferred["limit"]
+                    })
+
+                # ── Position open at the broker but no SL and no pending order ──
+                # Covers both the original case (entry-fill callback missed,
+                # never got an SL in the first place) AND the drift case
+                # above (old SL id turned out to be stale/filled, sync
+                # already cleared it, position is confirmed still open).
                 elif (self.position_qty != 0
                         and not self.sl_order_id
                         and not self.pending_order_id):
-                    self.sync_state()
-                    if (self.position_qty != 0
-                            and not self.sl_order_id
-                            and not self.pending_order_id):
-                        self._log("WARNING", "🚨 SAFETY NET: pos open but no SL/pending → recomputing SL from current level")
-                        ref_price = self.renko.last_close
-                        if ref_price is not None:
-                            if self.position_qty > 0:
-                                sl_trigger = self._round_price(ref_price - self.cfg.sl_brick_multiplier * self.cfg.brick_size)
-                                sl_side = "S"
-                            else:
-                                sl_trigger = self._round_price(ref_price + self.cfg.sl_brick_multiplier * self.cfg.brick_size)
-                                sl_side = "B"
-                            self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
+                    self._log("WARNING", "🚨 SAFETY NET: pos open but no SL/pending → recomputing SL from current level")
+                    ref_price = self.renko.last_close
+                    if ref_price is not None:
+                        if self.position_qty > 0:
+                            sl_trigger = self._round_price(ref_price - self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                            sl_side = "S"
                         else:
-                            self._log("ERROR", "🚨 SAFETY NET: cannot compute SL — renko.last_close is None")
+                            sl_trigger = self._round_price(ref_price + self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                            sl_side = "B"
+                        self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
+                    else:
+                        self._log("ERROR", "🚨 SAFETY NET: cannot compute SL — renko.last_close is None")
 
     # ================= ORDER WORKER =================
     def _order_worker(self):
