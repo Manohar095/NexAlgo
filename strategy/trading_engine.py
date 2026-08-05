@@ -59,6 +59,22 @@ class TradingEngine:
 
         self.entry_price      = None
 
+        # ── Dynamic price-based cancellation state ──
+        # green0_price / red0_price track the price of the brick that
+        # STARTED the current up/down run (brick_no == 0 for that color —
+        # either the very first brick of the session, or the reversal
+        # brick right after a trend flip). These update continuously as
+        # new brick_no==0 bricks form. pending_buy_origin_price /
+        # pending_sell_origin_price are a SNAPSHOT of that value taken at
+        # the moment an order is actually placed — the frozen reference
+        # point a pending order's cancellation level is measured from,
+        # per the spec: "once a pending Buy order is placed, record the
+        # price of Green Brick #0".
+        self.green0_price = None
+        self.red0_price   = None
+        self.pending_buy_origin_price  = None
+        self.pending_sell_origin_price = None
+
         self._skip_next_sync = False
 
         self.trades_blocked       = False
@@ -273,6 +289,12 @@ class TradingEngine:
                     if p.get("tsym") == self.cfg.trading_symbol and p.get("exch") == self.cfg.exchange:
                         self.position_qty = int(p.get("netqty", 0))
                         break
+
+            if not self.pending_order_id:
+                # No pending order at the broker (anymore) — any cancellation
+                # origin snapshot from a prior pending order is now stale.
+                self.pending_buy_origin_price  = None
+                self.pending_sell_origin_price = None
 
             self._log(
                 "INFO",
@@ -535,6 +557,12 @@ class TradingEngine:
                 if response and response.get("stat") == "Ok":
                     self.pending_order_id = response.get("norenordno")
                     self.pending_side     = side
+                    if side == "B":
+                        self.pending_buy_origin_price = self.green0_price
+                        self._log("INFO", f"📍 BUY cancellation origin snapshot: Green Brick #0 = {self.green0_price}")
+                    else:
+                        self.pending_sell_origin_price = self.red0_price
+                        self._log("INFO", f"📍 SELL cancellation origin snapshot: Red Brick #0 = {self.red0_price}")
 
             except Exception as e:
                 self._log("ERROR", f"Order error → {e}")
@@ -644,6 +672,8 @@ class TradingEngine:
                     self.deferred_for_oid = None
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_buy_origin_price  = None
+                    self.pending_sell_origin_price = None
 
         except Exception as e:
             self._log("ERROR", f"Cancel error → {e}")
@@ -652,6 +682,8 @@ class TradingEngine:
                 self.deferred_for_oid = None
                 self.pending_order_id = None
                 self.pending_side     = None
+                self.pending_buy_origin_price  = None
+                self.pending_sell_origin_price = None
 
     # ================= ORDER CALLBACK =================
     def order_handler(self, msg):
@@ -684,6 +716,8 @@ class TradingEngine:
                 else:
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_buy_origin_price  = None
+                    self.pending_sell_origin_price = None
 
                     if self.deferred_for_oid == oid and self.deferred_order:
                         self._log("WARNING", "⚠️ Order filled before cancel landed → re-evaluating deferred")
@@ -719,6 +753,8 @@ class TradingEngine:
                 else:
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_buy_origin_price  = None
+                    self.pending_sell_origin_price = None
                     if self.deferred_for_oid == oid and self.deferred_order:
                         should_replay         = self.deferred_order
                         self.deferred_order   = None
@@ -733,6 +769,8 @@ class TradingEngine:
                 else:
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_buy_origin_price  = None
+                    self.pending_sell_origin_price = None
                     if self.deferred_for_oid == oid and self.deferred_order:
                         should_replay         = self.deferred_order
                         self.deferred_order   = None
@@ -771,24 +809,52 @@ class TradingEngine:
             self.last_brick = brick
             self._log("INFO", f"{self.cfg.trading_symbol} | {brick} | LTP: {ltp:.2f}")
 
-            if self.trades_blocked:
-                continue
-
             color       = brick["color"]
             brick_no    = brick["brick_no"]
             brick_price = brick["brick_price"]
 
-            # ===== CANCEL PENDING ENTRY ON HARD REVERSAL =====
+            # ===== TRACK TREND-ORIGIN PRICE (Brick #0 of the current run) =====
+            # Updated unconditionally — even if trades are blocked — since
+            # this is just recording price history, not placing trades.
+            # brick_no == 0 always marks either the very first brick of the
+            # session or the reversal brick right after a trend flip.
+            if brick_no == 0:
+                if color == "Green":
+                    self.green0_price = brick_price
+                elif color == "Red":
+                    self.red0_price = brick_price
+
+            if self.trades_blocked:
+                continue
+
+            # ===== CANCEL PENDING ENTRY ON DYNAMIC PRICE RETRACEMENT =====
+            # Cancellation level is fixed at the moment the order was
+            # placed (pending_buy_origin_price / pending_sell_origin_price
+            # — a snapshot of Green/Red Brick #0's price at that time), not
+            # a brick-count threshold. Renko bricks always land on an exact
+            # price lattice spaced by brick_size, so this retracement level
+            # is guaranteed to coincide exactly with a brick price rather
+            # than needing a tolerance check.
             with self.state_lock:
                 if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
-                    if (self.pending_side == "B" and color == "Red"
-                            and brick_no <= self.cfg.buy_order_cancel_brick_no):
-                        self._log("INFO", f"🔄 Hard reversal → Cancel pending BUY ({self.pending_order_id})")
-                        self.cancel_order(self.pending_order_id)
-                    elif (self.pending_side == "S" and color == "Green"
-                            and brick_no >= self.cfg.sell_order_cancel_brick_no):
-                        self._log("INFO", f"🔄 Hard reversal → Cancel pending SELL ({self.pending_order_id})")
-                        self.cancel_order(self.pending_order_id)
+                    if self.pending_side == "B" and self.pending_buy_origin_price is not None:
+                        cancel_level = self._round_price(self.pending_buy_origin_price - self.cfg.brick_size)
+                        if brick_price <= cancel_level:
+                            self._log(
+                                "INFO",
+                                f"🔄 Price retraced to {brick_price} (≤ {cancel_level}, "
+                                f"Green#0 was {self.pending_buy_origin_price}) → Cancel pending BUY ({self.pending_order_id})"
+                            )
+                            self.cancel_order(self.pending_order_id)
+                    elif self.pending_side == "S" and self.pending_sell_origin_price is not None:
+                        cancel_level = self._round_price(self.pending_sell_origin_price + self.cfg.brick_size)
+                        if brick_price >= cancel_level:
+                            self._log(
+                                "INFO",
+                                f"🔄 Price retraced to {brick_price} (≥ {cancel_level}, "
+                                f"Red#0 was {self.pending_sell_origin_price}) → Cancel pending SELL ({self.pending_order_id})"
+                            )
+                            self.cancel_order(self.pending_order_id)
 
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
             if self.position_qty != 0:

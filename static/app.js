@@ -20,7 +20,6 @@ const FIELD_IDS = [
   "brick_size", "green_to_red_rev", "red_to_green_rev",
   "buy_brick_no", "sell_brick_no", "tick_size",
   "limit_price_buy_brick_no", "limit_price_sell_brick_no",
-  "buy_order_cancel_brick_no", "sell_order_cancel_brick_no",
   "sl_brick_multiplier", "sl_limit_offset",
   "trade_mode", "squareoff_hour", "squareoff_minute", "sl_lmt_buffer", "autostart"
 ];

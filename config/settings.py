@@ -35,6 +35,13 @@ class Settings:
     HOST           = _get_env("APP_HOST", "0.0.0.0")
     PORT           = int(_get_env("APP_PORT", "8000") or "8000")
 
+    # ---- Dashboard login (optional) ----
+    # If both are set, every request (including the WebSocket) requires
+    # HTTP Basic Auth. If either is blank, auth is skipped entirely —
+    # useful for local dev / SSH-tunnel-only setups that don't need it.
+    DASHBOARD_USER     = _get_env("DASHBOARD_USER")
+    DASHBOARD_PASSWORD = _get_env("DASHBOARD_PASSWORD")
+
     # ---- Defaults (used only when a new symbol config omits a field) ----
     DEFAULT_TICK_SIZE     = 0.05
     DEFAULT_SL_LMT_BUFFER = 0.10

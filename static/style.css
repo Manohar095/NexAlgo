@@ -199,6 +199,10 @@ legend {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
   color: var(--text-dim); padding: 0 6px;
 }
+.field-note {
+  margin: 10px 2px 0; font-size: 11.5px; color: var(--text-dim);
+  line-height: 1.5; font-style: italic;
+}
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 label {

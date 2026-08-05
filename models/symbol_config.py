@@ -34,21 +34,19 @@ class SymbolConfig(BaseModel):
     product_type: ProductType = ProductType.INTRADAY
 
     # ---- Renko settings ----
-    brick_size: float = Field(10, gt=0)
+    brick_size: float = Field(..., gt=0)
     green_to_red_rev: int = Field(2, ge=1)
     red_to_green_rev: int = Field(2, ge=1)
 
     # ---- Entry settings ----
-    buy_brick_no: int = 2
-    sell_brick_no: int = -2
-    limit_price_buy_brick_no: int = 2
-    limit_price_sell_brick_no: int = 2
-    buy_order_cancel_brick_no: int = -3
-    sell_order_cancel_brick_no: int = 3
+    buy_brick_no: int = 1
+    sell_brick_no: int = -1
+    limit_price_buy_brick_no: int = 3
+    limit_price_sell_brick_no: int = 3
     tick_size: float = 0.05
 
     # ---- Stop-loss settings ----
-    sl_brick_multiplier: float = 4
+    sl_brick_multiplier: float = 2
     sl_limit_offset: Optional[float] = None  # defaults to tick_size if omitted
 
     # ---- Trading settings ----
@@ -57,7 +55,7 @@ class SymbolConfig(BaseModel):
     # ---- Auto square-off ----
     squareoff_hour: int = Field(15, ge=0, le=23)
     squareoff_minute: int = Field(15, ge=0, le=59)
-    sl_lmt_buffer: float = 1
+    sl_lmt_buffer: float = 0.10
 
     # ---- Lifecycle ----
     autostart: bool = Field(False, description="Start automatically when the platform launches")

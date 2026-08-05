@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>CogniX Algo</title>
+<title>Zenith Trading Terminal</title>
 <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -12,8 +12,8 @@
       <div class="brand">
         <span class="brand-mark">◈</span>
         <div>
-          <div class="brand-title">CogniX Algo</div>
-          <div class="brand-sub">Precision over Prediction! Isolate the risk, Discipline the edge</div>
+          <div class="brand-title">Zenith Trading Terminal</div>
+          <div class="brand-sub">multi-symbol algorithmic trading platform</div>
         </div>
       </div>
       <div class="topbar-actions">
@@ -90,7 +90,7 @@
         <fieldset>
           <legend>Renko Settings</legend>
           <div class="grid3">
-            <label>Brick Size <input required type="number" step="0.01" id="brick_size" value="10" /></label>
+            <label>Brick Size <input required type="number" step="any" id="brick_size" value="4" /></label>
             <label>Green→Red Rev <input required type="number" id="green_to_red_rev" value="2" /></label>
             <label>Red→Green Rev <input required type="number" id="red_to_green_rev" value="2" /></label>
           </div>
@@ -99,20 +99,23 @@
         <fieldset>
           <legend>Entry Settings</legend>
           <div class="grid3">
-            <label>Buy Brick # <input required type="number" id="buy_brick_no" value="2" /></label>
-            <label>Sell Brick # <input required type="number" id="sell_brick_no" value="-2" /></label>
+            <label>Buy Brick # <input required type="number" id="buy_brick_no" value="1" /></label>
+            <label>Sell Brick # <input required type="number" id="sell_brick_no" value="-1" /></label>
             <label>Tick Size <input required type="number" step="0.01" id="tick_size" value="0.05" /></label>
-            <label>Buy Limit Offset (bricks) <input required type="number" id="limit_price_buy_brick_no" value="2" /></label>
-            <label>Sell Limit Offset (bricks) <input required type="number" id="limit_price_sell_brick_no" value="2" /></label>
-            <label>Buy Cancel Brick # <input required type="number" id="buy_order_cancel_brick_no" value="-3" /></label>
-            <label>Sell Cancel Brick # <input required type="number" id="sell_order_cancel_brick_no" value="3" /></label>
+            <label>Buy Limit Offset (bricks) <input required type="number" id="limit_price_buy_brick_no" value="3" /></label>
+            <label>Sell Limit Offset (bricks) <input required type="number" id="limit_price_sell_brick_no" value="3" /></label>
           </div>
+          <p class="field-note">
+            Pending entries cancel automatically if price retraces one brick
+            below/above the breakout's origin brick — no cancel-brick
+            setting needed.
+          </p>
         </fieldset>
 
         <fieldset>
           <legend>Stop Loss</legend>
           <div class="grid3">
-            <label>SL Brick Multiplier <input required type="number" step="0.5" id="sl_brick_multiplier" value="4" /></label>
+            <label>SL Brick Multiplier <input required type="number" step="0.5" id="sl_brick_multiplier" value="2" /></label>
             <label>SL Limit Offset <input type="number" step="0.01" id="sl_limit_offset" placeholder="defaults to tick size" /></label>
           </div>
         </fieldset>
@@ -129,7 +132,7 @@
             </label>
             <label>Squareoff Hour (IST) <input required type="number" min="0" max="23" id="squareoff_hour" value="15" /></label>
             <label>Squareoff Minute <input required type="number" min="0" max="59" id="squareoff_minute" value="15" /></label>
-            <label>SL-LMT Buffer <input required type="number" step="0.01" id="sl_lmt_buffer" value="1" /></label>
+            <label>SL-LMT Buffer <input required type="number" step="0.01" id="sl_lmt_buffer" value="0.10" /></label>
             <label class="checkbox-row"><input type="checkbox" id="autostart" /> Auto-start with platform</label>
           </div>
         </fieldset>
