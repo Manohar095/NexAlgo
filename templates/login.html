@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign in — CogniX Algo</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="login-brand">
+        <span class="brand-mark">◈</span>
+        <div>
+          <div class="brand-title">CogniX Algo</div>
+          <div class="brand-sub">sign in to continue</div>
+        </div>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <label>Username
+          <input id="username" required autocomplete="username" autofocus />
+        </label>
+        <label>Password
+          <input id="password" type="password" required autocomplete="current-password" />
+        </label>
+        <label id="totpField" class="hidden">Authenticator Code
+          <input id="totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                 placeholder="6-digit code" autocomplete="one-time-code" />
+        </label>
+
+        <div id="loginError" class="login-error hidden"></div>
+
+        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/login.js"></script>
+</body>
+</html>

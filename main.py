@@ -21,7 +21,7 @@ from api.routes import router as api_router
 from config.settings import settings
 from database import db
 from services.instance_manager import instance_manager
-from utils.auth_middleware import BasicAuthMiddleware
+from utils.auth_middleware import SessionAuthMiddleware
 from ws_broadcast.ws_manager import ws_manager
 
 
@@ -33,10 +33,13 @@ async def lifespan(app: FastAPI):
     # Restore saved symbols; auto-start the ones flagged autostart=True
     instance_manager.load_from_db(autostart_saved=True)
     if settings.DASHBOARD_USER and settings.DASHBOARD_PASSWORD:
-        logging.info("🔒 Dashboard login enabled (user: %s)", settings.DASHBOARD_USER)
+        if settings.DASHBOARD_TOTP_SECRET:
+            logging.info("🔒 Dashboard login enabled with 2FA (user: %s)", settings.DASHBOARD_USER)
+        else:
+            logging.info("🔒 Dashboard login enabled, no 2FA (user: %s)", settings.DASHBOARD_USER)
     else:
         logging.warning("🔓 Dashboard login is DISABLED — set DASHBOARD_USER/DASHBOARD_PASSWORD in .env to enable it")
-    logging.info("🚀 Zenith Trading Terminal ready at http://localhost:8000")
+    logging.info("🚀 CogniX Algo ready at http://localhost:8000")
     yield
     logging.info("🛑 Shutting down — stopping all running symbols")
     for status in instance_manager.all_statuses():
@@ -47,9 +50,9 @@ async def lifespan(app: FastAPI):
                 logging.error("Error stopping %s during shutdown → %s", status["id"], e)
 
 
-app = FastAPI(title="Zenith Trading Terminal", lifespan=lifespan)
+app = FastAPI(title="CogniX Algo", lifespan=lifespan)
 
-app.add_middleware(BasicAuthMiddleware)
+app.add_middleware(SessionAuthMiddleware)
 app.include_router(api_router)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -57,6 +60,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 async def index():
     return FileResponse("templates/index.html")
+
+
+@app.get("/login")
+async def login_page():
+    return FileResponse("templates/login.html")
 
 
 @app.websocket("/ws")

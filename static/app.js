@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------
-// Zenith Trading Terminal — dashboard client
+// CogniX Algo — dashboard client
 // ---------------------------------------------------------------------
 
 const boardBody   = document.getElementById("boardBody");
@@ -354,7 +354,22 @@ function connectWS() {
 }
 
 // ---------------- Init ----------------
+document.getElementById("btnLogout").addEventListener("click", async () => {
+  try {
+    await fetch("/api/auth/logout", { method: "POST" });
+  } finally {
+    window.location.href = "/login";
+  }
+});
+
 (async function init() {
+  try {
+    const authStatus = await fetch("/api/auth/status").then(r => r.json());
+    if (!authStatus.auth_enabled) {
+      document.getElementById("btnLogout").classList.add("hidden");
+    }
+  } catch (e) { /* ignore — leave logout button visible */ }
+
   await loadSymbols();
   await loadInitialLogs();
   connectWS();

@@ -36,11 +36,25 @@ class Settings:
     PORT           = int(_get_env("APP_PORT", "8000") or "8000")
 
     # ---- Dashboard login (optional) ----
-    # If both are set, every request (including the WebSocket) requires
-    # HTTP Basic Auth. If either is blank, auth is skipped entirely —
-    # useful for local dev / SSH-tunnel-only setups that don't need it.
+    # If both USER and PASSWORD are set, every request requires logging in
+    # via a session cookie (see /login) — checked on every HTTP route AND
+    # the WebSocket handshake. If either is blank, auth is skipped
+    # entirely — useful for local dev / SSH-tunnel-only setups.
     DASHBOARD_USER     = _get_env("DASHBOARD_USER")
     DASHBOARD_PASSWORD = _get_env("DASHBOARD_PASSWORD")
+
+    # If set, login ALSO requires a valid 6-digit TOTP code (Google
+    # Authenticator, Authy, etc.) — genuine two-factor, not just a second
+    # password. Generate a secret with `python -m utils.session_auth` (see
+    # that module) and add it here. Leave blank to log in with just
+    # username/password (no 2FA).
+    DASHBOARD_TOTP_SECRET = _get_env("DASHBOARD_TOTP_SECRET")
+
+    # Signs session cookies issued after a successful login. Set this in
+    # .env for sessions to survive a process restart; if left blank, a
+    # random key is generated at startup instead (safe, but every restart
+    # then logs everyone out).
+    SESSION_SECRET_KEY = _get_env("SESSION_SECRET_KEY")
 
     # ---- Defaults (used only when a new symbol config omits a field) ----
     DEFAULT_TICK_SIZE     = 0.05

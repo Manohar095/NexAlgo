@@ -5,18 +5,62 @@ api/routes.py
 REST endpoints consumed by the dashboard (static/app.js).
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
+from config.settings import settings
 from models.symbol_config import SymbolConfig
 from services import access_token_generator
 from services.instance_manager import instance_manager
+from utils.session_auth import create_session_token, verify_login, SESSION_MAX_AGE_SECONDS
 
 router = APIRouter(prefix="/api")
 
 
 class SymbolPayload(BaseModel):
     config: SymbolConfig
+
+
+class LoginPayload(BaseModel):
+    username: str
+    password: str
+    totp_code: str = ""
+
+
+@router.get("/auth/status")
+def auth_status():
+    """Tells the login page whether auth is even enabled, and whether to
+    show the TOTP field, without requiring auth itself to check."""
+    return {
+        "auth_enabled": bool(settings.DASHBOARD_USER and settings.DASHBOARD_PASSWORD),
+        "totp_required": bool(settings.DASHBOARD_TOTP_SECRET),
+    }
+
+
+@router.post("/auth/login")
+def auth_login(payload: LoginPayload, response: Response):
+    ok, error = verify_login(payload.username, payload.password, payload.totp_code)
+    if not ok:
+        raise HTTPException(status_code=401, detail=error)
+
+    token = create_session_token(payload.username)
+    response.set_cookie(
+        key="session",
+        value=token,
+        max_age=SESSION_MAX_AGE_SECONDS,
+        httponly=True,
+        samesite="lax",
+        # secure=True belongs here once this is served over HTTPS (e.g.
+        # behind a reverse proxy with TLS) — left off since a bare
+        # SSH-tunnel/private-IP deployment is plain HTTP by default.
+    )
+    return {"success": True}
+
+
+@router.post("/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie("session")
+    return {"success": True}
 
 
 class BrokerTokenPayload(BaseModel):
