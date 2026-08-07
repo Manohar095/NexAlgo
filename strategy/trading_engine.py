@@ -38,9 +38,9 @@ class TradingEngine:
 
     def __init__(self, instance_id, cfg, broker, on_log=None, on_status=None):
         self.id     = instance_id
-        self.cfg    = cfg          # models.symbol_config.SymbolConfig
-        self.broker = broker       # strategy.broker.BrokerSession (shared)
-        self.on_log = on_log       # callback(instance_id, level, message)
+        self.cfg    = cfg       # models.symbol_config.SymbolConfig
+        self.broker = broker    # strategy.broker.BrokerSession (shared)
+        self.on_log = on_log    # callback(instance_id, level, message)
         self.on_status = on_status # callback(instance_id, status_dict)
 
         self.renko = LiveRenko(cfg.brick_size, cfg.green_to_red_rev, cfg.red_to_green_rev)
@@ -84,6 +84,11 @@ class TradingEngine:
         self.red0_price   = None
         self.pending_buy_origin_price  = None
         self.pending_sell_origin_price = None
+        
+        # Flag to track if we're in a reversal attempt
+        self._is_reversal_attempt = False
+        # Store the last traced SL level when reversal starts, so we can re-arm if reversal fails
+        self._reversal_original_sl_level = None
 
         self._skip_next_sync = False
 
@@ -479,12 +484,28 @@ class TradingEngine:
                         and not self.pending_order_id):
                     ref_price = self.renko.last_close
                     if ref_price is not None:
+                        # Tracks which branch actually fired below — needed because
+                        # self._is_reversal_attempt gets cleared INSIDE the reversal
+                        # branch itself (so it can't be used afterward to tell the
+                        # branches apart), which previously caused a confusing
+                        # double log line: the reversal branch's own message, then
+                        # the generic "kept prior trailed level" message right after
+                        # describing the exact same re-arm a second time.
+                        via_reversal_fallback = False
+
                         if self.position_qty > 0:
                             fresh_trigger = self._round_price(ref_price - self.cfg.sl_brick_multiplier * self.cfg.brick_size)
                             sl_side = "S"
                             # LONG: tighter = higher trigger. Never re-arm
                             # looser than a level already earned by trailing.
-                            if self.last_known_sl_trigger is not None:
+                            # If we're in a reversal attempt, use the remembered original level
+                            if self._is_reversal_attempt and self._reversal_original_sl_level is not None:
+                                sl_trigger = max(fresh_trigger, self._reversal_original_sl_level)
+                                via_reversal_fallback = True
+                                self._log("INFO", f"🔄 Reversal failed - re-arming at {sl_trigger} (kept original level {self._reversal_original_sl_level})")
+                                self._is_reversal_attempt = False
+                                self._reversal_original_sl_level = None
+                            elif self.last_known_sl_trigger is not None:
                                 sl_trigger = max(fresh_trigger, self.last_known_sl_trigger)
                             else:
                                 sl_trigger = fresh_trigger
@@ -492,22 +513,29 @@ class TradingEngine:
                             fresh_trigger = self._round_price(ref_price + self.cfg.sl_brick_multiplier * self.cfg.brick_size)
                             sl_side = "B"
                             # SHORT: tighter = lower trigger.
-                            if self.last_known_sl_trigger is not None:
+                            if self._is_reversal_attempt and self._reversal_original_sl_level is not None:
+                                sl_trigger = min(fresh_trigger, self._reversal_original_sl_level)
+                                via_reversal_fallback = True
+                                self._log("INFO", f"🔄 Reversal failed - re-arming at {sl_trigger} (kept original level {self._reversal_original_sl_level})")
+                                self._is_reversal_attempt = False
+                                self._reversal_original_sl_level = None
+                            elif self.last_known_sl_trigger is not None:
                                 sl_trigger = min(fresh_trigger, self.last_known_sl_trigger)
                             else:
                                 sl_trigger = fresh_trigger
 
-                        if self.last_known_sl_trigger is not None and sl_trigger != fresh_trigger:
-                            self._log(
-                                "WARNING",
-                                f"🚨 SAFETY NET: pos open but no SL/pending → re-arming at {sl_trigger} "
-                                f"(kept prior trailed level {self.last_known_sl_trigger}, tighter than fresh calc {fresh_trigger})"
-                            )
-                        else:
-                            self._log(
-                                "WARNING",
-                                f"🚨 SAFETY NET: pos open but no SL/pending → re-arming at {sl_trigger} (fresh calc from current level)"
-                            )
+                        if not via_reversal_fallback:
+                            if self.last_known_sl_trigger is not None and sl_trigger != fresh_trigger:
+                                self._log(
+                                    "WARNING",
+                                    f"🚨 SAFETY NET: pos open but no SL/pending → re-arming at {sl_trigger} "
+                                    f"(kept prior trailed level {self.last_known_sl_trigger}, tighter than fresh calc {fresh_trigger})"
+                                )
+                            else:
+                                self._log(
+                                    "WARNING",
+                                    f"🚨 SAFETY NET: pos open but no SL/pending → re-arming at {sl_trigger} (fresh calc from current level)"
+                                )
                         self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
                     else:
                         self._log("ERROR", "🚨 SAFETY NET: cannot compute SL — renko.last_close is None")
@@ -673,6 +701,14 @@ class TradingEngine:
             if self.sl_order_id:
                 self._log("INFO", f"🔄 Reversal → cancelling resting SL {self.sl_order_id} before flipping position")
                 self._cancel_order_direct(self.sl_order_id)
+                # IMPORTANT: We're starting a reversal attempt, but we need to 
+                # remember the last traced level in case the reversal fails
+                # DO NOT clear last_known_sl_trigger here - we need it if reversal cancels
+                # Set flag to indicate we're in a reversal attempt
+                self._is_reversal_attempt = True
+                # Store the last known SL trigger in a separate variable for re-arm if reversal fails
+                self._reversal_original_sl_level = self.last_known_sl_trigger
+                self._log("INFO", f"📍 Reversal started - remembering last SL level {self._reversal_original_sl_level} for fallback")
 
             reverse_qty = abs(self.position_qty) + self.cfg.quantity
             self._log(
@@ -703,9 +739,16 @@ class TradingEngine:
                         self.pending_buy_origin_price = self.green0_price
                     else:
                         self.pending_sell_origin_price = self.red0_price
+                else:
+                    # If reversal order placement fails, clear the reversal flag
+                    self._is_reversal_attempt = False
+                    self._reversal_original_sl_level = None
 
             except Exception as e:
                 self._log("ERROR", f"Reverse order error → {e}")
+                # If reversal order fails, clear the reversal flag
+                self._is_reversal_attempt = False
+                self._reversal_original_sl_level = None
 
     # ================= PLACE SL ORDER =================
     def _place_sl_order(self, sl_side, trigger_price, qty):
@@ -747,6 +790,9 @@ class TradingEngine:
                 self.sl_trigger_price = trigger
                 self.sl_limit_price   = limit
                 self.last_known_sl_trigger = trigger
+                # Clear reversal flag and remembered level after SL is placed successfully
+                self._is_reversal_attempt = False
+                self._reversal_original_sl_level = None
                 self._log("INFO", f"✅ SL Placed | oid={self.sl_order_id} trigger={trigger:.2f}")
             else:
                 self._log("ERROR", f"📤 SL Order FAILED ❌ | emsg={response.get('emsg') if response else None}")
@@ -850,6 +896,8 @@ class TradingEngine:
                     # Covers squareoff too (it also fills under the
                     # 'api_order' tag) — flat is flat, nothing to remember.
                     self.last_known_sl_trigger = None
+                    self._is_reversal_attempt = False
+                    self._reversal_original_sl_level = None
 
                 if remarks == "RENKO_SL":
                     self.sl_order_id      = None
@@ -857,6 +905,8 @@ class TradingEngine:
                     self.sl_limit_price   = None
                     self.entry_price      = None
                     self.last_known_sl_trigger = None  # position genuinely closed — nothing to remember
+                    self._is_reversal_attempt = False
+                    self._reversal_original_sl_level = None
                     self._log("INFO", f"🛑 SL HIT → trantype={tran}, filled={filled_qty}, fill_price={fill_price}, new position_qty={self.position_qty}")
 
                 else:
@@ -877,9 +927,20 @@ class TradingEngine:
                         ref_price = fill_price if fill_price > 0 else self.renko.last_close
                         if ref_price:
                             self.entry_price = fill_price if fill_price > 0 else ref_price
-                            # New leg starting (fresh entry OR a reversal's new direction) —
-                            # any remembered level belonged to whatever leg just closed.
+                            # ALWAYS clear the remembered level unconditionally, regardless
+                            # of path. Previously this only happened in the non-reversal
+                            # branch, relying on _place_sl_order's side effect to refresh it
+                            # for reversals — which left a STALE value from the OLD leg in
+                            # place whenever that placement was skipped or failed (broker
+                            # rejection, guard clause, exception), silently contaminating
+                            # any later safety-net re-arm for the NEW leg with a price level
+                            # that belongs to a different direction entirely.
                             self.last_known_sl_trigger = None
+                            if self._is_reversal_attempt:
+                                self._log("INFO", "🔄 Reversal filled - clearing reversal tracking state")
+                                self._is_reversal_attempt = False
+                                self._reversal_original_sl_level = None
+
                             if self.position_qty > 0:
                                 sl_trigger = self._round_price(ref_price - self.cfg.sl_brick_multiplier * self.cfg.brick_size)
                                 sl_side = "S"
@@ -908,6 +969,10 @@ class TradingEngine:
                         should_replay         = self.deferred_order
                         self.deferred_order   = None
                         self.deferred_for_oid = None
+                    # If this was a reversal order, keep the flag for safety net
+                    # DO NOT clear _is_reversal_attempt here - let safety net consume it
+                    if self._is_reversal_attempt and self.position_qty != 0:
+                        self._log("INFO", "🔄 Reversal REJECTED - safety net will re-arm SL for original position")
 
             elif status == "CANCELLED":
                 self._log("INFO", f"❌ Order CANCELLED → oid={oid}")
@@ -924,6 +989,11 @@ class TradingEngine:
                         should_replay         = self.deferred_order
                         self.deferred_order   = None
                         self.deferred_for_oid = None
+                    # If this was a reversal order that got cancelled,
+                    # DO NOT clear _is_reversal_attempt here - let safety net consume it
+                    if self._is_reversal_attempt and self.position_qty != 0:
+                        self._log("INFO", "🔄 Reversal order cancelled - safety net will re-arm SL for original position")
+                        # Keep _is_reversal_attempt = True and _reversal_original_sl_level intact
 
             elif status == "TRIGGER_PENDING":
                 self._log("INFO", f"⏳ TRIGGER PENDING → oid={oid}, remarks={remarks}")
