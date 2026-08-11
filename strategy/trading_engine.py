@@ -51,6 +51,8 @@ class TradingEngine:
         self.position_qty     = 0
         self.pending_order_id = None
         self.pending_side     = None
+        self.pending_trigger_price = None  # current trigger of the resting pending ENTRY order (trails on retracement)
+        self.pending_limit_price   = None  # current limit of the resting pending ENTRY order
 
         self.deferred_order   = None
         self.deferred_for_oid = None
@@ -274,6 +276,8 @@ class TradingEngine:
             orders = self.broker.get_order_book()
             self.pending_order_id = None
             self.pending_side     = None
+            self.pending_trigger_price = None
+            self.pending_limit_price   = None
             self.sl_order_id      = None
             self.sl_trigger_price = None
             self.sl_limit_price   = None
@@ -292,6 +296,8 @@ class TradingEngine:
                     else:
                         self.pending_order_id = o.get("norenordno")
                         self.pending_side     = o.get("trantype")
+                        self.pending_trigger_price = float(o.get("trgprc", 0) or 0)
+                        self.pending_limit_price   = float(o.get("prc", 0) or 0)
 
             positions = self.broker.get_positions()
             self.position_qty = 0
@@ -373,6 +379,10 @@ class TradingEngine:
                 self._cancel_order_direct(self.pending_order_id)
                 self.pending_order_id = None
                 self.pending_side     = None
+                self.pending_trigger_price     = None
+                self.pending_limit_price       = None
+                self.pending_buy_origin_price  = None
+                self.pending_sell_origin_price = None
                 time.sleep(1)
 
             if self.position_qty == 0:
@@ -537,6 +547,8 @@ class TradingEngine:
                     self._cancel_order_direct(task["order_id"])
                 elif task["type"] == "MODIFY_SL":
                     self._modify_sl_order(task["new_trigger"])
+                elif task["type"] == "MODIFY_PENDING_ENTRY":
+                    self._modify_pending_entry_order(task["new_trigger"], task["new_limit"])
             except Exception as e:
                 self._log("ERROR", f"Order worker error → {e}")
             finally:
@@ -599,6 +611,8 @@ class TradingEngine:
                 if response and response.get("stat") == "Ok":
                     self.pending_order_id = response.get("norenordno")
                     self.pending_side     = side
+                    self.pending_trigger_price = trigger
+                    self.pending_limit_price   = limit
                     if side == "B":
                         self.pending_buy_origin_price = self.green0_price
                         self._log("INFO", f"📍 BUY cancellation origin snapshot: Green Brick #0 = {self.green0_price}")
@@ -717,6 +731,8 @@ class TradingEngine:
                 if response and response.get("stat") == "Ok":
                     self.pending_order_id = response.get("norenordno")
                     self.pending_side     = side
+                    self.pending_trigger_price = trigger
+                    self.pending_limit_price   = limit
                     if side == "B":
                         self.pending_buy_origin_price = self.green0_price
                     else:
@@ -812,6 +828,95 @@ class TradingEngine:
         except Exception as e:
             self._log("ERROR", f"Modify SL exception → {e}")
 
+    # ================= TRAIL PENDING ENTRY ORDER (loosen-only, follows retracement) =================
+    def _modify_pending_entry_order(self, new_trigger, new_limit):
+        """
+        Trails a resting PENDING ENTRY order (BUY or SELL, remarks=api_order,
+        NOT an SL — self.sl_order_id/self.position_qty are untouched here)
+        in the direction of an adverse retracement, instead of cancelling
+        it outright.
+
+        This mirrors _modify_sl_order's tighten-only-in-one-direction shape,
+        but for the opposite purpose: an SL trails to LOCK IN a better exit
+        as price moves favourably for an OPEN position; this trails a
+        not-yet-filled ENTRY order to follow price as it moves AWAY from
+        triggering, so the order keeps working instead of being thrown away.
+
+        - BUY pending entry: price falling → trigger/limit move DOWN with it.
+          Only ever moves down (never snaps back up on a small uptick),
+          exactly like the SL's tighten-only guard.
+        - SELL pending entry: price rising → trigger/limit move UP with it.
+          Only ever moves up.
+
+        Uses the exact same gap (sl_brick_multiplier * brick_size) and the
+        exact same offset (sl_limit_offset) as the SL trail — per the
+        requirement, "use the same gap calculation/logic that we are
+        currently using for the Trailing SL."
+        """
+        if not self.pending_order_id or self.position_qty != 0:
+            return
+
+        new_trigger = self._round_price(new_trigger)
+        new_limit   = self._round_price(new_limit)
+
+        if self.pending_side == "B":
+            # BUY entry only ever trails DOWN as price falls.
+            if self.pending_trigger_price is not None and new_trigger >= self.pending_trigger_price:
+                return
+            if self.pending_limit_price is not None and new_limit >= self.pending_limit_price:
+                return
+        elif self.pending_side == "S":
+            # SELL entry only ever trails UP as price rises.
+            if self.pending_trigger_price is not None and new_trigger <= self.pending_trigger_price:
+                return
+            if self.pending_limit_price is not None and new_limit <= self.pending_limit_price:
+                return
+        else:
+            return
+
+        try:
+            self._log(
+                "INFO",
+                f"🔧 Trailing PENDING {self.pending_side} entry | oid={self.pending_order_id} | "
+                f"{self.pending_trigger_price or 0:.2f} → {new_trigger:.2f}"
+            )
+
+            response = self.broker.modify_order(
+                exchange=self.cfg.exchange,
+                tradingsymbol=self.cfg.trading_symbol,
+                orderno=str(self.pending_order_id),
+                newquantity=str(self.cfg.quantity),
+                newprice_type='SL-LMT',
+                newprice=str(new_limit),
+                newtrigger_price=str(new_trigger)
+            )
+
+            if response and response.get("stat") == "Ok":
+                old_trigger = self.pending_trigger_price
+
+                self.pending_trigger_price = new_trigger
+                self.pending_limit_price   = new_limit
+
+                # The origin-price snapshot used by the LONG_SHORT
+                # cancel-and-reverse check must move together with the
+                # order — shifted by the SAME delta the trigger just
+                # moved, not re-derived from new_trigger with a fixed
+                # offset (that would reset/invert the reference level
+                # instead of tracking it).
+                if old_trigger is not None:
+                    if self.pending_side == "B" and self.pending_buy_origin_price is not None:
+                        trail_amount = old_trigger - new_trigger  # positive: trigger moved down
+                        self.pending_buy_origin_price = self._round_price(self.pending_buy_origin_price - trail_amount)
+                    elif self.pending_side == "S" and self.pending_sell_origin_price is not None:
+                        trail_amount = new_trigger - old_trigger  # positive: trigger moved up
+                        self.pending_sell_origin_price = self._round_price(self.pending_sell_origin_price + trail_amount)
+
+                self._log("INFO", f"🔧 Pending entry trailed ✅ | new trigger={new_trigger:.2f}")
+            else:
+                self._log("ERROR", f"🔧 Modify pending entry FAILED ❌ | {response}")
+        except Exception as e:
+            self._log("ERROR", f"Modify pending entry exception → {e}")
+
     # ================= CANCEL ORDER =================
     def _cancel_order_direct(self, order_id):
         try:
@@ -830,6 +935,8 @@ class TradingEngine:
                     self.deferred_for_oid = None
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_trigger_price     = None
+                    self.pending_limit_price       = None
                     self.pending_buy_origin_price  = None
                     self.pending_sell_origin_price = None
 
@@ -840,6 +947,8 @@ class TradingEngine:
                 self.deferred_for_oid = None
                 self.pending_order_id = None
                 self.pending_side     = None
+                self.pending_trigger_price     = None
+                self.pending_limit_price       = None
                 self.pending_buy_origin_price  = None
                 self.pending_sell_origin_price = None
 
@@ -880,6 +989,8 @@ class TradingEngine:
                 else:
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_trigger_price     = None
+                    self.pending_limit_price       = None
                     self.pending_buy_origin_price  = None
                     self.pending_sell_origin_price = None
 
@@ -924,6 +1035,8 @@ class TradingEngine:
                 else:
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_trigger_price     = None
+                    self.pending_limit_price       = None
                     self.pending_buy_origin_price  = None
                     self.pending_sell_origin_price = None
                     if self.deferred_for_oid == oid and self.deferred_order:
@@ -940,6 +1053,8 @@ class TradingEngine:
                 else:
                     self.pending_order_id = None
                     self.pending_side     = None
+                    self.pending_trigger_price     = None
+                    self.pending_limit_price       = None
                     self.pending_buy_origin_price  = None
                     self.pending_sell_origin_price = None
                     if self.deferred_for_oid == oid and self.deferred_order:
@@ -998,41 +1113,58 @@ class TradingEngine:
             if self.trades_blocked:
                 continue
 
-            # ===== CANCEL PENDING ENTRY ON DYNAMIC PRICE RETRACEMENT =====
-            # Cancellation level is fixed at the moment the order was
-            # placed (pending_buy_origin_price / pending_sell_origin_price
-            # — a snapshot of Green/Red Brick #0's price at that time), not
-            # a brick-count threshold. Renko bricks always land on an exact
-            # price lattice spaced by brick_size, so this retracement level
-            # is guaranteed to coincide exactly with a brick price rather
-            # than needing a tolerance check. This applies identically to
-            # fresh entries AND opposite-direction entries placed during a
-            # LONG_SHORT reversal — both populate pending_order_id/
-            # pending_side/pending_*_origin_price the same way, so a
-            # pending opposite entry gets cancelled here too if price
-            # un-reverses before it fills, leaving the original (still
-            # live, untouched) SL to keep protecting the unchanged
-            # original position.
+            # ===== PENDING ENTRY ORDER: TRAIL ON RETRACEMENT (all modes) =====
+            # PLUS LONG_SHORT-ONLY: CANCEL + REVERSE ONCE PRICE FULLY UN-REVERSES
+            #
+            # Previously the retracement level (pending_*_origin_price ±
+            # brick_size) simply cancelled the pending entry outright, in
+            # every trade mode. New behaviour: the pending entry order
+            # itself now TRAILS with price as it retraces — using the exact
+            # same gap (sl_brick_multiplier * brick_size) as trailing SL —
+            # instead of being thrown away, so it keeps working closer to
+            # the market. This trailing applies in ALL modes (LONG_ONLY,
+            # SHORT_ONLY, LONG_SHORT).
+            #
+            # The old cancel-and-place-opposite-entry behaviour is kept,
+            # but now gated to LONG_SHORT mode only, and is driven by the
+            # SAME retracement trigger as before (price reaching the
+            # original Brick #0 origin ± one brick) — i.e. "price reverses
+            # and reaches the BUY Entry Order level from the opposite
+            # direction". In LONG_ONLY/SHORT_ONLY this branch is skipped
+            # entirely and the order just keeps trailing indefinitely.
             with self.state_lock:
                 if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
                     if self.pending_side == "B" and self.pending_buy_origin_price is not None:
                         cancel_level = self._round_price(self.pending_buy_origin_price - self.cfg.brick_size)
                         if brick_price <= cancel_level:
-                            self._log(
-                                "INFO",
-                                f"🔄 Price retraced to {brick_price} (≤ {cancel_level}, "
-                                f"Green#0 was {self.pending_buy_origin_price}) → Cancel pending BUY ({self.pending_order_id})"
-                            )
-                            self.cancel_order(self.pending_order_id)
+                            if self.cfg.trade_mode == "LONG_SHORT":
+                                self._log(
+                                    "INFO",
+                                    f"🔄 Price retraced to {brick_price} (≤ {cancel_level}, "
+                                    f"Green#0 was {self.pending_buy_origin_price}) → LONG_SHORT: Cancel pending BUY "
+                                    f"({self.pending_order_id}) and reverse"
+                                )
+                                self.cancel_order(self.pending_order_id)
+                            else:
+                                new_trigger = brick_price - (self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                                new_limit   = new_trigger + self.cfg.tick_size
+                                self.trail_pending_entry(new_trigger, new_limit)
+
                     elif self.pending_side == "S" and self.pending_sell_origin_price is not None:
                         cancel_level = self._round_price(self.pending_sell_origin_price + self.cfg.brick_size)
                         if brick_price >= cancel_level:
-                            self._log(
-                                "INFO",
-                                f"🔄 Price retraced to {brick_price} (≥ {cancel_level}, "
-                                f"Red#0 was {self.pending_sell_origin_price}) → Cancel pending SELL ({self.pending_order_id})"
-                            )
-                            self.cancel_order(self.pending_order_id)
+                            if self.cfg.trade_mode == "LONG_SHORT":
+                                self._log(
+                                    "INFO",
+                                    f"🔄 Price retraced to {brick_price} (≥ {cancel_level}, "
+                                    f"Red#0 was {self.pending_sell_origin_price}) → LONG_SHORT: Cancel pending SELL "
+                                    f"({self.pending_order_id}) and reverse"
+                                )
+                                self.cancel_order(self.pending_order_id)
+                            else:
+                                new_trigger = brick_price + (self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                                new_limit   = new_trigger - self.cfg.tick_size
+                                self.trail_pending_entry(new_trigger, new_limit)
 
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
             if self.position_qty != 0:
@@ -1096,3 +1228,12 @@ class TradingEngine:
         if self.trades_blocked or not self.sl_order_id or self.position_qty == 0:
             return
         self.order_queue.put({"type": "MODIFY_SL", "new_trigger": new_trigger})
+
+    def trail_pending_entry(self, new_trigger, new_limit):
+        """Trails a resting pending ENTRY order (BUY or SELL) toward the
+        market as price retraces away from it, instead of cancelling it.
+        No-op if trades are blocked, there's no pending entry, or a
+        position is already open (trailing SL owns that case instead)."""
+        if self.trades_blocked or not self.pending_order_id or self.position_qty != 0:
+            return
+        self.order_queue.put({"type": "MODIFY_PENDING_ENTRY", "new_trigger": new_trigger, "new_limit": new_limit})
