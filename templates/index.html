@@ -107,18 +107,32 @@
             <label>Sell Limit Offset (bricks) <input required type="number" id="limit_price_sell_brick_no" value="3" /></label>
           </div>
           <p class="field-note">
-            Pending entries cancel automatically if price retraces one brick
-            below/above the breakout's origin brick — no cancel-brick
-            setting needed.
+            A pending entry order now <strong>trails</strong> instead of cancelling as price
+            retraces, moving with price using <strong>Entry_Trail_Brick_Number</strong> below (same
+            gap logic as the Stop Loss trail).<br />
+            This applies in every trade mode. In <strong>Long &amp; Short</strong> mode only,
+            once price retraces a full brick past the breakout's origin brick, the trailing
+            entry is instead cancelled and an opposite-direction entry is placed. In
+            <strong>Long Only</strong> / <strong>Short Only</strong> mode there is no cancel —
+            the entry just keeps trailing indefinitely.
           </p>
         </fieldset>
 
         <fieldset>
-          <legend>Stop Loss</legend>
+          <legend>Stop Loss &amp; Entry Trailing</legend>
           <div class="grid3">
-            <label>SL Brick Multiplier <input required type="number" step="0.5" id="sl_brick_multiplier" value="2" /></label>
-            <label>SL Limit Offset <input type="number" step="0.01" id="sl_limit_offset" placeholder="defaults to tick size" /></label>
+            <label>SL_Trail_Brick_Number <input required type="number" step="0.5" id="sl_trail_brick_number" value="2" /></label>
+            <label>Entry_Trail_Brick_Number <input required type="number" step="0.5" id="entry_trail_brick_number" value="2" /></label>
+            <label>Limit_Offset <input type="number" step="0.01" id="limit_offset" placeholder="defaults to tick size" /></label>
           </div>
+          <p class="field-note">
+            <strong>SL_Trail_Brick_Number</strong> controls SL distance from price while a position
+            is open (SL = price ± SL_Trail_Brick_Number × brick size).<br />
+            <strong>Entry_Trail_Brick_Number</strong> controls how far the pending entry order
+            trails behind price on retracement, before any position is open.<br />
+            <strong>Limit_Offset</strong> is shared by both the Stop Loss and the trailing
+            entry's SL-LMT orders.
+          </p>
         </fieldset>
 
         <fieldset>
