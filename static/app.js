@@ -20,7 +20,7 @@ const FIELD_IDS = [
   "brick_size", "green_to_red_rev", "red_to_green_rev",
   "buy_brick_no", "sell_brick_no", "tick_size",
   "limit_price_buy_brick_no", "limit_price_sell_brick_no",
-  "sl_brick_multiplier", "sl_limit_offset",
+  "sl_trail_brick_number", "entry_trail_brick_number", "limit_offset",
   "trade_mode", "squareoff_hour", "squareoff_minute", "sl_lmt_buffer", "autostart"
 ];
 
@@ -187,6 +187,7 @@ symbolForm.addEventListener("submit", async (e) => {
   const config = {};
   FIELD_IDS.forEach(f => {
     const el = document.getElementById(f);
+    if (!el) return;
     if (el.type === "checkbox") { config[f] = el.checked; return; }
     if (el.type === "number") {
       config[f] = el.value === "" ? null : parseFloat(el.value);
@@ -194,7 +195,13 @@ symbolForm.addEventListener("submit", async (e) => {
     }
     config[f] = el.value;
   });
-  if (config.sl_limit_offset === null) delete config.sl_limit_offset;
+  // limit_offset and entry_trail_brick_number are both Optional[...] on the
+  // backend and default themselves (to tick_size / sl_trail_brick_number
+  // respectively) when omitted from the payload entirely — sending an
+  // explicit null works too (the backend validators handle both), but
+  // dropping the key keeps the payload clean when the user left it blank.
+  if (config.limit_offset === null) delete config.limit_offset;
+  if (config.entry_trail_brick_number === null) delete config.entry_trail_brick_number;
 
   try {
     if (id) {
