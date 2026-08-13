@@ -312,6 +312,47 @@ class TradingEngine:
                 # origin snapshot from a prior pending order is now stale.
                 self.pending_buy_origin_price  = None
                 self.pending_sell_origin_price = None
+            else:
+                # A pending order exists at the broker, but the origin-price
+                # snapshot (pending_buy_origin_price / pending_sell_origin_price)
+                # is a LOCAL-ONLY value — it's never sent to or read back from
+                # the broker's order book, unlike pending_trigger_price/
+                # pending_limit_price above. If the process restarts (or this
+                # instance is freshly created) while an order is resting —
+                # possibly already trailed several times — that snapshot is
+                # lost and would otherwise stay None forever, silently
+                # disabling the LONG_SHORT cancel-and-reverse check for that
+                # order until a brand-new entry is placed.
+                #
+                # Reconstruct a reasonable origin from the CURRENT
+                # trigger/limit instead of leaving it None: this is exactly
+                # the inverse of the fresh-entry relationship used elsewhere
+                # (limit = brick_price ± offset*brick_size, trigger = limit
+                # ∓ tick_size), so treating the recovered trigger as if it
+                # were freshly derived from "brick #0 = trigger" one gap back
+                # reproduces a same-order-of-magnitude reference level. It
+                # won't be bit-for-bit identical to the true original Brick
+                # #0 price if the order had already trailed before the
+                # restart, but it keeps the safety check live and roughly
+                # calibrated rather than permanently off.
+                if self.pending_side == "B" and self.pending_buy_origin_price is None and self.pending_trigger_price:
+                    self.pending_buy_origin_price = self._round_price(
+                        self.pending_trigger_price + self.cfg.brick_size
+                    )
+                    self._log(
+                        "WARNING",
+                        f"🔧 Recovered missing BUY origin snapshot after restart → "
+                        f"approximated at {self.pending_buy_origin_price} from resting trigger {self.pending_trigger_price}"
+                    )
+                elif self.pending_side == "S" and self.pending_sell_origin_price is None and self.pending_trigger_price:
+                    self.pending_sell_origin_price = self._round_price(
+                        self.pending_trigger_price - self.cfg.brick_size
+                    )
+                    self._log(
+                        "WARNING",
+                        f"🔧 Recovered missing SELL origin snapshot after restart → "
+                        f"approximated at {self.pending_sell_origin_price} from resting trigger {self.pending_trigger_price}"
+                    )
 
             self._log(
                 "INFO",
@@ -493,7 +534,7 @@ class TradingEngine:
                     ref_price = self.renko.last_close
                     if ref_price is not None:
                         if self.position_qty > 0:
-                            fresh_trigger = self._round_price(ref_price - self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                            fresh_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                             sl_side = "S"
                             # LONG: tighter = higher trigger. Never re-arm
                             # looser than a level already earned by trailing.
@@ -502,7 +543,7 @@ class TradingEngine:
                             else:
                                 sl_trigger = fresh_trigger
                         else:
-                            fresh_trigger = self._round_price(ref_price + self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                            fresh_trigger = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                             sl_side = "B"
                             # SHORT: tighter = lower trigger.
                             if self.last_known_sl_trigger is not None:
@@ -752,7 +793,7 @@ class TradingEngine:
             self._log("ERROR", f"❌ Invalid SL trigger price: {trigger_price}")
             return
 
-        offset = self.cfg.sl_limit_offset or self.cfg.tick_size
+        offset = self.cfg.limit_offset or self.cfg.tick_size
         if sl_side == "S":
             limit = self._round_price(trigger - offset)
         else:
@@ -794,7 +835,7 @@ class TradingEngine:
             return
 
         new_trigger = self._round_price(new_trigger)
-        offset = self.cfg.sl_limit_offset or self.cfg.tick_size
+        offset = self.cfg.limit_offset or self.cfg.tick_size
 
         if self.position_qty > 0:
             if self.sl_trigger_price is not None and new_trigger <= self.sl_trigger_price:
@@ -848,10 +889,8 @@ class TradingEngine:
         - SELL pending entry: price rising → trigger/limit move UP with it.
           Only ever moves up.
 
-        Uses the exact same gap (sl_brick_multiplier * brick_size) and the
-        exact same offset (sl_limit_offset) as the SL trail — per the
-        requirement, "use the same gap calculation/logic that we are
-        currently using for the Trailing SL."
+        Uses entry_trail_brick_number for gap calculation and limit_offset
+        for limit price offset.
         """
         if not self.pending_order_id or self.position_qty != 0:
             return
@@ -1014,10 +1053,10 @@ class TradingEngine:
                             self.last_known_sl_trigger = None
 
                             if self.position_qty > 0:
-                                sl_trigger = self._round_price(ref_price - self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                                sl_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                                 sl_side = "S"
                             else:
-                                sl_trigger = self._round_price(ref_price + self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                                sl_trigger = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                                 sl_side = "B"
                             self._log("INFO", f"🛡️ Entry filled → placing SL | side={sl_side} trigger={sl_trigger:.2f}")
                             self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
@@ -1119,11 +1158,11 @@ class TradingEngine:
             # Previously the retracement level (pending_*_origin_price ±
             # brick_size) simply cancelled the pending entry outright, in
             # every trade mode. New behaviour: the pending entry order
-            # itself now TRAILS with price as it retraces — using the exact
-            # same gap (sl_brick_multiplier * brick_size) as trailing SL —
-            # instead of being thrown away, so it keeps working closer to
-            # the market. This trailing applies in ALL modes (LONG_ONLY,
-            # SHORT_ONLY, LONG_SHORT).
+            # itself now TRAILS with price as it retraces — using the gap
+            # (entry_trail_brick_number * brick_size) — instead of being
+            # thrown away, so it keeps working closer to the market.
+            # This trailing applies in ALL modes (LONG_ONLY, SHORT_ONLY,
+            # LONG_SHORT).
             #
             # The old cancel-and-place-opposite-entry behaviour is kept,
             # but now gated to LONG_SHORT mode only, and is driven by the
@@ -1146,7 +1185,7 @@ class TradingEngine:
                                 )
                                 self.cancel_order(self.pending_order_id)
                             else:
-                                new_trigger = brick_price - (self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                                new_trigger = brick_price - (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
                                 new_limit   = new_trigger + self.cfg.tick_size
                                 self.trail_pending_entry(new_trigger, new_limit)
 
@@ -1162,16 +1201,16 @@ class TradingEngine:
                                 )
                                 self.cancel_order(self.pending_order_id)
                             else:
-                                new_trigger = brick_price + (self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                                new_trigger = brick_price + (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
                                 new_limit   = new_trigger - self.cfg.tick_size
                                 self.trail_pending_entry(new_trigger, new_limit)
 
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
             if self.position_qty != 0:
                 if self.position_qty > 0:
-                    candidate_trigger = brick_price - (self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                    candidate_trigger = brick_price - (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 else:
-                    candidate_trigger = brick_price + (self.cfg.sl_brick_multiplier * self.cfg.brick_size)
+                    candidate_trigger = brick_price + (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 self.trail_sl(candidate_trigger)
 
             # ===== FRESH ENTRIES + LONG_SHORT OPPOSITE ENTRIES (LONG_ONLY/SHORT_ONLY still exit via SL only) =====
