@@ -1169,18 +1169,26 @@ class TradingEngine:
             # constant distance of entry_trail_brick_number * brick_size
             # from the most recently closed brick — i.e. the CANDIDATE
             # trigger is recomputed from the live brick_price every brick
-            # (same shape as SL trailing: candidate = brick_price ± gap),
-            # and _modify_pending_entry_order's tighten-only guard accepts
-            # it only if it's an improvement (closer to market than the
-            # order's current level) — so a favourable tick's worse
-            # candidate is silently rejected and the order holds its best
-            # level reached so far. A big adverse move in one feed batch
-            # correctly snaps the order straight to the new pinned level in
-            # one shot, same as an SL would. This is safe against feed
-            # batching because brick_price is read fresh from the CURRENT
-            # brick being iterated, never from self.pending_trigger_price
-            # (which is what caused staleness in the old step-relative
-            # design — not used here).
+            # (same shape as SL trailing: candidate = brick_price ± gap).
+            #
+            # CRITICAL GUARD — only attempt a trail on a brick that is
+            # actually adverse (color-based), not merely because the
+            # resulting candidate NUMBER happens to be tighter than the
+            # current trigger. The tighten-only check in
+            # _modify_pending_entry_order compares candidate vs. current
+            # trigger purely numerically — it has no notion of which way
+            # price actually moved. Because the gap is large relative to a
+            # single tick (e.g. 20 bricks), brick_price - gap can still be
+            # "tighter" than the current trigger even while price is
+            # RISING (favourable for a pending BUY) — confirmed by an
+            # actual log: entry at 22.76, trigger=22.95, price then rose to
+            # 22.77 then 22.78 (two Green/favourable bricks), yet the old
+            # code (no color gate) still trailed 22.95 -> 22.57, which is
+            # wrong. Gating on color == "Red" for BUY / color == "Green"
+            # for SELL ensures a trail is only ever attempted on a brick
+            # that genuinely represents adverse movement; a favourable or
+            # neutral brick never reaches trail_pending_entry at all,
+            # regardless of what the gap math would otherwise compute.
             #
             # This trailing applies in ALL modes (LONG_ONLY, SHORT_ONLY,
             # LONG_SHORT). The separate LONG_SHORT-only cancel-and-reverse
@@ -1188,13 +1196,13 @@ class TradingEngine:
             # origin brick.
             with self.state_lock:
                 if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
-                    if self.pending_side == "B":
+                    if self.pending_side == "B" and color == "Red":
                         gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
                         candidate_trigger = brick_price - gap
                         candidate_limit   = candidate_trigger + self.cfg.tick_size
                         self.trail_pending_entry(candidate_trigger, candidate_limit)
 
-                    elif self.pending_side == "S":
+                    elif self.pending_side == "S" and color == "Green":
                         gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
                         candidate_trigger = brick_price + gap
                         candidate_limit   = candidate_trigger - self.cfg.tick_size
