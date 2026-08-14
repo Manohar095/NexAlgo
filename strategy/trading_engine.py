@@ -1162,14 +1162,26 @@ class TradingEngine:
             if self.trades_blocked:
                 continue
 
-            # ===== PENDING ENTRY ORDER: TRAIL — PINNED entry_trail_brick_number BRICKS FROM MARKET (all modes) =====
+            # ===== PENDING ENTRY ORDER: TRAIL — PINNED entry_trail_brick_number BRICKS ABOVE/BELOW MARKET (all modes) =====
             # PLUS LONG_SHORT-ONLY: CANCEL + REVERSE ONCE PRICE FULLY UN-REVERSES
             #
             # Confirmed requirement: the pending order stays pinned at a
             # constant distance of entry_trail_brick_number * brick_size
             # from the most recently closed brick — i.e. the CANDIDATE
-            # trigger is recomputed from the live brick_price every brick
-            # (same shape as SL trailing: candidate = brick_price ± gap).
+            # trigger is recomputed from the live brick_price every brick.
+            #
+            # SIGN — a BUY pending entry is placed ABOVE the breakout brick
+            # (limit = brick_price + offset*brick_size, same relationship
+            # used for a fresh entry), so trailing it must preserve that
+            # SAME "above" relationship to the CURRENT brick as price
+            # retraces: candidate = brick_price + gap, not brick_price -
+            # gap. (brick_price - gap would push the trigger BELOW the
+            # current price, which is backwards — confirmed by example:
+            # breakout 22.80, order placed 23.00 (=22.80+gap), price falls
+            # to 22.78 — the trigger must go to 22.98 (=22.78+gap), not
+            # 22.58.) Symmetric for SELL: placed BELOW the breakout, so it
+            # trails with candidate = brick_price - gap, staying below the
+            # current brick as price rises.
             #
             # CRITICAL GUARD — only attempt a trail on a brick that is
             # actually adverse (color-based), not merely because the
@@ -1177,18 +1189,12 @@ class TradingEngine:
             # current trigger. The tighten-only check in
             # _modify_pending_entry_order compares candidate vs. current
             # trigger purely numerically — it has no notion of which way
-            # price actually moved. Because the gap is large relative to a
-            # single tick (e.g. 20 bricks), brick_price - gap can still be
-            # "tighter" than the current trigger even while price is
-            # RISING (favourable for a pending BUY) — confirmed by an
-            # actual log: entry at 22.76, trigger=22.95, price then rose to
-            # 22.77 then 22.78 (two Green/favourable bricks), yet the old
-            # code (no color gate) still trailed 22.95 -> 22.57, which is
-            # wrong. Gating on color == "Red" for BUY / color == "Green"
-            # for SELL ensures a trail is only ever attempted on a brick
-            # that genuinely represents adverse movement; a favourable or
-            # neutral brick never reaches trail_pending_entry at all,
-            # regardless of what the gap math would otherwise compute.
+            # price actually moved. Gating on color == "Red" for BUY /
+            # color == "Green" for SELL ensures a trail is only ever
+            # attempted on a brick that genuinely represents adverse
+            # movement; a favourable or neutral brick never reaches
+            # trail_pending_entry at all, regardless of what the gap math
+            # would otherwise compute.
             #
             # This trailing applies in ALL modes (LONG_ONLY, SHORT_ONLY,
             # LONG_SHORT). The separate LONG_SHORT-only cancel-and-reverse
@@ -1198,13 +1204,13 @@ class TradingEngine:
                 if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
                     if self.pending_side == "B" and color == "Red":
                         gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                        candidate_trigger = brick_price - gap
+                        candidate_trigger = brick_price + gap
                         candidate_limit   = candidate_trigger + self.cfg.tick_size
                         self.trail_pending_entry(candidate_trigger, candidate_limit)
 
                     elif self.pending_side == "S" and color == "Green":
                         gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                        candidate_trigger = brick_price + gap
+                        candidate_trigger = brick_price - gap
                         candidate_limit   = candidate_trigger - self.cfg.tick_size
                         self.trail_pending_entry(candidate_trigger, candidate_limit)
 
