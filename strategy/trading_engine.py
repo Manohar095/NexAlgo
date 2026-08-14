@@ -1171,34 +1171,47 @@ class TradingEngine:
             # and reaches the BUY Entry Order level from the opposite
             # direction". In LONG_ONLY/SHORT_ONLY this branch is skipped
             # entirely and the order just keeps trailing indefinitely.
-            # ===== PENDING ENTRY ORDER: TRAIL ON RETRACEMENT (all modes) =====
+            # ===== PENDING ENTRY ORDER: TRAIL 1-BRICK-AT-A-TIME ON RETRACEMENT (all modes) =====
             # PLUS LONG_SHORT-ONLY: CANCEL + REVERSE ONCE PRICE FULLY UN-REVERSES
             #
-            # Mirrors the SL-trailing pattern exactly (see the "TRAIL SL
-            # EVERY BRICK" block below): candidate_trigger is recomputed
-            # fresh from the CURRENT brick price every brick, using
-            # entry_trail_brick_number * brick_size as the gap — same
-            # formula shape as sl_trail_brick_number * brick_size for the
-            # SL. This is safe and correct here for the same reason it's
-            # correct for the SL: _modify_pending_entry_order enforces a
-            # tighten-only-toward-market guard (BUY trigger only ever moves
-            # down, SELL trigger only ever moves up), so recomputing from
-            # scratch each brick and letting the guard silently reject any
-            # non-improving candidate produces the right one-way trailing
-            # behavior — including snapping straight to the correct level
-            # in one shot if price gaps several bricks in a single feed
-            # update, exactly like the SL does.
+            # Option A (confirmed): trailing moves the pending order by
+            # exactly ONE brick_size for every new brick that forms against
+            # it — one real brick of price movement = one brick_size of
+            # trigger movement, in lockstep. NOT entry_trail_brick_number *
+            # brick_size as a single gap (that jumps the full distance the
+            # instant one adverse brick forms, which is wrong — see prior
+            # log trace: 23.01 -> 22.61 off a single brick, confirmed
+            # unwanted). entry_trail_brick_number is unused here.
+            #
+            # The trail only ever moves toward the market (BUY trigger
+            # down, SELL trigger up) — if price reverses back the other
+            # way, the order simply stops trailing and holds its last
+            # level; it never moves back with a favourable move. This runs
+            # on every red brick (BUY side) / green brick (SELL side)
+            # while a pending entry is resting, independent of the
+            # LONG_SHORT-only cancel_level check below — that one triggers
+            # once, after a full brick_size retracement past the origin
+            # brick; this one triggers per-brick starting immediately
+            # after entry.
             with self.state_lock:
                 if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
                     if self.pending_side == "B" and self.pending_trigger_price is not None:
-                        candidate_trigger = brick_price - (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
-                        candidate_limit   = candidate_trigger + self.cfg.tick_size
-                        self.trail_pending_entry(candidate_trigger, candidate_limit)
+                        # A brick moving against a resting BUY is a Red brick
+                        # whose price sits below the current trigger — trail
+                        # down by exactly one brick_size to follow it.
+                        if color == "Red" and brick_price < self.pending_trigger_price:
+                            new_trigger = self._round_price(self.pending_trigger_price - self.cfg.brick_size)
+                            new_limit   = new_trigger + self.cfg.tick_size
+                            self.trail_pending_entry(new_trigger, new_limit)
 
                     elif self.pending_side == "S" and self.pending_trigger_price is not None:
-                        candidate_trigger = brick_price + (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
-                        candidate_limit   = candidate_trigger - self.cfg.tick_size
-                        self.trail_pending_entry(candidate_trigger, candidate_limit)
+                        # A brick moving against a resting SELL is a Green
+                        # brick whose price sits above the current trigger —
+                        # trail up by exactly one brick_size to follow it.
+                        if color == "Green" and brick_price > self.pending_trigger_price:
+                            new_trigger = self._round_price(self.pending_trigger_price + self.cfg.brick_size)
+                            new_limit   = new_trigger - self.cfg.tick_size
+                            self.trail_pending_entry(new_trigger, new_limit)
 
             # ===== LONG_SHORT ONLY: CANCEL + REVERSE ON FULL ORIGIN RETRACEMENT =====
             # Separate, one-shot threshold (unrelated to the per-brick trail
