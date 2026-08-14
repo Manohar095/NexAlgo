@@ -1185,7 +1185,18 @@ class TradingEngine:
                                 )
                                 self.cancel_order(self.pending_order_id)
                             else:
-                                new_trigger = brick_price - (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
+                                # Trail relative to the EXISTING trigger, not the live
+                                # brick price — the SL-trailing formula (candidate_trigger
+                                # = brick_price ± gap, always re-derived from current price)
+                                # is wrong here: it snaps the trigger to wherever it "should"
+                                # sit relative to price right now, so a big price move
+                                # between bricks makes it jump multiple gaps in one shot
+                                # instead of stepping down by exactly one gap. The entry
+                                # trail is specified as a fixed step off the order's own
+                                # last price, so it must be computed off
+                                # self.pending_trigger_price instead.
+                                gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
+                                new_trigger = self._round_price(self.pending_trigger_price - gap)
                                 new_limit   = new_trigger + self.cfg.tick_size
                                 self.trail_pending_entry(new_trigger, new_limit)
 
@@ -1201,7 +1212,8 @@ class TradingEngine:
                                 )
                                 self.cancel_order(self.pending_order_id)
                             else:
-                                new_trigger = brick_price + (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
+                                gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
+                                new_trigger = self._round_price(self.pending_trigger_price + gap)
                                 new_limit   = new_trigger - self.cfg.tick_size
                                 self.trail_pending_entry(new_trigger, new_limit)
 
