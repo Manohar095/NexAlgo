@@ -1171,51 +1171,65 @@ class TradingEngine:
             # and reaches the BUY Entry Order level from the opposite
             # direction". In LONG_ONLY/SHORT_ONLY this branch is skipped
             # entirely and the order just keeps trailing indefinitely.
+            # ===== PENDING ENTRY ORDER: TRAIL ON RETRACEMENT (all modes) =====
+            # PLUS LONG_SHORT-ONLY: CANCEL + REVERSE ONCE PRICE FULLY UN-REVERSES
+            #
+            # Mirrors the SL-trailing pattern exactly (see the "TRAIL SL
+            # EVERY BRICK" block below): candidate_trigger is recomputed
+            # fresh from the CURRENT brick price every brick, using
+            # entry_trail_brick_number * brick_size as the gap — same
+            # formula shape as sl_trail_brick_number * brick_size for the
+            # SL. This is safe and correct here for the same reason it's
+            # correct for the SL: _modify_pending_entry_order enforces a
+            # tighten-only-toward-market guard (BUY trigger only ever moves
+            # down, SELL trigger only ever moves up), so recomputing from
+            # scratch each brick and letting the guard silently reject any
+            # non-improving candidate produces the right one-way trailing
+            # behavior — including snapping straight to the correct level
+            # in one shot if price gaps several bricks in a single feed
+            # update, exactly like the SL does.
+            with self.state_lock:
+                if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
+                    if self.pending_side == "B" and self.pending_trigger_price is not None:
+                        candidate_trigger = brick_price - (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
+                        candidate_limit   = candidate_trigger + self.cfg.tick_size
+                        self.trail_pending_entry(candidate_trigger, candidate_limit)
+
+                    elif self.pending_side == "S" and self.pending_trigger_price is not None:
+                        candidate_trigger = brick_price + (self.cfg.entry_trail_brick_number * self.cfg.brick_size)
+                        candidate_limit   = candidate_trigger - self.cfg.tick_size
+                        self.trail_pending_entry(candidate_trigger, candidate_limit)
+
+            # ===== LONG_SHORT ONLY: CANCEL + REVERSE ON FULL ORIGIN RETRACEMENT =====
+            # Separate, one-shot threshold (unrelated to the per-brick trail
+            # above): once price retraces a full brick past the breakout's
+            # own origin brick, cancel the (still-trailing) pending entry
+            # and place the opposite-direction entry instead. LONG_ONLY /
+            # SHORT_ONLY never take this branch — their pending entry just
+            # keeps trailing indefinitely per the block above.
             with self.state_lock:
                 if self.pending_order_id and self.pending_order_id != self.deferred_for_oid:
                     if self.pending_side == "B" and self.pending_buy_origin_price is not None:
                         cancel_level = self._round_price(self.pending_buy_origin_price - self.cfg.brick_size)
-                        if brick_price <= cancel_level:
-                            if self.cfg.trade_mode == "LONG_SHORT":
-                                self._log(
-                                    "INFO",
-                                    f"🔄 Price retraced to {brick_price} (≤ {cancel_level}, "
-                                    f"Green#0 was {self.pending_buy_origin_price}) → LONG_SHORT: Cancel pending BUY "
-                                    f"({self.pending_order_id}) and reverse"
-                                )
-                                self.cancel_order(self.pending_order_id)
-                            else:
-                                # Trail relative to the EXISTING trigger, not the live
-                                # brick price — the SL-trailing formula (candidate_trigger
-                                # = brick_price ± gap, always re-derived from current price)
-                                # is wrong here: it snaps the trigger to wherever it "should"
-                                # sit relative to price right now, so a big price move
-                                # between bricks makes it jump multiple gaps in one shot
-                                # instead of stepping down by exactly one gap. The entry
-                                # trail is specified as a fixed step off the order's own
-                                # last price, so it must be computed off
-                                # self.pending_trigger_price instead.
-                                gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                                new_trigger = self._round_price(self.pending_trigger_price - gap)
-                                new_limit   = new_trigger + self.cfg.tick_size
-                                self.trail_pending_entry(new_trigger, new_limit)
+                        if brick_price <= cancel_level and self.cfg.trade_mode == "LONG_SHORT":
+                            self._log(
+                                "INFO",
+                                f"🔄 Price retraced to {brick_price} (≤ {cancel_level}, "
+                                f"Green#0 was {self.pending_buy_origin_price}) → LONG_SHORT: Cancel pending BUY "
+                                f"({self.pending_order_id}) and reverse"
+                            )
+                            self.cancel_order(self.pending_order_id)
 
                     elif self.pending_side == "S" and self.pending_sell_origin_price is not None:
                         cancel_level = self._round_price(self.pending_sell_origin_price + self.cfg.brick_size)
-                        if brick_price >= cancel_level:
-                            if self.cfg.trade_mode == "LONG_SHORT":
-                                self._log(
-                                    "INFO",
-                                    f"🔄 Price retraced to {brick_price} (≥ {cancel_level}, "
-                                    f"Red#0 was {self.pending_sell_origin_price}) → LONG_SHORT: Cancel pending SELL "
-                                    f"({self.pending_order_id}) and reverse"
-                                )
-                                self.cancel_order(self.pending_order_id)
-                            else:
-                                gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                                new_trigger = self._round_price(self.pending_trigger_price + gap)
-                                new_limit   = new_trigger - self.cfg.tick_size
-                                self.trail_pending_entry(new_trigger, new_limit)
+                        if brick_price >= cancel_level and self.cfg.trade_mode == "LONG_SHORT":
+                            self._log(
+                                "INFO",
+                                f"🔄 Price retraced to {brick_price} (≥ {cancel_level}, "
+                                f"Red#0 was {self.pending_sell_origin_price}) → LONG_SHORT: Cancel pending SELL "
+                                f"({self.pending_order_id}) and reverse"
+                            )
+                            self.cancel_order(self.pending_order_id)
 
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
             if self.position_qty != 0:
