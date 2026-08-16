@@ -228,18 +228,22 @@ document.getElementById("brokerModalClose").addEventListener("click", closeBroke
 brokerModalOverlay.addEventListener("click", (e) => { if (e.target === brokerModalOverlay) closeBrokerModal(); });
 
 const btnGenerateToken = document.getElementById("btnGenerateToken");
+const btnCloseAfterGenerate = document.getElementById("btnCloseAfterGenerate");
+
 btnGenerateToken.addEventListener("click", async () => {
   const originalLabel = btnGenerateToken.textContent;
   btnGenerateToken.disabled = true;
   btnGenerateToken.textContent = "⏳ Generating…";
   brokerTokenStatus.textContent = "Logging in and generating a fresh access token — this takes a few seconds…";
   brokerTokenStatus.className = "token-status";
+  btnCloseAfterGenerate.classList.add("hidden");
 
   try {
     const s = await api("/api/broker/generate-token", { method: "POST" });
     renderBrokerStatus(s);
     brokerTokenStatus.innerHTML = `✅ ${escapeHTML(s.message || "Token generated and applied.")}<br/>` + brokerTokenStatus.innerHTML;
     brokerTokenStatus.className = "token-status ok";
+    btnCloseAfterGenerate.classList.remove("hidden");
   } catch (err) {
     brokerTokenStatus.textContent = `❌ ${err.message}`;
     brokerTokenStatus.className = "token-status warn";
@@ -248,6 +252,8 @@ btnGenerateToken.addEventListener("click", async () => {
     btnGenerateToken.textContent = originalLabel;
   }
 });
+
+btnCloseAfterGenerate.addEventListener("click", closeBrokerModal);
 
 async function openBrokerModal() {
   newAccessTokenEl.value = "";
