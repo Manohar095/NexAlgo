@@ -243,6 +243,10 @@ btnGenerateToken.addEventListener("click", async () => {
     renderBrokerStatus(s);
     brokerTokenStatus.innerHTML = `✅ ${escapeHTML(s.message || "Token generated and applied.")}<br/>` + brokerTokenStatus.innerHTML;
     brokerTokenStatus.className = "token-status ok";
+    // Auto-fill the generated token into the input field
+    if (s.access_token) {
+      newAccessTokenEl.value = s.access_token;
+    }
     btnCloseAfterGenerate.classList.remove("hidden");
   } catch (err) {
     brokerTokenStatus.textContent = `❌ ${err.message}`;

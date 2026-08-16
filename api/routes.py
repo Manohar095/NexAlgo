@@ -98,7 +98,11 @@ async def generate_broker_token():
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Token generation failed: {e}")
-    return {"message": "Access token generated and applied.", **instance_manager.broker.get_access_token_status()}
+    return {
+        "message": "Access token generated and applied.",
+        "access_token": new_token,
+        **instance_manager.broker.get_access_token_status()
+    }
 
 
 @router.get("/symbols")
