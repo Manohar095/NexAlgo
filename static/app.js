@@ -298,7 +298,7 @@ brokerTokenForm.addEventListener("submit", async (e) => {
       body: JSON.stringify({ access_token: token }),
     });
     renderBrokerStatus(s);
-    newAccessTokenEl.value = "";
+    closeBrokerModal();
   } catch (err) {
     alert(err.message);
   }
