@@ -409,13 +409,13 @@ class TradingEngine:
                     f"approximated at {self.pending_sell_origin_price} from resting trigger {self.pending_sell_trigger_price}"
                 )
 
-            self._log(
-                "INFO",
-                f"🔄 Sync → Position Qty: {self.position_qty}, "
-                f"BUY pending: {self.pending_buy_order_id} (trigger={self.pending_buy_trigger_price}), "
-                f"SELL pending: {self.pending_sell_order_id} (trigger={self.pending_sell_trigger_price}), "
-                f"SL: {self.sl_order_id} (trigger={self.sl_trigger_price})"
-            )
+            #self._log(
+                #"INFO",
+                #f"🔄 Sync → Position Qty: {self.position_qty}, "
+                #f"BUY pending: {self.pending_buy_order_id} (trigger={self.pending_buy_trigger_price}), "
+                #f"SELL pending: {self.pending_sell_order_id} (trigger={self.pending_sell_trigger_price}), "
+                #f"SL: {self.sl_order_id} (trigger={self.sl_trigger_price})"
+            #)
             self._push_status()
         except Exception as e:
             self._log("ERROR", f"Sync error → {e}")
