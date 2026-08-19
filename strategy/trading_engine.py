@@ -21,12 +21,6 @@ _modify_pending_entry_order, _cancel_order_direct, order_handler, and
 feed_handler for the per-function detail. LONG_ONLY / SHORT_ONLY
 behaviour is unchanged.
 
-FIXES APPLIED (from log analysis):
-1. Added limit validation in _modify_pending_entry_order (prevents invalid SL-LMT orders)
-2. Added fallback in order_handler for unmatched fills (handles race condition)
-3. Extracted _reconcile_sl_for_position() as unified SL management
-4. Preserved intentional trail formulas: BUY = brick_price + gap, SELL = brick_price - gap
-
 Everything else is a mechanical refactor to support multiple
 simultaneous symbols:
   - All former global constants (SYMBOL, BRICK_SIZE, TRADE_MODE, ...)
@@ -96,10 +90,6 @@ class TradingEngine:
         # entry that may still be resting at the same time.
         self.squareoff_order_id = None
         self.squareoff_side     = None
-
-        # ── Deferred order state (restored from original) ──
-        self.deferred_order   = None
-        self.deferred_for_oid = None
 
         self.sl_order_id      = None
         self.sl_side           = None  # "B" (protects SHORT) or "S" (protects LONG)
@@ -588,65 +578,26 @@ class TradingEngine:
                         f"SELL pending {prev_pending_sell}→{self.pending_sell_order_id}"
                     )
 
-                # ── Pending entry cleared at the broker while we had a deferred order queued ──
-                if prev_pending_buy and not self.pending_buy_order_id and self.deferred_order:
-                    self._log("INFO", "🔄 Periodic check: pending cleared → replaying deferred")
-                    deferred = self.deferred_order
-                    self.deferred_order   = None
-                    self.deferred_for_oid = None
-                    self.order_queue.put({
-                        "type":    "PLACE",
-                        "side":    deferred["side"],
-                        "trigger": deferred["trigger"],
-                        "limit":   deferred["limit"]
-                    })
-
-                # ── Position open at the broker but no SL ──
-                # Covers the entry-fill-callback-missed case (never got an
-                # SL in the first place) and the drift case above (old SL
-                # id turned out to be stale/filled, sync already cleared
-                # it, position confirmed still open). Deliberately does
-                # NOT check for an absence of pending BUY/SELL orders —
-                # those are now fully independent of the SL/position
-                # lifecycle (a pending order may legitimately be resting
-                # alongside an open position and its SL), so their
-                # presence or absence has no bearing on whether the SL
-                # needs re-arming here.
-                if self.position_qty != 0 and not self.sl_order_id:
-                    ref_price = self.renko.last_close
-                    if ref_price is not None:
-                        if self.position_qty > 0:
-                            fresh_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
-                            sl_side = "S"
-                            # LONG: tighter = higher trigger. Never re-arm
-                            # looser than a level already earned by trailing.
-                            if self.last_known_sl_trigger is not None:
-                                sl_trigger = max(fresh_trigger, self.last_known_sl_trigger)
-                            else:
-                                sl_trigger = fresh_trigger
-                        else:
-                            fresh_trigger = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
-                            sl_side = "B"
-                            # SHORT: tighter = lower trigger.
-                            if self.last_known_sl_trigger is not None:
-                                sl_trigger = min(fresh_trigger, self.last_known_sl_trigger)
-                            else:
-                                sl_trigger = fresh_trigger
-
-                        if self.last_known_sl_trigger is not None and sl_trigger != fresh_trigger:
-                            self._log(
-                                "WARNING",
-                                f"🚨 SAFETY NET: pos open but no SL → re-arming at {sl_trigger} "
-                                f"(kept prior trailed level {self.last_known_sl_trigger}, tighter than fresh calc {fresh_trigger})"
-                            )
-                        else:
-                            self._log(
-                                "WARNING",
-                                f"🚨 SAFETY NET: pos open but no SL → re-arming at {sl_trigger} (fresh calc from current level)"
-                            )
-                        self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
-                    else:
-                        self._log("ERROR", "🚨 SAFETY NET: cannot compute SL — renko.last_close is None")
+                # ── SL reconciliation, independent of whether the fill that
+                # caused it was ever seen by order_handler ──
+                # _reconcile_sl_for_position is the single source of truth
+                # for "what should the SL look like given the CURRENT
+                # position_qty" — it already handles all three cases
+                # (position flat + stale SL to cancel, position open + no
+                # SL to arm, position open + wrong-side SL to swap). It was
+                # previously only called from order_handler, which means
+                # any fill discovered ONLY through this periodic drift
+                # correction (WebSocket order-update callback missed
+                # entirely — confirmed happening for every fill in a
+                # session, not just an occasional one) never triggered SL
+                # reconciliation at all. That's a real gap: a stale SL
+                # left resting after an independent opposite-side pending
+                # order fills the position back to flat would sit at the
+                # broker un-cancelled indefinitely if that particular fill
+                # was only ever caught here rather than via order_handler.
+                # Calling it unconditionally every cycle closes that gap
+                # regardless of which path first noticed the fill.
+                self._reconcile_sl_for_position()
 
     # ================= ORDER WORKER =================
     def _order_worker(self):
@@ -661,11 +612,6 @@ class TradingEngine:
                         self._log("INFO", "⛔ Trades blocked → skipping order placement")
                         continue
                     self._place_order(task)
-                elif task["type"] == "REVERSE":
-                    if self.trades_blocked or self._is_squareoff_time():
-                        self._log("INFO", "⛔ Trades blocked → skipping opposite entry")
-                        continue
-                    self._place_reversal_order(task)
                 elif task["type"] == "CANCEL":
                     self._cancel_order_direct(task["order_id"])
                 elif task["type"] == "MODIFY_SL":
@@ -735,16 +681,6 @@ class TradingEngine:
             order_qty = self.cfg.quantity
             self._log("INFO", f"{'🟢 BUY' if side == 'B' else '🔴 SELL'} FRESH ENTRY | qty={order_qty}")
 
-            if self.pending_buy_order_id or self.pending_sell_order_id:
-                opposite_side = "S" if side == "B" else "B"
-                pending_id = self.pending_sell_order_id if side == "B" else self.pending_buy_order_id
-                if pending_id:
-                    self._log("INFO", f"🔄 Opposite pending exists → cancelling {pending_id}, deferring {side} order")
-                    self.deferred_order = {"side": side, "trigger": trigger, "limit": limit}
-                    self.deferred_for_oid = pending_id
-                    self._cancel_order_direct(pending_id)
-                    return
-
             try:
                 response = self.broker.place_order(
                     buy_or_sell=side,
@@ -779,135 +715,6 @@ class TradingEngine:
                 self._log("ERROR", f"Order error → {e}")
 
     # ================= OPPOSITE-DIRECTION ENTRY (LONG_SHORT only) =================
-    def _place_reversal_order(self, data):
-        """
-        LONG_SHORT mode only. Fires on an opposite-direction signal while
-        a position is already open.
-
-        REDESIGNED — previously this cancelled the resting SL and placed
-        a single doubled-quantity order at the NEW signal's price. That
-        was wrong: the new signal's price is (by construction — it's
-        further out than the SL's own distance) reliably WORSE than the
-        SL's already-earned level, so the old leg ended up exiting at a
-        worse price than its own stop-loss would have given it, with a
-        real unprotected gap in between while the reversal order was
-        still pending.
-
-        NEW BEHAVIOUR: does NOT touch the existing SL at all, and does
-        NOT double the quantity:
-          - The existing SL stays exactly as it was, live, still
-            trailing — it's already the correct mechanism to close the
-            current leg at its own protected price whenever price gets
-            there. Nothing new needs to be built for that; it already
-            works.
-          - A brand new, NORMAL single-qty entry order is placed for the
-            opposite direction, at the new signal's own price — placed
-            concurrently, not gated behind the position going flat
-            first, so a fast move still gets captured immediately.
-          - This new entry order is tracked exactly like any other
-            pending entry (pending_order_id/pending_side, origin-price
-            snapshot for the existing dynamic cancellation logic) — no
-            special-casing needed there, it already applies generically.
-            If price un-reverses before this new entry fills, the
-            existing feed_handler cancellation logic cancels it exactly
-            like it would any fresh entry, leaving the original,
-            still-live SL to keep protecting the unchanged original
-            position — nothing else needed.
-
-        Sequencing in the normal case: since the SL is always the closer
-        trigger level (by construction — the signal offset pushes further
-        from current price than the SL distance), the SL fires first,
-        closing the old leg at its correct price; the new entry order
-        remains resting and later fires on its own when/if price
-        continues, opening the new leg from a clean flat position exactly
-        like any fresh entry — reusing that already-tested code path with
-        zero special-casing.
-        """
-        side    = data["side"]
-        limit   = self._round_price(data["limit"])
-        trigger = self._round_price(data["trigger"])
-
-        with self.state_lock:
-            self.sync_state()
-
-            if self.trades_blocked:
-                self._log("INFO", "⛔ Trades blocked → skipping opposite entry")
-                return
-
-            if self.cfg.trade_mode != "LONG_SHORT":
-                return  # defensive — this path should only ever be queued in LONG_SHORT mode
-
-            if self.position_qty == 0:
-                # Already flat by the time this got processed — just a fresh entry.
-                self._place_order(data)
-                return
-
-            already_same_direction = (side == "B" and self.position_qty > 0) or (side == "S" and self.position_qty < 0)
-            if already_same_direction:
-                self._log("INFO", f"🚫 Opposite entry {side} skipped → position already in that direction (qty={self.position_qty})")
-                return
-
-            # Check for same-side pending
-            if side == "B" and self.pending_buy_order_id:
-                self._log("INFO", "⛔ Same-side pending opposite entry already exists → skip")
-                return
-            if side == "S" and self.pending_sell_order_id:
-                self._log("INFO", "⛔ Same-side pending opposite entry already exists → skip")
-                return
-
-            # Check for opposite-side pending
-            if side == "B" and self.pending_sell_order_id:
-                self._log("INFO", f"🔄 Opposite pending exists → cancelling {self.pending_sell_order_id}, deferring new BUY entry")
-                self.deferred_order = {"side": side, "trigger": trigger, "limit": limit}
-                self.deferred_for_oid = self.pending_sell_order_id
-                self._cancel_order_direct(self.pending_sell_order_id)
-                return
-            if side == "S" and self.pending_buy_order_id:
-                self._log("INFO", f"🔄 Opposite pending exists → cancelling {self.pending_buy_order_id}, deferring new SELL entry")
-                self.deferred_order = {"side": side, "trigger": trigger, "limit": limit}
-                self.deferred_for_oid = self.pending_buy_order_id
-                self._cancel_order_direct(self.pending_buy_order_id)
-                return
-
-            order_qty = self.cfg.quantity  # NOT doubled — the existing SL (untouched) closes the current leg at its own price
-            current_direction = "LONG" if self.position_qty > 0 else "SHORT"
-            self._log(
-                "INFO",
-                f"🔀 OPPOSITE ENTRY {side} | qty={order_qty} — existing SL for the current {current_direction} "
-                f"leg stays live and untouched (will close it at its own protected level, {self.sl_trigger_price})"
-            )
-
-            try:
-                response = self.broker.place_order(
-                    buy_or_sell=side,
-                    product_type=self.cfg.product_type.value,
-                    exchange=self.cfg.exchange,
-                    tradingsymbol=self.cfg.trading_symbol,
-                    quantity=order_qty,
-                    discloseqty=0,
-                    price_type='SL-LMT',
-                    price=limit,
-                    trigger_price=trigger,
-                    retention='DAY',
-                    remarks='api_order'
-                )
-                self._log("INFO", f"📤 Opposite Entry Order Response → {response}")
-
-                if response and response.get("stat") == "Ok":
-                    if side == "B":
-                        self.pending_buy_order_id      = response.get("norenordno")
-                        self.pending_buy_trigger_price = trigger
-                        self.pending_buy_limit_price   = limit
-                        self.pending_buy_origin_price  = self.green0_price
-                    else:
-                        self.pending_sell_order_id      = response.get("norenordno")
-                        self.pending_sell_trigger_price = trigger
-                        self.pending_sell_limit_price   = limit
-                        self.pending_sell_origin_price  = self.red0_price
-
-            except Exception as e:
-                self._log("ERROR", f"Opposite entry order error → {e}")
-
     # ================= PLACE SL ORDER =================
     def _place_sl_order(self, sl_side, trigger_price, qty):
         if self.sl_order_id:
@@ -996,7 +803,7 @@ class TradingEngine:
         except Exception as e:
             self._log("ERROR", f"Modify SL exception → {e}")
 
-    # ================= TRAIL PENDING ENTRY ORDER =================
+    # ================= TRAIL PENDING ENTRY ORDER (loosen-only, follows retracement) =================
     def _modify_pending_entry_order(self, side, new_trigger, new_limit):
         """
         Trails a resting PENDING ENTRY order for ONE SIDE (BUY or SELL,
@@ -1029,8 +836,8 @@ class TradingEngine:
 
         - BUY pending entry: candidate = brick_price + gap. Only accepted
           if it's LOWER than the current trigger (tighten-only toward
-          market) — a favourable uptick's candidate is silently rejected,
-          so the order holds its best (lowest) level reached.
+          market) — a favourable downtick's candidate is silently
+          rejected, so the order holds its best (lowest) level reached.
         - SELL pending entry: candidate = brick_price - gap. Only
           accepted if HIGHER than the current trigger.
 
@@ -1059,14 +866,12 @@ class TradingEngine:
             # BUY entry only ever trails DOWN as price falls.
             if current_trigger is not None and new_trigger >= current_trigger:
                 return
-            # FIX: Validate limit price direction as well
             if current_limit is not None and new_limit >= current_limit:
                 return
         else:
             # SELL entry only ever trails UP as price rises.
             if current_trigger is not None and new_trigger <= current_trigger:
                 return
-            # FIX: Validate limit price direction as well
             if current_limit is not None and new_limit <= current_limit:
                 return
 
@@ -1140,89 +945,11 @@ class TradingEngine:
                     self.pending_sell_trigger_price = None
                     self.pending_sell_limit_price   = None
                     self.pending_sell_origin_price  = None
-                elif order_id == self.squareoff_order_id:
-                    self.squareoff_order_id = None
-                    self.squareoff_side     = None
             else:
                 self._log("WARNING", f"⚠️ Cancel request may have failed → {response}")
-                if self.deferred_for_oid == order_id:
-                    self.deferred_order   = None
-                    self.deferred_for_oid = None
 
         except Exception as e:
             self._log("ERROR", f"Cancel error → {e}")
-            if self.deferred_for_oid == order_id:
-                self.deferred_order   = None
-                self.deferred_for_oid = None
-
-    # ================= RECONCILE SL =================
-    def _reconcile_sl_for_position(self):
-        """
-        Must be called with self.state_lock already held. Brings the SL
-        in line with the CURRENT self.position_qty, generically — used
-        after any fill that changes position_qty (a fresh entry from
-        flat, or a fill while a position was already open).
-
-        - position_qty == 0: any existing SL is now stale (a fresh
-          independent pending order on the OTHER side just filled and
-          exactly offset the position the SL was protecting — the SL
-          itself never fired, so it's still resting at the broker,
-          protecting nothing). Cancel it so it doesn't linger
-          indefinitely. This is the case that actually matters for
-          repeated oscillation (spec Test F): LONG + SL(S) -> independent
-          SELL pending fills -> flat -> the stale SL(S) must be cancelled
-          here, or it would sit at the broker forever and could
-          eventually mis-fire against a future unrelated position.
-        - position_qty != 0 and no SL exists: place a fresh one from the
-          current entry_price/renko.last_close.
-        - position_qty != 0 and an SL exists but on the WRONG side for
-          the current position direction (a genuine reversal): cancel the
-          stale one and place the correct one fresh.
-        - position_qty != 0 and the existing SL already matches the
-          correct side: leave it exactly as is — _place_sl_order's own
-          "already exists" guard would no-op anyway, and per-brick
-          trailing (trail_sl) continues to manage it normally.
-        """
-        if self.position_qty == 0:
-            if self.sl_order_id:
-                self._log(
-                    "WARNING",
-                    f"🔁 Position now flat but SL {self.sl_order_id} (side={self.sl_side}) still resting → cancelling stale SL"
-                )
-                self._cancel_order_direct(self.sl_order_id)
-                self.last_known_sl_trigger = None
-            return
-
-        required_sl_side = "S" if self.position_qty > 0 else "B"
-
-        if self.sl_order_id and self.sl_side is not None and self.sl_side != required_sl_side:
-            # The existing SL's own stored side (self.sl_side, set when it
-            # was placed / recovered via sync_state) no longer matches
-            # what the CURRENT position direction requires — this only
-            # happens on a genuine reversal (position flipped sign), which
-            # makes the existing SL guaranteed wrong for the new
-            # direction. Cancel it before placing the correct one.
-            self._log(
-                "WARNING",
-                f"🔁 Position direction changed (now {self.position_qty}) → cancelling stale SL {self.sl_order_id} before re-arming"
-            )
-            self._cancel_order_direct(self.sl_order_id)
-            self.last_known_sl_trigger = None
-
-        if not self.sl_order_id:
-            ref_price = self.entry_price if self.entry_price else self.renko.last_close
-            if not ref_price:
-                self._log("ERROR", "❌ Cannot compute SL — no entry_price and renko.last_close is None")
-                return
-            self.last_known_sl_trigger = None
-            if self.position_qty > 0:
-                sl_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
-                sl_side = "S"
-            else:
-                sl_trigger = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
-                sl_side = "B"
-            self._log("INFO", f"🛡️ Reconciling SL for position={self.position_qty} | side={sl_side} trigger={sl_trigger:.2f}")
-            self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
 
     # ================= ORDER CALLBACK =================
     def order_handler(self, msg):
@@ -1258,8 +985,6 @@ class TradingEngine:
         remarks = msg.get("remarks", "")
 
         self._log("INFO", f"📨 Order Update → oid={oid}, status={status}, remarks={remarks}")
-
-        should_replay = None
 
         with self.state_lock:
             if status == "COMPLETE":
@@ -1317,20 +1042,13 @@ class TradingEngine:
                     self._reconcile_sl_for_position()
 
                 else:
-                    # FALLBACK: Filled order we no longer have a local record for
+                    # Filled order we no longer have a local record for
                     # (e.g. already cleared by a prior sync_state pass) —
-                    # position_qty is already updated above from the fill
+                    # position_qty is still updated above from the fill
                     # itself, and _reconcile_sl_for_position brings the SL
                     # in line with whatever the resulting position now is.
                     self._log("WARNING", f"⚠️ COMPLETE for untracked oid={oid} → reconciling SL from resulting position")
                     self._reconcile_sl_for_position()
-
-                # ── Check if this was a deferred order that filled before cancel landed ──
-                if self.deferred_for_oid == oid and self.deferred_order:
-                    self._log("WARNING", "⚠️ Order filled before cancel landed → re-evaluating deferred")
-                    should_replay = self.deferred_order
-                    self.deferred_order = None
-                    self.deferred_for_oid = None
 
             elif status == "REJECTED":
                 reject_reason = msg.get("rejreason", "Unknown reason")
@@ -1354,10 +1072,6 @@ class TradingEngine:
                     self.pending_sell_trigger_price = None
                     self.pending_sell_limit_price   = None
                     self.pending_sell_origin_price  = None
-                elif self.deferred_for_oid == oid and self.deferred_order:
-                    should_replay = self.deferred_order
-                    self.deferred_order = None
-                    self.deferred_for_oid = None
 
             elif status == "CANCELLED":
                 self._log("INFO", f"❌ Order CANCELLED → oid={oid}")
@@ -1379,9 +1093,6 @@ class TradingEngine:
                     self.pending_sell_trigger_price = None
                     self.pending_sell_limit_price   = None
                     self.pending_sell_origin_price  = None
-                elif self.deferred_for_oid == oid and self.deferred_order:
-                    self.deferred_order = None
-                    self.deferred_for_oid = None
 
             elif status == "TRIGGER_PENDING":
                 self._log("INFO", f"⏳ TRIGGER PENDING → oid={oid}, remarks={remarks}")
@@ -1396,9 +1107,116 @@ class TradingEngine:
 
         self._push_status()
 
-        if should_replay and not self.trades_blocked:
-            self._log("INFO", f"▶️ Replaying deferred {should_replay['side']} order")
-            self.place_order(should_replay["side"], should_replay["trigger"], should_replay["limit"])
+    def _reconcile_sl_for_position(self):
+        """
+        Must be called with self.state_lock already held. Brings the SL
+        in line with the CURRENT self.position_qty, generically — used
+        after any fill that changes position_qty (a fresh entry from
+        flat, or a fill while a position was already open).
+
+        - position_qty == 0: any existing SL is now stale (a fresh
+          independent pending order on the OTHER side just filled and
+          exactly offset the position the SL was protecting — the SL
+          itself never fired, so it's still resting at the broker,
+          protecting nothing). Cancel it so it doesn't linger
+          indefinitely. This is the case that actually matters for
+          repeated oscillation (spec Test F): LONG + SL(S) -> independent
+          SELL pending fills -> flat -> the stale SL(S) must be cancelled
+          here, or it would sit at the broker forever and could
+          eventually mis-fire against a future unrelated position.
+        - position_qty != 0 and no SL exists: place a fresh one from the
+          current entry_price/renko.last_close.
+        - position_qty != 0 and an SL exists but on the WRONG side for
+          the current position direction (a genuine reversal): cancel the
+          stale one and place the correct one fresh.
+        - position_qty != 0 and the existing SL already matches the
+          correct side: leave it exactly as is — _place_sl_order's own
+          "already exists" guard would no-op anyway, and per-brick
+          trailing (trail_sl) continues to manage it normally.
+        """
+        if self.position_qty == 0:
+            if self.sl_order_id:
+                self._log(
+                    "WARNING",
+                    f"🔁 Position now flat but SL {self.sl_order_id} (side={self.sl_side}) still resting → cancelling stale SL"
+                )
+                self._cancel_order_direct(self.sl_order_id)
+                self.last_known_sl_trigger = None
+            # Whatever entry_price was set for the leg that just closed is
+            # no longer valid for anything that comes next — clear it
+            # unconditionally so a later reconciliation (for a
+            # DIFFERENT leg opened by an independent pending order) can
+            # never mistake this stale value for a trustworthy fresh fill
+            # price.
+            self.entry_price = None
+            return
+
+        required_sl_side = "S" if self.position_qty > 0 else "B"
+
+        if self.sl_order_id and self.sl_side is not None and self.sl_side != required_sl_side:
+            # The existing SL's own stored side (self.sl_side, set when it
+            # was placed / recovered via sync_state) no longer matches
+            # what the CURRENT position direction requires — this only
+            # happens on a genuine reversal (position flipped sign), which
+            # makes the existing SL guaranteed wrong for the new
+            # direction. Cancel it before placing the correct one.
+            self._log(
+                "WARNING",
+                f"🔁 Position direction changed (now {self.position_qty}) → cancelling stale SL {self.sl_order_id} before re-arming"
+            )
+            self._cancel_order_direct(self.sl_order_id)
+            self.last_known_sl_trigger = None
+
+        if not self.sl_order_id:
+            # entry_price is now a TRUSTWORTHY signal, not a guess: it is
+            # unconditionally cleared to None the moment position_qty
+            # returns to flat (see the position_qty == 0 branch above),
+            # so if it's set here it can only be because order_handler
+            # set it from a real fill price moments ago, in this same
+            # call chain, for the position that is currently open. Prefer
+            # it — it's the exact fill price, more precise than the
+            # nearest Renko brick close. Fall back to renko.last_close
+            # only when entry_price is genuinely absent, which happens
+            # when this reconciliation is reached via the PERIODIC safety
+            # net for a fill order_handler's WebSocket callback never
+            # delivered at all (confirmed happening routinely in some
+            # sessions, not just as a rare edge case) — the live brick
+            # close is the best available reference in that situation.
+            ref_price = self.entry_price if self.entry_price else self.renko.last_close
+            if not ref_price:
+                self._log("ERROR", "❌ Cannot compute SL — no entry_price and renko.last_close is None")
+                return
+            if self.position_qty > 0:
+                fresh_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                sl_side = "S"
+                # LONG: tighter = higher trigger. Never re-arm looser than
+                # a level already earned by trailing (mirrors the old
+                # inline periodic safety-net logic exactly).
+                if self.last_known_sl_trigger is not None:
+                    sl_trigger = max(fresh_trigger, self.last_known_sl_trigger)
+                else:
+                    sl_trigger = fresh_trigger
+            else:
+                fresh_trigger = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                sl_side = "B"
+                # SHORT: tighter = lower trigger.
+                if self.last_known_sl_trigger is not None:
+                    sl_trigger = min(fresh_trigger, self.last_known_sl_trigger)
+                else:
+                    sl_trigger = fresh_trigger
+
+            if self.last_known_sl_trigger is not None and sl_trigger != fresh_trigger:
+                self._log(
+                    "WARNING",
+                    f"🛡️ Reconciling SL for position={self.position_qty} → re-arming at {sl_trigger} "
+                    f"(kept prior trailed level {self.last_known_sl_trigger}, tighter than fresh calc {fresh_trigger})"
+                )
+            else:
+                self._log(
+                    "INFO",
+                    f"🛡️ Reconciling SL for position={self.position_qty} | side={sl_side} trigger={sl_trigger:.2f}"
+                )
+            self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
 
     # ================= FEED CALLBACK =================
     def feed_handler(self, msg):
@@ -1435,6 +1253,7 @@ class TradingEngine:
                 continue
 
             # ===== PENDING ENTRY ORDER TRAILING — INDEPENDENT PER SIDE (all modes) =====
+            #
             # BUY and SELL pending entries trail completely independently
             # of each other — trailing the BUY side never touches SELL
             # state and vice versa. Each stays pinned at a constant
@@ -1468,14 +1287,12 @@ class TradingEngine:
             with self.state_lock:
                 if self.pending_buy_order_id and color == "Red":
                     gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                    # BUY order trails DOWN as price falls (stays ABOVE market)
                     candidate_trigger = brick_price + gap
                     candidate_limit   = candidate_trigger + self.cfg.tick_size
                     self.trail_pending_entry("B", candidate_trigger, candidate_limit)
 
                 if self.pending_sell_order_id and color == "Green":
                     gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                    # SELL order trails UP as price rises (stays BELOW market)
                     candidate_trigger = brick_price - gap
                     candidate_limit   = candidate_trigger - self.cfg.tick_size
                     self.trail_pending_entry("S", candidate_trigger, candidate_limit)
@@ -1531,17 +1348,7 @@ class TradingEngine:
             return
         self.order_queue.put({"type": "PLACE", "side": side, "trigger": trigger, "limit": limit})
 
-    def reverse_order(self, side, trigger, limit):
-        """LONG_SHORT mode only — places a concurrent opposite-direction
-        entry while a position is open, WITHOUT touching the existing SL
-        (see _place_reversal_order for the full reasoning)."""
-        if self.trades_blocked:
-            return
-        self.order_queue.put({"type": "REVERSE", "side": side, "trigger": trigger, "limit": limit})
-
     def cancel_order(self, order_id):
-        if self.deferred_for_oid == order_id:
-            return
         self.order_queue.put({"type": "CANCEL", "order_id": order_id})
 
     def trail_sl(self, new_trigger):
