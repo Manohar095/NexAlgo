@@ -714,7 +714,6 @@ class TradingEngine:
             except Exception as e:
                 self._log("ERROR", f"Order error → {e}")
 
-    # ================= OPPOSITE-DIRECTION ENTRY (LONG_SHORT only) =================
     # ================= PLACE SL ORDER =================
     def _place_sl_order(self, sl_side, trigger_price, qty):
         if self.sl_order_id:
@@ -803,7 +802,7 @@ class TradingEngine:
         except Exception as e:
             self._log("ERROR", f"Modify SL exception → {e}")
 
-    # ================= TRAIL PENDING ENTRY ORDER (loosen-only, follows retracement) =================
+    # ================= TRAIL PENDING ENTRY ORDER =================
     def _modify_pending_entry_order(self, side, new_trigger, new_limit):
         """
         Trails a resting PENDING ENTRY order for ONE SIDE (BUY or SELL,
@@ -979,6 +978,11 @@ class TradingEngine:
         the spec: fresh entry from flat, SL-hit-to-flat with the other
         side's pending order surviving, and a genuine position reversal
         if one ever produces a non-zero opposite-sign result.
+
+        CRITICAL FIX: On a new entry fill (BUY or SELL), clear
+        self.last_known_sl_trigger before calling _reconcile_sl_for_position
+        so that the SL is calculated fresh from the entry price, not from
+        a stale trailed level from a previous position.
         """
         status  = msg.get("status", "").upper()
         oid     = msg.get("norenordno")
@@ -1029,6 +1033,9 @@ class TradingEngine:
                     self._log("INFO", f"✅ BUY entry COMPLETE → filled={filled_qty}, fill_price={fill_price}, new position_qty={self.position_qty}")
                     if fill_price > 0:
                         self.entry_price = fill_price
+                    # ── CRITICAL FIX ──
+                    # Clear stale SL trail level so SL is calculated fresh from entry price
+                    self.last_known_sl_trigger = None
                     self._reconcile_sl_for_position()
 
                 elif oid == self.pending_sell_order_id:
@@ -1039,6 +1046,9 @@ class TradingEngine:
                     self._log("INFO", f"✅ SELL entry COMPLETE → filled={filled_qty}, fill_price={fill_price}, new position_qty={self.position_qty}")
                     if fill_price > 0:
                         self.entry_price = fill_price
+                    # ── CRITICAL FIX ──
+                    # Clear stale SL trail level so SL is calculated fresh from entry price
+                    self.last_known_sl_trigger = None
                     self._reconcile_sl_for_position()
 
                 else:
