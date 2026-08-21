@@ -1117,87 +1117,37 @@ class TradingEngine:
 
     def _reconcile_sl_for_position(self):
         """
-        Must be called with self.state_lock already held. Brings the SL
-        in line with the CURRENT self.position_qty, generically — used
-        after any fill that changes position_qty (a fresh entry from
-        flat, or a fill while a position was already open).
-
-        SL trigger is always computed FRESH from entry_price (preferred)
-        or renko.last_close (fallback) — no persisted "best trigger
-        reached so far" is kept or consulted. Every re-arm starts clean
-        from the current reference price and the configured
-        sl_trail_brick_number gap.
-
-        - position_qty == 0: any existing SL is now stale (a fresh
-          independent pending order on the OTHER side just filled and
-          exactly offset the position the SL was protecting — the SL
-          itself never fired, so it's still resting at the broker,
-          protecting nothing). Cancel it so it doesn't linger
-          indefinitely. This is the case that actually matters for
-          repeated oscillation (spec Test F): LONG + SL(S) -> independent
-          SELL pending fills -> flat -> the stale SL(S) must be cancelled
-          here, or it would sit at the broker forever and could
-          eventually mis-fire against a future unrelated position.
-        - position_qty != 0 and no SL exists: place a fresh one from the
-          current entry_price/renko.last_close.
-        - position_qty != 0 and an SL exists but on the WRONG side for
-          the current position direction (a genuine reversal): cancel the
-          stale one and place the correct one fresh.
-        - position_qty != 0 and the existing SL already matches the
-          correct side: leave it exactly as is — _place_sl_order's own
-          "already exists" guard would no-op anyway, and per-brick
-          trailing (trail_sl) continues to manage it normally.
+        Brings the SL in line with the CURRENT position.
+        SL is ONLY cancelled at squareoff time – never when position goes flat.
+        If position is flat, the SL remains resting (will be cancelled only at squareoff).
         """
         if self.position_qty == 0:
+            # Do NOT cancel the SL – keep it until squareoff.
             if self.sl_order_id:
                 self._log(
-                    "WARNING",
-                    f"🔁 Position now flat but SL {self.sl_order_id} (side={self.sl_side}) still resting → cancelling stale SL"
+                    "INFO",
+                    f"Position flat but SL {self.sl_order_id} (trigger={self.sl_trigger_price}) "
+                    f"remains alive – will be cancelled only at squareoff"
                 )
-                self._cancel_order_direct(self.sl_order_id)
-            # Whatever entry_price was set for the leg that just closed is
-            # no longer valid for anything that comes next — clear it
-            # unconditionally so a later reconciliation (for a
-            # DIFFERENT leg opened by an independent pending order) can
-            # never mistake this stale value for a trustworthy fresh fill
-            # price.
+            # Clear entry_price to avoid stale values if a new position opens later
             self.entry_price = None
             return
 
         required_sl_side = "S" if self.position_qty > 0 else "B"
 
         if self.sl_order_id and self.sl_side is not None and self.sl_side != required_sl_side:
-            # The existing SL's own stored side (self.sl_side, set when it
-            # was placed / recovered via sync_state) no longer matches
-            # what the CURRENT position direction requires — this only
-            # happens on a genuine reversal (position flipped sign), which
-            # makes the existing SL guaranteed wrong for the new
-            # direction. Cancel it before placing the correct one.
             self._log(
                 "WARNING",
-                f"🔁 Position direction changed (now {self.position_qty}) → cancelling stale SL {self.sl_order_id} before re-arming"
+                f"Position direction changed (now {self.position_qty}) – cancelling wrong-side SL {self.sl_order_id}"
             )
             self._cancel_order_direct(self.sl_order_id)
 
         if not self.sl_order_id:
-            # entry_price is now a TRUSTWORTHY signal, not a guess: it is
-            # unconditionally cleared to None the moment position_qty
-            # returns to flat (see the position_qty == 0 branch above),
-            # so if it's set here it can only be because order_handler
-            # set it from a real fill price moments ago, in this same
-            # call chain, for the position that is currently open. Prefer
-            # it — it's the exact fill price, more precise than the
-            # nearest Renko brick close. Fall back to renko.last_close
-            # only when entry_price is genuinely absent, which happens
-            # when this reconciliation is reached via the PERIODIC safety
-            # net for a fill order_handler's WebSocket callback never
-            # delivered at all (confirmed happening routinely in some
-            # sessions, not just as a rare edge case) — the live brick
-            # close is the best available reference in that situation.
             ref_price = self.entry_price if self.entry_price else self.renko.last_close
             if not ref_price:
-                self._log("ERROR", "❌ Cannot compute SL — no entry_price and renko.last_close is None")
+                self._log("ERROR", "Cannot compute SL – no entry_price and renko.last_close is None")
                 return
+
             if self.position_qty > 0:
                 sl_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 sl_side = "S"
