@@ -1280,14 +1280,14 @@ class TradingEngine:
             with self.state_lock:
                 if self.pending_buy_order_id and color == "Red":
                     gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                    candidate_trigger = brick_price + gap
-                    candidate_limit   = candidate_trigger + self.cfg.tick_size
+                    candidate_limit = brick_price + gap
+                    candidate_trigger   = candidate_limit + self.cfg.tick_size
                     self.trail_pending_entry("B", candidate_trigger, candidate_limit)
 
                 if self.pending_sell_order_id and color == "Green":
                     gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                    candidate_trigger = brick_price - gap
-                    candidate_limit   = candidate_trigger - self.cfg.tick_size
+                    candidate_limit = brick_price - gap
+                    candidate_trigger   = candidate_limit - self.cfg.tick_size
                     self.trail_pending_entry("S", candidate_trigger, candidate_limit)
 
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
