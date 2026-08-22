@@ -1117,37 +1117,88 @@ class TradingEngine:
 
     def _reconcile_sl_for_position(self):
         """
-        Brings the SL in line with the CURRENT position.
-        SL is ONLY cancelled at squareoff time – never when position goes flat.
-        If position is flat, the SL remains resting (will be cancelled only at squareoff).
+        Must be called with self.state_lock already held. Brings the SL
+        in line with the CURRENT self.position_qty, generically — used
+        after any fill that changes position_qty (a fresh entry from
+        flat, or a fill while a position was already open).
+
+        SL trigger is always computed FRESH from entry_price (preferred)
+        or renko.last_close (fallback) — no persisted "best trigger
+        reached so far" is kept or consulted. Every re-arm starts clean
+        from the current reference price and the configured
+        sl_trail_brick_number gap.
+
+        CONFIRMED INTENTIONAL: this function NEVER cancels an order.
+        Cancellation happens ONLY at squareoff (_execute_squareoff) — no
+        exceptions, including the "wrong side after a reversal" case.
+        Consequences of this, both confirmed accepted:
+        - position_qty == 0: any existing SL is left resting live at the
+          broker for the rest of the session, even though it no longer
+          protects anything. It can fire later, independent of any new
+          strategy signal, if price revisits its trigger.
+        - position_qty != 0 but an existing SL is on the WRONG side for
+          the new direction (a genuine reversal): that stale SL is left
+          exactly as-is too. Because _place_sl_order refuses to place a
+          second SL while self.sl_order_id is set, NO new, correct SL
+          gets placed for the new position in this case — the position
+          runs without a working stop-loss (in the correct direction)
+          until squareoff, unless the stale wrong-side order happens to
+          fire on its own at an unrelated level.
+
+        The only case this function still ACTS on: no SL exists at all
+        for a non-flat position (fresh entry from flat, or the slot was
+        already empty for some other reason) — it places one. It never
+        cancels anything to make room.
         """
         if self.position_qty == 0:
-            # Do NOT cancel the SL – keep it until squareoff.
             if self.sl_order_id:
                 self._log(
                     "INFO",
-                    f"Position flat but SL {self.sl_order_id} (trigger={self.sl_trigger_price}) "
-                    f"remains alive – will be cancelled only at squareoff"
+                    f"Position flat but SL {self.sl_order_id} (side={self.sl_side}, trigger={self.sl_trigger_price}) "
+                    f"remains live — cancelled only at squareoff, not here"
                 )
-            # Clear entry_price to avoid stale values if a new position opens later
+            # Whatever entry_price was set for the leg that just closed is
+            # no longer valid for anything that comes next — clear it
+            # unconditionally so a later reconciliation (for a
+            # DIFFERENT leg opened by an independent pending order) can
+            # never mistake this stale value for a trustworthy fresh fill
+            # price.
             self.entry_price = None
             return
 
         required_sl_side = "S" if self.position_qty > 0 else "B"
 
         if self.sl_order_id and self.sl_side is not None and self.sl_side != required_sl_side:
+            # Position direction has reversed and the existing SL no
+            # longer matches — confirmed intentional to leave it exactly
+            # as-is rather than cancel it. This position now runs WITHOUT
+            # a correct-direction SL until squareoff (see docstring).
             self._log(
                 "WARNING",
-                f"Position direction changed (now {self.position_qty}) – cancelling wrong-side SL {self.sl_order_id}"
+                f"⚠️ Position direction changed (now {self.position_qty}) but existing SL {self.sl_order_id} "
+                f"(side={self.sl_side}) is left untouched — cancellation only happens at squareoff, "
+                f"so this position has NO correct-side SL until then"
             )
-            self._cancel_order_direct(self.sl_order_id)
 
         if not self.sl_order_id:
+            # entry_price is now a TRUSTWORTHY signal, not a guess: it is
+            # unconditionally cleared to None the moment position_qty
+            # returns to flat (see the position_qty == 0 branch above),
+            # so if it's set here it can only be because order_handler
+            # set it from a real fill price moments ago, in this same
+            # call chain, for the position that is currently open. Prefer
+            # it — it's the exact fill price, more precise than the
+            # nearest Renko brick close. Fall back to renko.last_close
+            # only when entry_price is genuinely absent, which happens
+            # when this reconciliation is reached via the PERIODIC safety
+            # net for a fill order_handler's WebSocket callback never
+            # delivered at all (confirmed happening routinely in some
+            # sessions, not just as a rare edge case) — the live brick
+            # close is the best available reference in that situation.
             ref_price = self.entry_price if self.entry_price else self.renko.last_close
             if not ref_price:
-                self._log("ERROR", "Cannot compute SL – no entry_price and renko.last_close is None")
+                self._log("ERROR", "❌ Cannot compute SL — no entry_price and renko.last_close is None")
                 return
-
             if self.position_qty > 0:
                 sl_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 sl_side = "S"
@@ -1205,12 +1256,16 @@ class TradingEngine:
             # recomputed from the live brick_price every brick.
             #
             # SIGN — a BUY pending entry is placed ABOVE the breakout
-            # brick (limit = brick_price + offset*brick_size, same
-            # relationship used for a fresh entry), so trailing it must
-            # preserve that SAME "above" relationship to the CURRENT
-            # brick as price retraces: candidate = brick_price + gap.
-            # Symmetric for SELL: placed BELOW the breakout, trails with
-            # candidate = brick_price - gap.
+            # brick (limit = brick_price + offset*brick_size, trigger =
+            # limit - tick_size — the LIMIT is what's pinned to the
+            # configured offset, trigger is derived one tick inside it;
+            # same relationship used for a fresh entry, see the BUY
+            # signal dispatch below), so trailing it must preserve that
+            # SAME structure: candidate_limit = brick_price + gap,
+            # candidate_trigger = candidate_limit - tick_size. Symmetric
+            # for SELL: placed BELOW the breakout, candidate_limit =
+            # brick_price - gap, candidate_trigger = candidate_limit +
+            # tick_size.
             #
             # CRITICAL GUARD — only attempt a trail on a brick that is
             # actually adverse for that side (color-based): color=="Red"
@@ -1230,14 +1285,14 @@ class TradingEngine:
             with self.state_lock:
                 if self.pending_buy_order_id and color == "Red":
                     gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                    candidate_limit = brick_price + gap
-                    candidate_trigger   = candidate_limit - self.cfg.tick_size
+                    candidate_limit   = brick_price + gap
+                    candidate_trigger = candidate_limit - self.cfg.tick_size
                     self.trail_pending_entry("B", candidate_trigger, candidate_limit)
 
                 if self.pending_sell_order_id and color == "Green":
                     gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
-                    candidate_limit = brick_price - gap
-                    candidate_trigger   = candidate_limit + self.cfg.tick_size
+                    candidate_limit   = brick_price - gap
+                    candidate_trigger = candidate_limit + self.cfg.tick_size
                     self.trail_pending_entry("S", candidate_trigger, candidate_limit)
 
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
