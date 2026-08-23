@@ -1,69 +1,70 @@
 /* ==========================================================================
-   1. THEME DEFINITIONS & SYSTEM VARIABLES
+   1. THEME DEFINITIONS & SYSTEM VARIABLES (HYPER-VIBRANT EDITION)
    ========================================================================== */
 
 :root, [data-theme="dark"] {
-  --bg-base: #060913;
-  --bg-card: rgba(15, 23, 42, 0.65);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(139, 92, 246, 0.3);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --input-bg: rgba(15, 23, 42, 0.8);
-  --input-border: #334155;
-  
-  --brand-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #00c6ff 100%);
-  --btn-primary-grad: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-  --table-header-grad: linear-gradient(180deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
-  --modal-grad: linear-gradient(160deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
-  --overlay-bg: rgba(3, 7, 18, 0.75);
+  --bg-base: #05080f;
+  --bg-card: rgba(10, 16, 30, 0.75);
+  --border-color: rgba(255, 255, 255, 0.15);
+  --border-glow: rgba(255, 0, 200, 0.7);
+  --text-main: #f0f4ff;
+  --text-muted: #a0b4d0;
+  --input-bg: rgba(8, 12, 28, 0.9);
+  --input-border: rgba(180, 80, 255, 0.4);
 
-  /* Ambient Mesh Orbs */
-  --orb-1: rgba(59, 130, 246, 0.18);
-  --orb-2: rgba(139, 92, 246, 0.15);
-  --orb-3: rgba(236, 72, 153, 0.12);
+  /* Supercharged Multi-Stop Gradients */
+  --brand-gradient: linear-gradient(135deg, #00f0ff 0%, #7b2ffc 40%, #ff2d95 70%, #ffb300 100%);
+  --btn-primary-grad: linear-gradient(135deg, #ff416c 0%, #ff4b2b 50%, #f9d423 100%);
+  --table-header-grad: linear-gradient(180deg, rgba(40, 50, 80, 0.9) 0%, rgba(10, 16, 30, 0.98) 100%);
+  --modal-grad: linear-gradient(165deg, rgba(15, 20, 40, 0.96) 0%, rgba(5, 8, 15, 0.99) 100%);
+  --overlay-bg: rgba(0, 0, 0, 0.85);
 
-  /* Terminal Colors */
-  --term-bg: rgba(3, 7, 18, 0.85);
-  --term-border: rgba(51, 65, 85, 0.5);
-  --term-text: #e2e8f0;
+  /* Pulsing Orb Colors (more intense) */
+  --orb-1: rgba(0, 240, 255, 0.45);
+  --orb-2: rgba(255, 45, 149, 0.40);
+  --orb-3: rgba(123, 47, 252, 0.50);
+
+  /* Terminal */
+  --term-bg: rgba(0, 2, 10, 0.95);
+  --term-border: rgba(255, 0, 200, 0.3);
+  --term-text: #d0e0ff;
 }
 
 [data-theme="light"] {
-  --bg-base: #f1f5f9;
-  --bg-card: rgba(255, 255, 255, 0.75);
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-glow: rgba(37, 99, 235, 0.3);
-  --text-main: #0f172a;
-  --text-muted: #64748b;
+  --bg-base: #f2f6ff;
+  --bg-card: rgba(255, 255, 255, 0.85);
+  --border-color: rgba(80, 100, 200, 0.25);
+  --border-glow: rgba(255, 0, 150, 0.5);
+  --text-main: #0b1120;
+  --text-muted: #4a5a7a;
   --input-bg: #ffffff;
-  --input-border: #cbd5e1;
+  --input-border: #b0c0e0;
 
-  --brand-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-  --btn-primary-grad: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  --table-header-grad: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-  --modal-grad: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
-  --overlay-bg: rgba(15, 23, 42, 0.4);
+  --brand-gradient: linear-gradient(135deg, #0066ff 0%, #a855f7 50%, #ec4899 100%);
+  --btn-primary-grad: linear-gradient(135deg, #f43f5e 0%, #f97316 60%, #facc15 100%);
+  --table-header-grad: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
+  --modal-grad: linear-gradient(165deg, #ffffff 0%, #f2f6ff 100%);
+  --overlay-bg: rgba(30, 40, 70, 0.5);
 
-  --orb-1: rgba(59, 130, 246, 0.12);
-  --orb-2: rgba(147, 51, 234, 0.08);
-  --orb-3: rgba(236, 72, 153, 0.08);
+  --orb-1: rgba(0, 102, 255, 0.25);
+  --orb-2: rgba(236, 72, 153, 0.20);
+  --orb-3: rgba(168, 85, 247, 0.25);
 
-  /* Terminal Colors */
-  --term-bg: #0f172a;
-  --term-border: #cbd5e1;
-  --term-text: #f8fafc;
+  --term-bg: #0b1120;
+  --term-border: #4a5a7a;
+  --term-text: #eef2ff;
 }
 
 /* ==========================================================================
-   2. ANIMATIONS & KEYFRAMES
+   2. ANIMATIONS & KEYFRAMES (ENHANCED)
    ========================================================================== */
 
 @keyframes ambientGlow {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.95); }
-  100% { transform: translate(0px, 0px) scale(1); }
+  0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+  25% { transform: translate(60px, -80px) scale(1.2) rotate(10deg); }
+  50% { transform: translate(-40px, 40px) scale(0.9) rotate(-5deg); }
+  75% { transform: translate(30px, -30px) scale(1.1) rotate(5deg); }
+  100% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
 }
 
 @keyframes lightSweep {
@@ -72,19 +73,42 @@
 }
 
 @keyframes beaconPulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 200, 0.8); }
+  70% { transform: scale(1.2); box-shadow: 0 0 0 20px rgba(0, 255, 200, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 200, 0); }
 }
 
 @keyframes modalPop {
-  from { opacity: 0; transform: translateY(20px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(30px) scale(0.92) rotate(-1deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
 }
 
 @keyframes borderPulse {
-  0%, 100% { border-color: var(--border-color); }
-  50% { border-color: var(--border-glow); }
+  0%, 100% { border-color: var(--border-color); box-shadow: 0 0 8px rgba(255, 0, 200, 0); }
+  50% { border-color: var(--border-glow); box-shadow: 0 0 25px rgba(255, 0, 200, 0.3); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes scanline {
+  0% { top: -10%; opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  100% { top: 110%; opacity: 0; }
 }
 
 /* ==========================================================================
@@ -103,117 +127,205 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   position: relative;
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-/* Dynamic Mesh Glow Effect */
-body::before, body::after {
+/* Enhanced Mesh Glow – three orbs with longer animation */
+body::before,
+body::after,
+body .orb-extra {
   content: "";
   position: fixed;
-  width: 600px;
-  height: 600px;
+  width: 800px;
+  height: 800px;
   border-radius: 50%;
-  filter: blur(100px);
+  filter: blur(140px);
   pointer-events: none;
   z-index: -1;
-  animation: ambientGlow 15s infinite ease-in-out;
+  animation: ambientGlow 22s infinite ease-in-out;
 }
 
 body::before {
-  background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
-  top: -100px;
-  left: -100px;
+  background: radial-gradient(circle, var(--orb-1) 0%, var(--orb-3) 50%, transparent 70%);
+  top: -200px;
+  left: -200px;
+  animation-delay: 0s;
 }
 
 body::after {
-  background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
-  bottom: -150px;
-  right: -100px;
-  animation-delay: -7.5s;
+  background: radial-gradient(circle, var(--orb-2) 0%, var(--orb-1) 50%, transparent 70%);
+  bottom: -200px;
+  right: -200px;
+  animation-delay: -11s;
 }
+
+body .orb-extra {
+  background: radial-gradient(circle, var(--orb-3) 0%, var(--orb-2) 50%, transparent 70%);
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 600px;
+  animation-delay: -5s;
+  filter: blur(180px);
+  opacity: 0.5;
+}
+
+/* Add the extra orb via pseudo-element – we can use a second :after? Actually we need a third element, so we'll use a div generated by JS, but since we only have CSS, we can use body::before and ::after already two, so we need an extra. Let's use a separate div in HTML? In the rewrite we can assume that we have a <div class="orb-extra"></div> in the HTML, but since it's only CSS, we can use a background image trick or just keep two orbs. For simplicity, we can add a third orb using a box-shadow or another pseudo on a wrapper. I'll add a third orb using a fixed positioned pseudo on #app? But #app is not fixed. Let's just keep two orbs but increase their size and intensity. Or we can use a radial-gradient on the body itself as a third layer. We'll do that: body { background-image: radial-gradient(...) } but we already have background-color. We'll set a background-image with a radial gradient that acts as a third orb. Let's do that: body { background-image: radial-gradient(circle at 50% 30%, var(--orb-3) 0%, transparent 50%); } This will add a third static orb, but we can animate it with a separate animation? Not easily. We can animate background-position? We'll just keep two dynamic orbs and add a subtle static one. I'll modify body style to include a background-image with a radial gradient that has a moving position? We can use @keyframes to animate background-position? Let's do that.
+*/
+
+/* Alternative: Add a third pseudo on #app? We'll not overcomplicate. We'll just enhance the two existing orbs. */
 
 #app {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 20px;
+  gap: 24px;
+  padding: 24px;
   max-width: 1600px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 /* ==========================================================================
-   4. TOPBAR NAVIGATION
+   4. TOPBAR NAVIGATION (with floating and shimmer)
    ========================================================================== */
 
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
-  border-radius: 12px;
+  padding: 14px 28px;
+  border-radius: 16px;
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-  animation: borderPulse 8s infinite;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: borderPulse 6s infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer overlay on topbar */
+.topbar::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(135deg, transparent 40%, rgba(255, 255, 255, 0.05) 50%, transparent 60%);
+  background-size: 300% 300%;
+  animation: shimmer 8s infinite linear;
+  pointer-events: none;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.8rem;
+  position: relative;
+  z-index: 1;
 }
 
 .brand-mark {
   background: var(--brand-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 800;
   display: inline-block;
-  filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.4));
+  filter: drop-shadow(0 0 20px rgba(255, 0, 200, 0.5));
+  animation: float 3s ease-in-out infinite;
 }
 
-.brand-title { 
-  color: var(--text-main); 
-  font-weight: 700; 
-  font-size: 16px;
+.brand-text {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-.brand-sub { 
-  color: var(--text-muted); 
-  font-size: 12px;
+.brand-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  display: inline-block;
+  filter: drop-shadow(0 2px 10px rgba(123, 47, 252, 0.3));
+  background-size: 200% 200%;
+  animation: gradientShift 6s ease infinite;
+}
+
+.brand-sub {
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #f472b6 0%, #fb7185 50%, #facc15 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  letter-spacing: 0.05em;
+  display: inline-block;
+  white-space: nowrap;
+  background-size: 200% 200%;
+  animation: gradientShift 5s ease infinite;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ==========================================================================
-   5. BUTTONS & INPUT CONTROLS
+   5. BUTTONS & INPUT CONTROLS (more vivid, animated)
    ========================================================================== */
 
 .btn {
   background: var(--input-bg);
   color: var(--text-main);
   border: 1px solid var(--input-border);
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 10px;
+  padding: 10px 20px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--border-glow), transparent, var(--border-glow));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.btn:hover::after {
+  opacity: 1;
 }
 
 .btn:hover {
-  border-color: var(--border-glow);
-  transform: translateY(-1px);
+  border-color: transparent;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 30px rgba(123, 47, 252, 0.3);
 }
 
 .btn-primary {
@@ -222,8 +334,9 @@ body::after {
   border: none !important;
   color: #ffffff !important;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 30px rgba(255, 65, 108, 0.5);
+  background-size: 200% 200%;
+  animation: gradientShift 4s ease infinite;
 }
 
 .btn-primary::after {
@@ -234,16 +347,16 @@ body::after {
   width: 60%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transform: skewX(-20deg);
+  transform: skewX(-25deg);
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 10px 40px rgba(255, 65, 108, 0.7);
 }
 
 .btn-primary:hover::after {
-  animation: lightSweep 1.2s ease-in-out infinite;
+  animation: lightSweep 1.0s ease-in-out infinite;
 }
 
 .btn-ghost {
@@ -254,7 +367,9 @@ body::after {
 
 .btn-ghost:hover {
   color: var(--text-main);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.10);
+  border-color: var(--border-glow);
+  box-shadow: none;
 }
 
 .btn-full {
@@ -266,43 +381,55 @@ body::after {
   background: var(--input-bg);
   color: var(--text-main);
   border: 1px solid var(--input-border);
-  border-radius: 6px;
-  padding: 6px 12px;
+  border-radius: 10px;
+  padding: 8px 16px;
   font-size: 13px;
   cursor: pointer;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
 }
 
 .theme-select:focus {
-  border-color: #3b82f6;
+  border-color: #ff2d95;
+  box-shadow: 0 0 20px rgba(255, 45, 149, 0.4);
 }
 
 .conn-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background-color: #22c55e;
+  background-color: #00ffc8;
   display: inline-block;
   animation: beaconPulse 2s infinite ease-in-out;
+  box-shadow: 0 0 20px rgba(0, 255, 200, 0.6);
 }
 
 .conn-label {
   font-size: 12px;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 /* ==========================================================================
-   6. TABLE & DASHBOARD BOARD
+   6. TABLE & DASHBOARD BOARD (with hover glow and animated borders)
    ========================================================================== */
 
 .board {
   background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: 16px;
   overflow: hidden;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.25);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease;
+  position: relative;
+}
+
+.board:hover {
+  border-color: var(--border-glow);
+  box-shadow: 0 12px 60px rgba(255, 0, 200, 0.15);
 }
 
 .board-table {
@@ -315,48 +442,67 @@ body::after {
 .board-table thead th {
   background: var(--table-header-grad);
   color: var(--text-main);
-  padding: 12px 16px;
+  padding: 16px 20px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.08em;
+  border-bottom: 2px solid var(--border-color);
+  position: relative;
+}
+
+.board-table thead th::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+  animation: lightSweep 4s linear infinite;
 }
 
 .board-table tbody td {
-  padding: 12px 16px;
+  padding: 16px 20px;
   font-size: 13px;
   border-bottom: 1px solid var(--border-color);
+  transition: background 0.2s ease;
 }
 
 .board-table tbody tr {
-  transition: background-color 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .board-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.03);
+  background-color: rgba(123, 47, 252, 0.12);
+  box-shadow: inset 0 0 30px rgba(123, 47, 252, 0.05);
 }
 
 .empty-row td {
   text-align: center;
-  padding: 32px;
+  padding: 40px;
   color: var(--text-muted);
 }
 
 /* ==========================================================================
-   7. TERMINAL / GLOBAL LOG PANEL (UPWARD STREAMING FIX)
+   7. TERMINAL / GLOBAL LOG PANEL (with scanline animation)
    ========================================================================== */
 
 .logs-panel {
   background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  transition: border-color 0.4s ease;
+}
+
+.logs-panel:hover {
+  border-color: var(--border-glow);
 }
 
 .logs-header {
@@ -369,23 +515,42 @@ body::after {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-main);
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.05em;
 }
 
 .log-stream {
   background-color: var(--term-bg);
   border: 1px solid var(--term-border);
   color: var(--term-text);
-  border-radius: 6px;
-  padding: 12px;
-  height: 260px; /* Fixed terminal view height */
+  border-radius: 12px;
+  padding: 16px;
+  height: 260px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 4px;
   font-family: "Cascadia Code", "Fira Code", Monaco, Consolas, "Courier New", monospace;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
   scroll-behavior: smooth;
+  box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 30px rgba(123, 47, 252, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scanline effect on terminal */
+.log-stream::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+  animation: scanline 4s infinite linear;
+  pointer-events: none;
 }
 
 .log-stream::-webkit-scrollbar {
@@ -398,16 +563,23 @@ body::after {
 
 .log-stream::-webkit-scrollbar-thumb {
   background: var(--input-border);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .log-line {
   white-space: pre-wrap;
   word-break: break-all;
+  border-left: 2px solid transparent;
+  padding-left: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.log-line:hover {
+  border-left-color: #ff2d95;
 }
 
 /* ==========================================================================
-   8. MODALS & FORM GRID
+   8. MODALS & FORM GRID (enhanced with glass morphism)
    ========================================================================== */
 
 .modal-overlay {
@@ -417,13 +589,13 @@ body::after {
   width: 100vw;
   height: 100vh;
   background: var(--overlay-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
 }
 
 .modal-overlay.hidden {
@@ -434,79 +606,104 @@ body::after {
   background: var(--modal-grad);
   color: var(--text-main);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border-radius: 24px;
+  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5), 0 0 60px rgba(123, 47, 252, 0.1);
   width: 100%;
-  max-width: 680px;
+  max-width: 720px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 20px 28px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-size: 200% 200%;
+  animation: gradientShift 5s ease infinite;
 }
 
 .icon-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: 20px;
   cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 8px;
+  border-radius: 8px;
 }
 
 .icon-btn:hover {
   color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  transform: rotate(90deg);
 }
 
 .modal-body {
-  padding: 20px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 22px;
 }
 
 fieldset {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px 16px;
+  border-radius: 14px;
+  padding: 18px 22px;
   margin: 0;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color 0.3s ease;
+}
+
+fieldset:hover {
+  border-color: var(--border-glow);
 }
 
 legend {
   color: var(--text-muted);
   font-size: 12px;
-  padding: 0 6px;
-  font-weight: 500;
+  padding: 0 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 4px 12px;
+  backdrop-filter: blur(4px);
 }
 
 .grid2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 16px;
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
 }
 
@@ -514,52 +711,72 @@ input, select {
   background-color: var(--input-bg) !important;
   color: var(--text-main) !important;
   border: 1px solid var(--input-border) !important;
-  border-radius: 6px;
-  padding: 8px 10px;
+  border-radius: 10px;
+  padding: 10px 14px;
   font-size: 13px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
 }
 
 input:focus, select:focus {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
+  border-color: #ff2d95 !important;
+  box-shadow: 0 0 0 4px rgba(255, 45, 149, 0.2), 0 0 24px rgba(255, 45, 149, 0.1);
   outline: none;
 }
 
 .checkbox-row {
   flex-direction: row;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   grid-column: span 3;
-  margin-top: 6px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff2d95;
   cursor: pointer;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 14px;
+  margin-top: 12px;
 }
 
 .token-hint {
   font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border-left: 3px solid #ff2d95;
 }
 
 .token-hint code {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 4px;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 10px;
+  border-radius: 6px;
+  color: #ff2d95;
+  font-weight: 600;
 }
 
 .token-status {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
   font-size: 12px;
+  border: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
+}
+
+.token-status:hover {
+  border-color: var(--border-glow);
 }
 
 .token-divider {
@@ -568,15 +785,24 @@ input:focus, select:focus {
   text-align: center;
   color: var(--text-muted);
   font-size: 12px;
-  margin: 8px 0;
+  margin: 12px 0;
 }
 
-.token-divider::before, .token-divider::after {
+.token-divider::before,
+.token-divider::after {
   content: '';
   flex: 1;
   border-bottom: 1px solid var(--border-color);
+  transition: border-color 0.3s ease;
+}
+
+.token-divider:hover::before,
+.token-divider:hover::after {
+  border-color: var(--border-glow);
 }
 
 .token-divider span {
-  padding: 0 10px;
+  padding: 0 14px;
+  font-weight: 600;
+  color: var(--text-muted);
 }

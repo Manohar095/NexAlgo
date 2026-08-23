@@ -4,122 +4,85 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CogniX Algo</title>
+  <link rel="stylesheet" href="/static/style.css" />
 
   <style>
     /* ==========================================================================
-       1. THEME DEFINITIONS & SYSTEM VARIABLES (HYPER-VIBRANT EDITION)
+       THEME DEFINITIONS & ANIMATED BACKGROUND
        ========================================================================== */
-
     :root, [data-theme="dark"] {
-      --bg-base: #05080f;
-      --bg-card: rgba(10, 16, 30, 0.75);
-      --border-color: rgba(255, 255, 255, 0.15);
-      --border-glow: rgba(255, 0, 200, 0.7);
-      --text-main: #f0f4ff;
-      --text-muted: #a0b4d0;
-      --input-bg: rgba(8, 12, 28, 0.9);
-      --input-border: rgba(180, 80, 255, 0.4);
+      --bg-base: #080c1a;
+      --bg-card: rgba(18, 26, 45, 0.72);
+      --border-color: rgba(255, 255, 255, 0.06);
+      --border-glow: rgba(99, 102, 241, 0.35);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --input-bg: rgba(15, 23, 42, 0.75);
+      --input-border: #1e293b;
+      --shadow-color: rgba(0, 0, 0, 0.4);
 
-      --brand-gradient: linear-gradient(135deg, #00f0ff 0%, #7b2ffc 40%, #ff2d95 70%, #ffb300 100%);
-      --btn-primary-grad: linear-gradient(135deg, #02628a 0%, #4facfe 50%, #a855f7 100%);
-      --table-header-grad: linear-gradient(180deg, rgba(40, 50, 80, 0.9) 0%, rgba(10, 16, 30, 0.98) 100%);
-      --modal-grad: linear-gradient(165deg, rgba(15, 20, 40, 0.96) 0%, rgba(5, 8, 15, 0.99) 100%);
-      --overlay-bg: rgba(0, 0, 0, 0.85);
+      --brand-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #6366f1 100%);
+      --btn-primary-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --table-header-grad: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%);
+      --modal-grad: linear-gradient(160deg, rgba(18, 26, 45, 0.95) 0%, rgba(8, 12, 26, 0.98) 100%);
+      --overlay-bg: rgba(3, 7, 18, 0.7);
 
-      --orb-1: rgba(0, 240, 255, 0.45);
-      --orb-2: rgba(255, 45, 149, 0.40);
-      --orb-3: rgba(123, 47, 252, 0.50);
-
-      --term-bg: rgba(0, 2, 10, 0.95);
-      --term-border: rgba(255, 0, 200, 0.3);
-      --term-text: #d0e0ff;
+      --orb-1: rgba(79, 70, 229, 0.18);
+      --orb-2: rgba(139, 92, 246, 0.14);
+      --orb-3: rgba(236, 72, 153, 0.10);
     }
 
     [data-theme="light"] {
-      --bg-base: #f2f6ff;
-      --bg-card: rgba(255, 255, 255, 0.85);
-      --border-color: rgba(80, 100, 200, 0.25);
-      --border-glow: rgba(255, 0, 150, 0.5);
-      --text-main: #0b1120;
-      --text-muted: #4a5a7a;
+      --bg-base: #f1f5f9;
+      --bg-card: rgba(255, 255, 255, 0.78);
+      --border-color: rgba(0, 0, 0, 0.06);
+      --border-glow: rgba(79, 70, 229, 0.25);
+      --text-main: #0f172a;
+      --text-muted: #475569;
       --input-bg: #ffffff;
-      --input-border: #b0c0e0;
+      --input-border: #cbd5e1;
+      --shadow-color: rgba(0, 0, 0, 0.08);
 
-      --brand-gradient: linear-gradient(135deg, #0066ff 0%, #a855f7 50%, #ec4899 100%);
-      --btn-primary-grad: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #a855f7 100%);
-      --table-header-grad: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
-      --modal-grad: linear-gradient(165deg, #ffffff 0%, #f2f6ff 100%);
-      --overlay-bg: rgba(30, 40, 70, 0.5);
+      --brand-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --btn-primary-grad: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+      --table-header-grad: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+      --modal-grad: linear-gradient(160deg, #ffffff 0%, #f8fafc 100%);
+      --overlay-bg: rgba(15, 23, 42, 0.3);
 
-      --orb-1: rgba(0, 102, 255, 0.25);
-      --orb-2: rgba(236, 72, 153, 0.20);
-      --orb-3: rgba(168, 85, 247, 0.25);
-
-      --term-bg: #0b1120;
-      --term-border: #4a5a7a;
-      --term-text: #eef2ff;
+      --orb-1: rgba(79, 70, 229, 0.10);
+      --orb-2: rgba(147, 51, 234, 0.06);
+      --orb-3: rgba(236, 72, 153, 0.06);
     }
 
     /* ==========================================================================
-       2. ANIMATIONS & KEYFRAMES (ENHANCED)
+       ANIMATIONS
        ========================================================================== */
-
     @keyframes ambientGlow {
-      0%   { transform: translate(0,0) scale(1) rotate(0deg); }
-      25%  { transform: translate(60px,-80px) scale(1.2) rotate(10deg); }
-      50%  { transform: translate(-40px,40px) scale(0.9) rotate(-5deg); }
-      75%  { transform: translate(30px,-30px) scale(1.1) rotate(5deg); }
-      100% { transform: translate(0,0) scale(1) rotate(0deg); }
+      0%   { transform: translate(0,0) scale(1); }
+      33%  { transform: translate(40px,-60px) scale(1.08); }
+      66%  { transform: translate(-30px,30px) scale(0.95); }
+      100% { transform: translate(0,0) scale(1); }
     }
 
-    @keyframes lightSweep {
-      0%   { left: -100%; }
+    @keyframes shimmerSweep {
+      0%   { left: -200%; }
       100% { left: 200%; }
     }
 
     @keyframes beaconPulse {
-      0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0,255,200,0.8); }
-      70%  { transform: scale(1.2); box-shadow: 0 0 0 20px rgba(0,255,200,0); }
-      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0,255,200,0); }
+      0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34,197,94,0.7); }
+      70%  { transform: scale(1); box-shadow: 0 0 0 10px rgba(34,197,94,0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34,197,94,0); }
     }
 
     @keyframes modalPop {
-      from { opacity: 0; transform: translateY(30px) scale(0.92) rotate(-1deg); }
-      to   { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
-    }
-
-    @keyframes borderPulse {
-      0%, 100% { border-color: var(--border-color); box-shadow: 0 0 8px rgba(255,0,200,0); }
-      50%      { border-color: var(--border-glow); box-shadow: 0 0 25px rgba(255,0,200,0.3); }
-    }
-
-    @keyframes gradientShift {
-      0%   { background-position: 0% 50%; }
-      50%  { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translateY(0px); }
-      50%      { transform: translateY(-8px); }
-    }
-
-    @keyframes shimmer {
-      0%   { background-position: -200% center; }
-      100% { background-position: 200% center; }
-    }
-
-    @keyframes scanline {
-      0%   { top: -10%; opacity: 0; }
-      20%  { opacity: 0.6; }
-      80%  { opacity: 0.6; }
-      100% { top: 110%; opacity: 0; }
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     /* ==========================================================================
-       3. BASE LAYOUT & BACKGROUND
+       BASE
        ========================================================================== */
-
     * {
       box-sizing: border-box;
       margin: 0;
@@ -127,108 +90,68 @@
     }
 
     body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       background-color: var(--bg-base);
       color: var(--text-main);
       min-height: 100vh;
       margin: 0;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      padding: 0;
       position: relative;
       overflow-x: hidden;
-      transition: background-color 0.5s ease, color 0.5s ease;
+      transition: background-color 0.3s, color 0.3s;
     }
 
     body::before,
-    body::after,
-    .orb-extra {
+    body::after {
       content: "";
       position: fixed;
-      width: 800px;
-      height: 800px;
+      width: 600px;
+      height: 600px;
       border-radius: 50%;
-      filter: blur(140px);
+      filter: blur(110px);
       pointer-events: none;
       z-index: -1;
-      animation: ambientGlow 22s infinite ease-in-out;
+      animation: ambientGlow 18s infinite ease-in-out;
     }
 
     body::before {
-      background: radial-gradient(circle, var(--orb-1) 0%, var(--orb-3) 50%, transparent 70%);
-      top: -200px;
-      left: -200px;
-      animation-delay: 0s;
+      background: radial-gradient(circle, var(--orb-1) 0%, transparent 70%);
+      top: -120px;
+      left: -120px;
     }
 
     body::after {
-      background: radial-gradient(circle, var(--orb-2) 0%, var(--orb-1) 50%, transparent 70%);
-      bottom: -200px;
-      right: -200px;
-      animation-delay: -11s;
-    }
-
-    .orb-extra {
-      background: radial-gradient(circle, var(--orb-3) 0%, var(--orb-2) 50%, transparent 70%);
-      top: 30%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 600px;
-      height: 600px;
-      animation-delay: -5s;
-      filter: blur(180px);
-      opacity: 0.5;
-    }
-
-    #app {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      padding: 24px;
-      max-width: 1600px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 1;
+      background: radial-gradient(circle, var(--orb-2) 0%, transparent 70%);
+      bottom: -180px;
+      right: -120px;
+      animation-delay: -8s;
     }
 
     /* ==========================================================================
-       4. TOPBAR NAVIGATION
+       TOPBAR
        ========================================================================== */
-
     .topbar {
+      background: var(--bg-card);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 4px 30px var(--shadow-color);
+      padding: 0.8rem 2rem;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 28px;
-      border-radius: 16px;
-      background: var(--bg-card);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border-color);
-      box-shadow: 0 12px 48px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
-      animation: borderPulse 6s infinite;
-      position: relative;
-      overflow: hidden;
       gap: 1rem;
-    }
-
-    .topbar::before {
-      content: "";
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%);
-      background-size: 300% 300%;
-      animation: shimmer 8s infinite linear;
-      pointer-events: none;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      transition: background 0.3s, border-color 0.3s;
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 0.8rem;
-      position: relative;
-      z-index: 1;
     }
 
     .brand-mark {
@@ -236,108 +159,64 @@
       background: var(--brand-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      filter: drop-shadow(0 0 20px rgba(255,0,200,0.5));
-      animation: float 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px rgba(79,70,229,0.3));
+      display: inline-block;
       line-height: 1;
     }
 
-    .brand-text {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
     .brand-title {
-      font-size: 1.6rem;
+      font-size: 1.5rem;
       font-weight: 700;
-      background: var(--brand-gradient);
-      -webkit-background-clip: text !important;
-      -webkit-text-fill-color: transparent !important;
-      background-clip: text;
+      color: var(--text-main);
       letter-spacing: -0.02em;
       line-height: 1.2;
-      background-size: 200% 200%;
-      animation: gradientShift 6s ease infinite;
-      filter: drop-shadow(0 2px 10px rgba(123,47,252,0.3));
     }
 
     .brand-sub {
-      font-size: 0.82rem;
-      font-weight: 500;
-      background: linear-gradient(135deg, #f472b6 0%, #fb7185 50%, #facc15 100%) !important;
-      -webkit-background-clip: text !important;
-      -webkit-text-fill-color: transparent !important;
-      background-clip: text !important;
-      letter-spacing: 0.05em;
-      background-size: 200% 200%;
-      animation: gradientShift 5s ease infinite;
-      white-space: nowrap;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 400;
+      letter-spacing: 0.02em;
     }
 
     .topbar-actions {
       display: flex;
       align-items: center;
-      gap: 16px;
-      position: relative;
-      z-index: 1;
+      gap: 0.8rem;
       flex-wrap: wrap;
     }
 
     /* ==========================================================================
-       5. BUTTONS & INPUT CONTROLS
+       BUTTONS
        ========================================================================== */
-
     .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      background: var(--input-bg);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 0.6rem;
+      border: 1px solid var(--border-color);
+      background: transparent;
       color: var(--text-main);
-      border: 1px solid var(--input-border);
-      border-radius: 10px;
-      padding: 10px 20px;
-      font-size: 13px;
-      font-weight: 600;
       cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
-      gap: 8px;
-      position: relative;
-      overflow: hidden;
+      transition: all 0.2s ease;
       font-family: inherit;
+      gap: 0.4rem;
       white-space: nowrap;
     }
 
-    .btn::after {
-      content: "";
-      position: absolute;
-      inset: -2px;
-      border-radius: 12px;
-      padding: 2px;
-      background: linear-gradient(135deg, var(--border-glow), transparent, var(--border-glow));
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .btn:hover::after {
-      opacity: 1;
-    }
-
     .btn:hover {
-      border-color: transparent;
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 8px 30px rgba(123,47,252,0.3);
+      background: rgba(255, 255, 255, 0.06);
+      border-color: var(--border-glow);
     }
 
     .btn-primary {
       background: var(--btn-primary-grad) !important;
       border: none !important;
-      color: #ffffff !important;
-      box-shadow: 0 6px 30px rgba(255,65,108,0.5);
-      background-size: 200% 200%;
-      animation: gradientShift 4s ease infinite;
+      color: #fff !important;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
       position: relative;
       overflow: hidden;
     }
@@ -346,46 +225,30 @@
       content: "";
       position: absolute;
       top: 0;
-      left: -100%;
+      left: -200%;
       width: 60%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-      transform: skewX(-25deg);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+      transform: skewX(-20deg);
+      transition: none;
     }
 
     .btn-primary:hover {
-      transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 10px 40px rgba(255,65,108,0.7);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(79, 70, 229, 0.5);
     }
 
     .btn-primary:hover::after {
-      animation: lightSweep 1.0s ease-in-out infinite;
-    }
-
-    /* Custom color for "Add Symbol" button */
-    .btn-add-symbol {
-      background: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%) !important;
-      border: none !important;
-      box-shadow: 0 6px 30px rgba(0, 212, 255, 0.5) !important;
-    }
-    .btn-add-symbol:hover {
-      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.7) !important;
-    }
-    .btn-add-symbol::after {
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent) !important;
+      animation: shimmerSweep 1.4s ease-in-out infinite;
     }
 
     .btn-ghost {
       background: transparent;
       border: 1px solid transparent;
-      color: var(--text-muted);
     }
-
     .btn-ghost:hover {
-      color: var(--text-main);
-      background: rgba(255,255,255,0.10);
-      border-color: var(--border-glow);
-      box-shadow: none;
+      background: rgba(255,255,255,0.05);
+      border-color: var(--border-color);
     }
 
     .btn-secondary {
@@ -393,7 +256,6 @@
       border: 1px solid var(--border-color);
       color: var(--text-main);
     }
-
     .btn-secondary:hover {
       background: rgba(255,255,255,0.08);
     }
@@ -410,113 +272,90 @@
       font-size: 1.2rem;
       padding: 0.2rem 0.5rem;
       cursor: pointer;
-      transition: color 0.2s, transform 0.3s;
+      transition: color 0.2s;
     }
     .icon-btn:hover {
       color: var(--text-main);
-      transform: rotate(90deg);
     }
 
     .theme-select {
       background: var(--input-bg);
       color: var(--text-main);
       border: 1px solid var(--input-border);
-      border-radius: 10px;
-      padding: 8px 16px;
-      font-size: 13px;
+      border-radius: 0.5rem;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
       cursor: pointer;
       outline: none;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(8px);
+      transition: border-color 0.2s;
     }
     .theme-select:focus {
-      border-color: #ff2d95;
-      box-shadow: 0 0 20px rgba(255,45,149,0.4);
+      border-color: #4f46e5;
     }
 
     .conn-dot {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      background: #00ffc8;
+      background: #22c55e;
       display: inline-block;
       animation: beaconPulse 2s infinite ease-in-out;
-      box-shadow: 0 0 20px rgba(0,255,200,0.6);
     }
 
     .conn-label {
-      font-size: 12px;
+      font-size: 0.8rem;
       color: var(--text-muted);
-      font-weight: 500;
     }
 
     /* ==========================================================================
-       6. TABLE & DASHBOARD BOARD
+       BOARD TABLE
        ========================================================================== */
-
     .board {
-      background: var(--bg-card);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 12px 48px rgba(0,0,0,0.25);
-      transition: border-color 0.4s ease, box-shadow 0.4s ease;
       padding: 1.5rem 2rem;
-    }
-
-    .board:hover {
-      border-color: var(--border-glow);
-      box-shadow: 0 12px 60px rgba(255,0,200,0.15);
+      overflow-x: auto;
     }
 
     .board-table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
-      text-align: left;
-      font-size: 0.8rem;
+      font-size: 0.9rem;
+      border-radius: 0.8rem;
+      overflow: hidden;
+      box-shadow: 0 2px 20px var(--shadow-color);
+      background: var(--bg-card);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      transition: background 0.3s, border-color 0.3s;
     }
 
     .board-table thead th {
       background: var(--table-header-grad);
       color: var(--text-main);
-      padding: 14px 18px;
-      font-size: 11px;
-      font-weight: 700;
+      font-weight: 600;
+      padding: 0.8rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.03em;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border-bottom: 2px solid var(--border-color);
-      position: relative;
-    }
-
-    .board-table thead th::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
-      animation: lightSweep 4s linear infinite;
+      white-space: nowrap;
     }
 
     .board-table tbody td {
-      padding: 14px 18px;
+      padding: 0.8rem 1rem;
       border-bottom: 1px solid var(--border-color);
       color: var(--text-main);
-      font-size: 12px;
-      transition: background 0.2s ease;
+      transition: background 0.2s;
     }
 
     .board-table tbody tr {
-      transition: all 0.25s ease;
+      transition: background 0.15s ease;
     }
 
     .board-table tbody tr:hover {
-      background: rgba(123,47,252,0.12);
-      box-shadow: inset 0 0 30px rgba(123,47,252,0.05);
+      background: rgba(255,255,255,0.03);
     }
 
     .board-table tbody tr:last-child td {
@@ -525,174 +364,109 @@
 
     .empty-row td {
       text-align: center;
-      padding: 40px;
+      padding: 2.5rem 0;
       color: var(--text-muted);
       font-style: italic;
     }
 
     /* ==========================================================================
-       7. TERMINAL / GLOBAL LOG PANEL
+       LOGS PANEL
        ========================================================================== */
-
     .logs-panel {
       background: var(--bg-card);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      transition: border-color 0.4s ease;
-    }
-
-    .logs-panel:hover {
-      border-color: var(--border-glow);
+      border-radius: 0.8rem;
+      margin: 0 2rem 2rem 2rem;
+      padding: 1rem 1.5rem;
+      transition: background 0.3s, border-color 0.3s;
+      box-shadow: 0 2px 20px var(--shadow-color);
     }
 
     .logs-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-bottom: 0.8rem;
       flex-wrap: wrap;
       gap: 0.8rem;
     }
 
     .logs-title {
-      font-size: 14px;
       font-weight: 600;
+      font-size: 1.1rem;
       color: var(--text-main);
-      background: var(--brand-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: 0.05em;
     }
 
-    /* ===== GRADIENT DROPDOWN FOR LOG FILTER ===== */
-    #logFilter {
-      background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(123, 47, 252, 0.12));
+    .logs-header select {
+      background: var(--input-bg);
       color: var(--text-main);
-      border: 1px solid var(--border-glow);
-      border-radius: 10px;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 500;
+      border: 1px solid var(--input-border);
+      border-radius: 0.4rem;
+      padding: 0.3rem 0.8rem;
+      font-size: 0.8rem;
       cursor: pointer;
       outline: none;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 0 15px rgba(255, 0, 200, 0.1);
-      appearance: none;          /* removes default arrow, we'll add custom */
-      -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a0b4d0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 40px;
     }
-    #logFilter:hover {
-      border-color: #ff2d95;
-      box-shadow: 0 0 25px rgba(255, 0, 200, 0.25);
-    }
-    #logFilter:focus {
-      border-color: #ff2d95;
-      box-shadow: 0 0 30px rgba(255, 45, 149, 0.4);
-    }
-    /* Style the dropdown options (works in most browsers) */
-    #logFilter option {
-      background: var(--bg-card);
-      color: var(--text-main);
-      padding: 8px 12px;
+    .logs-header select:focus {
+      border-color: #4f46e5;
     }
 
     .log-stream {
-      background-color: var(--term-bg);
-      border: 1px solid var(--term-border);
-      color: var(--term-text);
-      border-radius: 12px;
-      padding: 16px;
-      height: 200px;
+      max-height: 200px;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
-      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: rgba(0,0,0,0.2);
+      border-radius: 0.4rem;
+      padding: 0.5rem 0.8rem;
       line-height: 1.6;
       scroll-behavior: smooth;
-      box-shadow: inset 0 4px 20px rgba(0,0,0,0.6), 0 0 30px rgba(123,47,252,0.05);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .log-stream::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      width: 100%;
-      height: 4px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
-      animation: scanline 4s infinite linear;
-      pointer-events: none;
     }
 
     .log-stream::-webkit-scrollbar {
-      width: 6px;
+      width: 5px;
+    }
+    .log-stream::-webkit-scrollbar-thumb {
+      background: var(--border-glow);
+      border-radius: 10px;
     }
     .log-stream::-webkit-scrollbar-track {
       background: transparent;
     }
-    .log-stream::-webkit-scrollbar-thumb {
-      background: var(--input-border);
-      border-radius: 4px;
-    }
-
-    .log-line {
-      white-space: pre-wrap;
-      word-break: break-all;
-      border-left: 2px solid transparent;
-      padding-left: 8px;
-      transition: border-color 0.2s ease;
-    }
-    .log-line:hover {
-      border-left-color: #ff2d95;
-    }
 
     /* ==========================================================================
-       8. MODALS & FORM GRID
+       MODALS (REVERTED TO DISPLAY: FLEX VIA .hidden COMPATIBILITY)
        ========================================================================== */
-
     .modal-overlay {
       position: fixed;
       inset: 0;
       background: var(--overlay-bg);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1.5rem;
       z-index: 100;
-      transition: opacity 0.4s ease;
-    }
-    .modal-overlay.hidden {
-      display: none;
+      transition: opacity 0.3s, visibility 0.3s;
     }
 
     .modal {
       background: var(--modal-grad);
       color: var(--text-main);
       border: 1px solid var(--border-color);
-      border-radius: 24px;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(123,47,252,0.1);
-      width: 100%;
+      border-radius: 1rem;
+      box-shadow: 0 30px 60px var(--shadow-color);
       max-width: 780px;
+      width: 100%;
       max-height: 90vh;
       overflow-y: auto;
-      animation: modalPop 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
       padding: 1.8rem;
+      animation: modalPop 0.35s cubic-bezier(0.16,1,0.3,1) forwards;
+      transition: background 0.3s, border-color 0.3s;
     }
 
     .modal-header {
@@ -703,14 +477,12 @@
     }
 
     .modal-header h2 {
-      margin: 0;
       font-size: 1.5rem;
       font-weight: 700;
       background: var(--brand-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      background-size: 200% 200%;
-      animation: gradientShift 5s ease infinite;
+      background-clip: text;
     }
 
     .modal-body {
@@ -721,11 +493,9 @@
 
     .modal-body fieldset {
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 18px 22px;
-      margin: 0;
-      background: rgba(255,255,255,0.03);
-      transition: border-color 0.3s ease;
+      border-radius: 0.6rem;
+      padding: 1rem 1.2rem;
+      transition: border-color 0.2s;
     }
     .modal-body fieldset:hover {
       border-color: var(--border-glow);
@@ -735,160 +505,128 @@
       font-weight: 600;
       font-size: 0.85rem;
       color: var(--text-muted);
-      padding: 0 10px;
-      background: var(--bg-card);
-      border-radius: 20px;
-      padding: 4px 12px;
-      backdrop-filter: blur(4px);
+      padding: 0 0.4rem;
     }
 
     .grid2 {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem 1.2rem;
     }
     .grid3 {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.8rem 1.2rem;
     }
 
     .modal-body label {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      font-size: 11px;
+      gap: 0.2rem;
+      font-size: 0.8rem;
       font-weight: 500;
       color: var(--text-muted);
     }
 
     .modal-body input,
     .modal-body select {
-      background-color: var(--input-bg) !important;
-      color: var(--text-main) !important;
-      border: 1px solid var(--input-border) !important;
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 12px;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(4px);
-      width: 100%;
+      background: var(--input-bg);
+      color: var(--text-main);
+      border: 1px solid var(--input-border);
+      border-radius: 0.4rem;
+      padding: 0.45rem 0.7rem;
+      font-size: 0.9rem;
       font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      outline: none;
+      width: 100%;
     }
 
     .modal-body input:focus,
     .modal-body select:focus {
-      border-color: #ff2d95 !important;
-      box-shadow: 0 0 0 4px rgba(255,45,149,0.2), 0 0 24px rgba(255,45,149,0.1);
-      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
     }
 
     .checkbox-row {
       flex-direction: row !important;
       align-items: center;
-      gap: 10px;
-      grid-column: span 3;
-      margin-top: 8px;
+      gap: 0.4rem;
       cursor: pointer;
     }
     .checkbox-row input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: #ff2d95;
-      cursor: pointer;
-      margin: 0;
+      width: auto;
+      margin-right: 0.3rem;
     }
 
     .modal-footer {
       display: flex;
       justify-content: flex-end;
-      gap: 14px;
-      margin-top: 12px;
-      padding-top: 12px;
+      gap: 0.8rem;
+      margin-top: 1rem;
+      padding-top: 0.8rem;
       border-top: 1px solid var(--border-color);
     }
 
     .token-hint {
-      font-size: 13px;
+      font-size: 0.9rem;
       color: var(--text-muted);
-      line-height: 1.6;
-      margin: 0;
-      padding: 12px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 10px;
-      border-left: 3px solid #ff2d95;
-    }
-    .token-hint code {
-      background: rgba(255,255,255,0.08);
-      padding: 2px 10px;
-      border-radius: 6px;
-      color: #ff2d95;
-      font-weight: 600;
+      background: rgba(0,0,0,0.15);
+      padding: 0.8rem 1rem;
+      border-radius: 0.6rem;
+      border-left: 3px solid var(--border-glow);
     }
 
     .token-status {
-      padding: 12px 18px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.04);
-      font-size: 12px;
-      border: 1px solid var(--border-color);
-      transition: border-color 0.3s ease;
-    }
-    .token-status:hover {
-      border-color: var(--border-glow);
+      font-size: 0.9rem;
+      padding: 0.4rem 0.8rem;
+      background: rgba(0,0,0,0.1);
+      border-radius: 0.4rem;
+      color: var(--text-muted);
     }
 
     .token-divider {
       display: flex;
       align-items: center;
-      text-align: center;
+      gap: 1rem;
       color: var(--text-muted);
-      font-size: 12px;
-      margin: 12px 0;
+      font-size: 0.8rem;
+      margin: 0.8rem 0;
     }
     .token-divider::before,
     .token-divider::after {
-      content: '';
+      content: "";
       flex: 1;
-      border-bottom: 1px solid var(--border-color);
-      transition: border-color 0.3s ease;
+      height: 1px;
+      background: var(--border-color);
     }
-    .token-divider:hover::before,
-    .token-divider:hover::after {
-      border-color: var(--border-glow);
-    }
-    .token-divider span {
-      padding: 0 14px;
-      font-weight: 600;
+
+    .hidden {
+      display: none !important;
     }
 
     /* ==========================================================================
-       9. RESPONSIVE
+       RESPONSIVE
        ========================================================================== */
-
     @media (max-width: 768px) {
       .topbar {
         flex-direction: column;
         align-items: stretch;
-        padding: 14px 18px;
+        padding: 0.8rem 1rem;
       }
       .topbar-actions {
         justify-content: flex-start;
         flex-wrap: wrap;
       }
       .brand-title {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
       }
       .board {
         padding: 0.8rem 1rem;
       }
-      .board-table thead th,
-      .board-table tbody td {
-        padding: 10px 12px;
-        font-size: 0.7rem;
-      }
       .logs-panel {
-        padding: 1rem;
+        margin: 0 1rem 1rem 1rem;
+        padding: 0.8rem 1rem;
       }
       .modal {
         padding: 1.2rem;
@@ -897,8 +635,12 @@
       .grid2, .grid3 {
         grid-template-columns: 1fr;
       }
-      .checkbox-row {
-        grid-column: span 1;
+      .board-table {
+        font-size: 0.75rem;
+      }
+      .board-table thead th,
+      .board-table tbody td {
+        padding: 0.5rem 0.6rem;
       }
     }
 
@@ -910,18 +652,10 @@
       .brand-mark {
         font-size: 1.8rem;
       }
-      .brand-sub {
-        font-size: 0.7rem;
-        white-space: normal;
-      }
     }
   </style>
-
 </head>
 <body>
-
-  <!-- Extra ambient orb (third glow) -->
-  <div class="orb-extra"></div>
 
   <div id="app">
     <header class="topbar">
@@ -941,7 +675,7 @@
         <span id="connDot" class="conn-dot" title="Live feed"></span>
         <span id="connLabel" class="conn-label">connecting…</span>
         <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
-        <button id="btnAddSymbol" class="btn btn-primary btn-add-symbol">+ Add Symbol</button>
+        <button id="btnAddSymbol" class="btn btn-primary">+ Add Symbol</button>
         <button id="btnLogout" class="btn btn-ghost" title="Sign out">⎋ Logout</button>
       </div>
     </header>
@@ -973,7 +707,7 @@
     </section>
   </div>
 
-  <!-- Symbol Modal -->
+  <!-- Symbol Modal (Restored class="modal-overlay hidden") -->
   <div id="modalOverlay" class="modal-overlay hidden">
     <div class="modal">
       <div class="modal-header">
@@ -1055,7 +789,7 @@
     </div>
   </div>
 
-  <!-- Broker Token Modal -->
+  <!-- Broker Token Modal (Restored class="modal-overlay hidden") -->
   <div id="brokerModalOverlay" class="modal-overlay hidden">
     <div class="modal" style="max-width: 480px;">
       <div class="modal-header">
@@ -1107,7 +841,7 @@
     });
   </script>
 
-  <!-- Your existing app.js will handle the rest -->
   <script src="/static/app.js"></script>
+
 </body>
 </html>
