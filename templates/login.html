@@ -1,11 +1,70 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sign in — CogniX Algo</title>
+
   <style>
-    /* ── Reset & base ── */
+    /* ──────────────────────────────────────────────────────────────
+       1. THEME VARIABLES (matches dashboard)
+       ────────────────────────────────────────────────────────────── */
+    :root, [data-theme="dark"] {
+      --bg-base: #05080f;
+      --bg-card: rgba(10, 16, 30, 0.75);
+      --border-color: rgba(255, 255, 255, 0.15);
+      --border-glow: rgba(255, 0, 200, 0.7);
+      --text-main: #f0f4ff;
+      --text-muted: #a0b4d0;
+      --input-bg: rgba(8, 12, 28, 0.9);
+      --input-border: rgba(180, 80, 255, 0.4);
+
+      --brand-gradient: linear-gradient(135deg, #00f0ff 0%, #7b2ffc 40%, #ff2d95 70%, #ffb300 100%);
+
+      --orb-1: rgba(0, 240, 255, 0.45);
+      --orb-2: rgba(255, 45, 149, 0.40);
+      --orb-3: rgba(123, 47, 252, 0.50);
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       2. ANIMATIONS (same as dashboard)
+       ────────────────────────────────────────────────────────────── */
+    @keyframes ambientGlow {
+      0%   { transform: translate(0,0) scale(1) rotate(0deg); }
+      25%  { transform: translate(60px,-80px) scale(1.2) rotate(10deg); }
+      50%  { transform: translate(-40px,40px) scale(0.9) rotate(-5deg); }
+      75%  { transform: translate(30px,-30px) scale(1.1) rotate(5deg); }
+      100% { transform: translate(0,0) scale(1) rotate(0deg); }
+    }
+
+    @keyframes borderPulse {
+      0%, 100% { border-color: var(--border-color); box-shadow: 0 0 8px rgba(255,0,200,0); }
+      50%      { border-color: var(--border-glow); box-shadow: 0 0 25px rgba(255,0,200,0.3); }
+    }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    @keyframes slideDown {
+      0% { opacity: 0; transform: translateY(-8px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       3. BASE & BACKGROUND (three animated orbs)
+       ────────────────────────────────────────────────────────────── */
     * {
       box-sizing: border-box;
       margin: 0;
@@ -13,51 +72,60 @@
     }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-base);
+      color: var(--text-main);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(ellipse at 20% 50%, #0b1120, #0a0f1a);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       padding: 1.5rem;
       position: relative;
       overflow: hidden;
     }
 
-    /* ── Animated orbs ── */
     body::before,
-    body::after {
+    body::after,
+    .orb-extra {
       content: '';
       position: fixed;
       border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.35;
-      z-index: 0;
+      filter: blur(140px);
       pointer-events: none;
+      z-index: 0;
+      animation: ambientGlow 22s infinite ease-in-out;
     }
+
     body::before {
+      background: radial-gradient(circle, var(--orb-1) 0%, var(--orb-3) 50%, transparent 70%);
+      width: 800px;
+      height: 800px;
+      top: -200px;
+      left: -200px;
+      animation-delay: 0s;
+    }
+
+    body::after {
+      background: radial-gradient(circle, var(--orb-2) 0%, var(--orb-1) 50%, transparent 70%);
+      width: 800px;
+      height: 800px;
+      bottom: -200px;
+      right: -200px;
+      animation-delay: -11s;
+    }
+
+    .orb-extra {
+      background: radial-gradient(circle, var(--orb-3) 0%, var(--orb-2) 50%, transparent 70%);
       width: 600px;
       height: 600px;
-      top: -200px;
-      right: -150px;
-      background: #6c3bf5;
-      animation: orbFloat 18s ease-in-out infinite alternate;
-    }
-    body::after {
-      width: 500px;
-      height: 500px;
-      bottom: -180px;
-      left: -120px;
-      background: #00b8d4;
-      animation: orbFloat 22s ease-in-out infinite alternate-reverse;
+      top: 30%;
+      left: 50%;
+      transform: translateX(-50%);
+      animation-delay: -5s;
+      filter: blur(180px);
+      opacity: 0.5;
     }
 
-    @keyframes orbFloat {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(60px, 40px) scale(1.2); }
-    }
-
-    /* ── Subtle grid overlay ── */
     .grid-overlay {
       position: fixed;
       inset: 0;
@@ -69,7 +137,9 @@
       background-size: 60px 60px;
     }
 
-    /* ── Login wrapper ── */
+    /* ──────────────────────────────────────────────────────────────
+       4. LOGIN WRAPPER & CARD
+       ────────────────────────────────────────────────────────────── */
     .login-wrap {
       position: relative;
       z-index: 1;
@@ -80,27 +150,26 @@
       transform: translateY(30px);
     }
 
-    @keyframes fadeUp {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── Card ── */
     .login-card {
-      background: rgba(16, 22, 40, 0.72);
-      backdrop-filter: blur(24px) saturate(1.4);
-      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
       border-radius: 1.5rem;
       padding: 2.5rem 2.2rem 2.8rem;
-      border: 1px solid rgba(255,255,255,0.06);
-      box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03) inset;
-      transition: box-shadow 0.4s ease;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+      animation: borderPulse 6s infinite;
+      transition: border-color 0.4s, box-shadow 0.4s;
     }
 
     .login-card:hover {
-      box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06) inset;
+      border-color: var(--border-glow);
+      box-shadow: 0 12px 60px rgba(255,0,200,0.15);
     }
 
-    /* ── Brand ── */
+    /* ──────────────────────────────────────────────────────────────
+       5. BRAND (visible with gradient)
+       ────────────────────────────────────────────────────────────── */
     .login-brand {
       display: flex;
       align-items: center;
@@ -110,44 +179,39 @@
 
     .brand-mark {
       font-size: 2.2rem;
-      color: #8b6eff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 3.2rem;
-      height: 3.2rem;
-      background: linear-gradient(135deg, rgba(139,110,255,0.18), rgba(0,184,212,0.12));
-      border-radius: 0.8rem;
-      border: 1px solid rgba(139,110,255,0.20);
-      animation: pulseMark 3s ease-in-out infinite;
-      flex-shrink: 0;
-    }
-
-    @keyframes pulseMark {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(139,110,255,0.2); }
-      50% { box-shadow: 0 0 0 8px rgba(139,110,255,0.05); }
+      background: var(--brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(255,0,200,0.5));
+      animation: float 3s ease-in-out infinite;
+      line-height: 1;
     }
 
     .brand-title {
       font-size: 1.5rem;
       font-weight: 700;
-      background: linear-gradient(135deg, #ffffff 30%, #b4a6ff 100%);
+      background: var(--brand-gradient);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
       letter-spacing: -0.02em;
       line-height: 1.2;
+      background-size: 200% 200%;
+      animation: gradientShift 6s ease infinite;
+      filter: drop-shadow(0 2px 10px rgba(123,47,252,0.3));
     }
 
     .brand-sub {
       font-size: 0.82rem;
-      color: rgba(255,255,255,0.45);
-      font-weight: 400;
-      letter-spacing: 0.02em;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
       margin-top: 0.05rem;
     }
 
-    /* ── Form ── */
+    /* ──────────────────────────────────────────────────────────────
+       6. FORM INPUTS
+       ────────────────────────────────────────────────────────────── */
     .login-form {
       display: flex;
       flex-direction: column;
@@ -160,19 +224,19 @@
       gap: 0.4rem;
       font-size: 0.78rem;
       font-weight: 500;
-      color: rgba(255,255,255,0.6);
+      color: var(--text-muted);
       letter-spacing: 0.03em;
       text-transform: uppercase;
     }
 
     .login-form input {
-      background: rgba(255,255,255,0.04);
-      border: 1.5px solid rgba(255,255,255,0.08);
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
       border-radius: 0.75rem;
       padding: 0.85rem 1.1rem;
       font-size: 1rem;
       font-weight: 450;
-      color: #f0f0ff;
+      color: var(--text-main);
       outline: none;
       transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
       font-family: inherit;
@@ -185,16 +249,15 @@
     }
 
     .login-form input:focus {
-      border-color: #8b6eff;
-      background: rgba(139,110,255,0.06);
-      box-shadow: 0 0 0 4px rgba(139,110,255,0.12), 0 0 0 1px rgba(139,110,255,0.15) inset;
+      border-color: #ff2d95;
+      background: rgba(255,45,149,0.06);
+      box-shadow: 0 0 0 4px rgba(255,45,149,0.12), 0 0 0 1px rgba(255,45,149,0.15) inset;
     }
 
     .login-form input:hover {
-      border-color: rgba(255,255,255,0.15);
+      border-color: rgba(255,255,255,0.2);
     }
 
-    /* ── TOTP field ── */
     .hidden {
       display: none !important;
     }
@@ -203,125 +266,82 @@
       animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    @keyframes slideDown {
-      0% { opacity: 0; transform: translateY(-8px) scale(0.97); }
-      100% { opacity: 1; transform: translateY(0) scale(1); }
-    }
-
-    /* ── Error message container ── */
+    /* ──────────────────────────────────────────────────────────────
+       7. ERROR MESSAGE
+       ────────────────────────────────────────────────────────────── */
     .login-error {
       border-radius: 0.75rem;
       padding: 0.7rem 1rem;
       font-size: 0.85rem;
       font-weight: 450;
       text-align: center;
-      transition: background 0.3s, border-color 0.3s, color 0.3s;
-      background: rgba(255,70,90,0.12);
-      border: 1px solid rgba(255,70,90,0.18);
+      background: rgba(255,45,149,0.12);
+      border: 1px solid rgba(255,45,149,0.18);
       color: #ff7a8a;
     }
 
-    /* ── Button ── */
-    .btn {
+    .login-error.hidden {
+      display: none;
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       8. SIGN IN BUTTON – UNIFIED STYLE (matches Access Token)
+       ────────────────────────────────────────────────────────────── */
+    .btn-signin {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0.9rem 2rem;
       font-size: 1rem;
       font-weight: 600;
-      border: none;
+      border: 1px solid var(--input-border);
       border-radius: 1rem;
       cursor: pointer;
-      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-                  box-shadow 0.3s ease,
-                  background 0.3s ease;
       font-family: inherit;
       letter-spacing: 0.01em;
+      width: 100%;
       position: relative;
       overflow: hidden;
-      width: 100%;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #7c5cfc, #5b3fd9);
-      color: #fff;
-      box-shadow: 0 4px 20px rgba(91,63,217,0.35);
+      background: var(--input-bg);
+      color: var(--text-main);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       margin-top: 0.4rem;
     }
 
-    .btn-primary::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 1rem;
-      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 60%);
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px) scale(1.01);
-      box-shadow: 0 8px 35px rgba(91,63,217,0.50);
-      background: linear-gradient(135deg, #8a6eff, #684be0);
-    }
-
-    .btn-primary:hover::after {
-      opacity: 1;
-    }
-
-    .btn-primary:active {
-      transform: translateY(0px) scale(0.98);
-      box-shadow: 0 4px 15px rgba(91,63,217,0.30);
-    }
-
-    /* Shimmer effect */
-    .btn-primary .shimmer {
-      position: absolute;
-      top: -50%;
-      left: -60%;
-      width: 50%;
-      height: 200%;
-      background: linear-gradient(90deg,
-          transparent 0%,
-          rgba(255,255,255,0.08) 40%,
-          rgba(255,255,255,0.18) 50%,
-          rgba(255,255,255,0.08) 60%,
-          transparent 100%);
-      transform: rotate(25deg) translateX(-100%);
-      animation: shimmerSweep 5s ease-in-out infinite;
-      pointer-events: none;
-    }
-
-    @keyframes shimmerSweep {
-      0% { transform: rotate(25deg) translateX(-100%); }
-      30% { transform: rotate(25deg) translateX(300%); }
-      100% { transform: rotate(25deg) translateX(300%); }
-    }
-
-    .btn-primary .btn-text {
-      position: relative;
-      z-index: 2;
+    .btn-signin .btn-text {
       display: flex;
       align-items: center;
       gap: 0.5rem;
     }
 
-    .btn-primary .btn-text .arrow {
+    .btn-signin .btn-text .arrow {
       display: inline-block;
       transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .btn-primary:hover .btn-text .arrow {
+    .btn-signin:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-glow);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 30px rgba(123, 47, 252, 0.2);
+    }
+
+    .btn-signin:hover .btn-text .arrow {
       transform: translateX(4px);
     }
 
-    /* ── Footer ── */
+    .btn-signin:active {
+      transform: translateY(0px) scale(0.98);
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       9. FOOTER LINKS
+       ────────────────────────────────────────────────────────────── */
     .login-footer {
       margin-top: 1.8rem;
       text-align: center;
       font-size: 0.8rem;
-      color: rgba(255,255,255,0.25);
+      color: var(--text-muted);
       letter-spacing: 0.02em;
     }
 
@@ -336,24 +356,27 @@
       color: #8b6eff;
     }
 
-    /* ── Responsive ── */
+    /* ──────────────────────────────────────────────────────────────
+       10. RESPONSIVE
+       ────────────────────────────────────────────────────────────── */
     @media (max-width: 480px) {
       .login-card { padding: 2rem 1.5rem 2.2rem; border-radius: 1.2rem; }
       .brand-title { font-size: 1.25rem; }
-      .brand-mark { width: 2.8rem; height: 2.8rem; font-size: 1.8rem; border-radius: 0.6rem; }
+      .brand-mark { font-size: 1.8rem; }
       .login-form input { padding: 0.75rem 1rem; font-size: 0.95rem; border-radius: 0.6rem; }
-      .btn { padding: 0.8rem 1.5rem; font-size: 0.95rem; border-radius: 0.8rem; }
+      .btn-signin { padding: 0.8rem 1.5rem; font-size: 0.95rem; border-radius: 0.8rem; }
     }
 
     @media (max-width: 380px) {
       .login-card { padding: 1.5rem 1.2rem 1.8rem; border-radius: 1rem; }
       .login-brand { gap: 0.7rem; }
-      .brand-mark { width: 2.4rem; height: 2.4rem; font-size: 1.4rem; }
+      .brand-mark { font-size: 1.5rem; }
     }
   </style>
 </head>
 <body>
 
+  <div class="orb-extra"></div>
   <div class="grid-overlay"></div>
 
   <div class="login-wrap">
@@ -381,11 +404,9 @@
                  placeholder="6-digit code" autocomplete="one-time-code" />
         </label>
 
-        <!-- Matched ID to original code so login.js can output backend errors here -->
         <div id="loginError" class="login-error hidden"></div>
 
-        <button type="submit" class="btn btn-primary">
-          <span class="shimmer"></span>
+        <button type="submit" class="btn-signin">
           <span class="btn-text">
             Sign In
             <span class="arrow">→</span>
@@ -400,10 +421,8 @@
     </div>
   </div>
 
-  <!-- Re-linked original JavaScript logic for processing login requests -->
   <script src="/static/login.js"></script>
 
-  <!-- Dynamic UI behavior for revealing TOTP field -->
   <script>
     (function() {
       'use strict';
@@ -436,6 +455,5 @@
       password.addEventListener('input', checkTOTP);
     })();
   </script>
-
 </body>
 </html>
