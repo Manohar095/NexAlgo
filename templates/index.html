@@ -7,7 +7,7 @@
 
   <style>
     /* ==========================================================================
-       1. THEME DEFINITIONS & SYSTEM VARIABLES (HYPER-VIBRANT EDITION)
+       1. THEME DEFINITIONS & SYSTEM VARIABLES
        ========================================================================== */
 
     :root, [data-theme="dark"] {
@@ -21,7 +21,7 @@
       --input-border: rgba(180, 80, 255, 0.4);
 
       --brand-gradient: linear-gradient(135deg, #00f0ff 0%, #7b2ffc 40%, #ff2d95 70%, #ffb300 100%);
-      --btn-primary-grad: linear-gradient(135deg, #02628a 0%, #4facfe 50%, #a855f7 100%);
+      --btn-add-grad: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%);
       --table-header-grad: linear-gradient(180deg, rgba(40, 50, 80, 0.9) 0%, rgba(10, 16, 30, 0.98) 100%);
       --modal-grad: linear-gradient(165deg, rgba(15, 20, 40, 0.96) 0%, rgba(5, 8, 15, 0.99) 100%);
       --overlay-bg: rgba(0, 0, 0, 0.85);
@@ -46,7 +46,7 @@
       --input-border: #b0c0e0;
 
       --brand-gradient: linear-gradient(135deg, #0066ff 0%, #a855f7 50%, #ec4899 100%);
-      --btn-primary-grad: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #a855f7 100%);
+      --btn-add-grad: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%);
       --table-header-grad: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%);
       --modal-grad: linear-gradient(165deg, #ffffff 0%, #f2f6ff 100%);
       --overlay-bg: rgba(30, 40, 70, 0.5);
@@ -61,7 +61,7 @@
     }
 
     /* ==========================================================================
-       2. ANIMATIONS & KEYFRAMES (ENHANCED)
+       2. ANIMATIONS & KEYFRAMES
        ========================================================================== */
 
     @keyframes ambientGlow {
@@ -284,7 +284,7 @@
     }
 
     /* ==========================================================================
-       5. BUTTONS & INPUT CONTROLS
+       5. UNIFIED BUTTON STYLES – all match the Access Token button
        ========================================================================== */
 
     .btn {
@@ -301,48 +301,49 @@
       cursor: pointer;
       transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
       gap: 8px;
-      position: relative;
-      overflow: hidden;
       font-family: inherit;
       white-space: nowrap;
-    }
-
-    .btn::after {
-      content: "";
-      position: absolute;
-      inset: -2px;
-      border-radius: 12px;
-      padding: 2px;
-      background: linear-gradient(135deg, var(--border-glow), transparent, var(--border-glow));
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      mask-composite: exclude;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    .btn:hover::after {
-      opacity: 1;
+      position: relative;
+      overflow: hidden;
     }
 
     .btn:hover {
-      border-color: transparent;
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-glow);
       transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 8px 30px rgba(123,47,252,0.3);
+      box-shadow: 0 8px 30px rgba(123,47,252,0.2);
     }
 
     .btn-primary {
-      background: var(--btn-primary-grad) !important;
-      border: none !important;
-      color: #ffffff !important;
-      box-shadow: 0 6px 30px rgba(255,65,108,0.5);
-      background-size: 200% 200%;
-      animation: gradientShift 4s ease infinite;
-      position: relative;
-      overflow: hidden;
+      background: var(--input-bg) !important;
+      border: 1px solid var(--input-border) !important;
+      color: var(--text-main) !important;
+      box-shadow: none !important;
+      animation: none !important;
     }
 
     .btn-primary::after {
+      display: none !important;
+    }
+
+    .btn-primary:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: var(--border-glow) !important;
+      box-shadow: 0 8px 30px rgba(123,47,252,0.2) !important;
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    /* ===== CUSTOM "ADD SYMBOL" BUTTON – vibrant gradient ===== */
+    .btn-add-symbol {
+      background: var(--btn-add-grad) !important;
+      border: none !important;
+      color: #ffffff !important;
+      box-shadow: 0 6px 30px rgba(0, 212, 255, 0.5) !important;
+      animation: gradientShift 4s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    .btn-add-symbol::after {
       content: "";
       position: absolute;
       top: 0;
@@ -353,39 +354,75 @@
       transform: skewX(-25deg);
     }
 
-    .btn-primary:hover {
+    .btn-add-symbol:hover {
       transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 10px 40px rgba(255,65,108,0.7);
+      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.7) !important;
     }
 
-    .btn-primary:hover::after {
+    .btn-add-symbol:hover::after {
       animation: lightSweep 1.0s ease-in-out infinite;
     }
 
-    /* Custom color for "Add Symbol" button */
-    .btn-add-symbol {
-      background: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%) !important;
-      border: none !important;
-      box-shadow: 0 6px 30px rgba(0, 212, 255, 0.5) !important;
-    }
-    .btn-add-symbol:hover {
-      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.7) !important;
-    }
-    .btn-add-symbol::after {
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent) !important;
-    }
-
+    /* ===== LOGOUT BUTTON – matches Access Token with red hover ===== */
     .btn-ghost {
-      background: transparent;
-      border: 1px solid transparent;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
       color: var(--text-muted);
     }
 
+    .btn-ghost::after {
+      display: none !important;
+    }
+
     .btn-ghost:hover {
+      color: #f87171;
+      background: rgba(248, 113, 113, 0.10);
+      border-color: #f8717155;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 30px rgba(248, 113, 113, 0.15);
+    }
+
+    /* ===== THEME SELECT – matches button style ===== */
+    .theme-select {
+      background: var(--input-bg);
       color: var(--text-main);
-      background: rgba(255,255,255,0.10);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 10px 40px 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      backdrop-filter: blur(8px);
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a0b4d0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+
+    .theme-select::after {
+      display: none !important;
+    }
+
+    .theme-select:hover {
+      background: rgba(255, 255, 255, 0.08);
       border-color: var(--border-glow);
-      box-shadow: none;
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 30px rgba(123,47,252,0.2);
+    }
+
+    .theme-select:focus {
+      border-color: var(--border-glow);
+      box-shadow: 0 0 20px rgba(123,47,252,0.3);
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .theme-select option {
+      background: var(--bg-card);
+      color: var(--text-main);
+      padding: 8px 12px;
     }
 
     .btn-secondary {
@@ -403,6 +440,12 @@
       justify-content: center;
     }
 
+    .btn-sm {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+    }
+
     .icon-btn {
       background: transparent;
       border: none;
@@ -415,23 +458,6 @@
     .icon-btn:hover {
       color: var(--text-main);
       transform: rotate(90deg);
-    }
-
-    .theme-select {
-      background: var(--input-bg);
-      color: var(--text-main);
-      border: 1px solid var(--input-border);
-      border-radius: 10px;
-      padding: 8px 16px;
-      font-size: 13px;
-      cursor: pointer;
-      outline: none;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(8px);
-    }
-    .theme-select:focus {
-      border-color: #ff2d95;
-      box-shadow: 0 0 20px rgba(255,45,149,0.4);
     }
 
     .conn-dot {
@@ -451,7 +477,7 @@
     }
 
     /* ==========================================================================
-       6. TABLE & DASHBOARD BOARD
+       6. TABLE & DASHBOARD BOARD – compact rows
        ========================================================================== */
 
     .board {
@@ -482,13 +508,14 @@
     .board-table thead th {
       background: var(--table-header-grad);
       color: var(--text-main);
-      padding: 14px 18px;
+      padding: 16px 14px;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       border-bottom: 2px solid var(--border-color);
       position: relative;
+      white-space: nowrap;
     }
 
     .board-table thead th::after {
@@ -503,11 +530,12 @@
     }
 
     .board-table tbody td {
-      padding: 14px 18px;
+      padding: 10px 14px;
       border-bottom: 1px solid var(--border-color);
       color: var(--text-main);
       font-size: 12px;
       transition: background 0.2s ease;
+      vertical-align: middle;
     }
 
     .board-table tbody tr {
@@ -523,9 +551,57 @@
       border-bottom: none;
     }
 
+    .board-table .actions-cell {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      padding: 12px 26px;
+      font-size: 16px;
+      border-radius: 6px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .btn-action:hover {
+      transform: translateY(-1px);
+    }
+    .btn-start {
+      color: #22c55e;
+      border-color: #22c55e55;
+    }
+    .btn-start:hover {
+      background: #22c55e22;
+      border-color: #22c55e;
+      box-shadow: 0 0 20px #22c55e33;
+    }
+    .btn-edit {
+      color: #60a5fa;
+      border-color: #60a5fa55;
+    }
+    .btn-edit:hover {
+      background: #60a5fa22;
+      border-color: #60a5fa;
+      box-shadow: 0 0 20px #60a5fa33;
+    }
+    .btn-delete {
+      color: #f87171;
+      border-color: #f8717155;
+    }
+    .btn-delete:hover {
+      background: #f8717122;
+      border-color: #f87171;
+      box-shadow: 0 0 20px #f8717133;
+    }
+
     .empty-row td {
       text-align: center;
-      padding: 40px;
+      padding: 30px 14px;
       color: var(--text-muted);
       font-style: italic;
     }
@@ -569,36 +645,39 @@
       letter-spacing: 0.05em;
     }
 
-    /* ===== GRADIENT DROPDOWN FOR LOG FILTER ===== */
+    /* ===== LOG FILTER – matches button style ===== */
     #logFilter {
-      background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(123, 47, 252, 0.12));
+      background: var(--input-bg);
       color: var(--text-main);
-      border: 1px solid var(--border-glow);
+      border: 1px solid var(--input-border);
       border-radius: 10px;
-      padding: 8px 16px;
+      padding: 10px 40px 10px 20px;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       outline: none;
-      transition: all 0.3s ease;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
       backdrop-filter: blur(8px);
-      box-shadow: 0 0 15px rgba(255, 0, 200, 0.1);
-      appearance: none;          /* removes default arrow, we'll add custom */
+      appearance: none;
       -webkit-appearance: none;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a0b4d0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 14px center;
-      padding-right: 40px;
     }
+
     #logFilter:hover {
-      border-color: #ff2d95;
-      box-shadow: 0 0 25px rgba(255, 0, 200, 0.25);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-glow);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 30px rgba(123,47,252,0.2);
     }
+
     #logFilter:focus {
-      border-color: #ff2d95;
-      box-shadow: 0 0 30px rgba(255, 45, 149, 0.4);
+      border-color: var(--border-glow);
+      box-shadow: 0 0 20px rgba(123,47,252,0.3);
+      transform: translateY(-2px) scale(1.02);
     }
-    /* Style the dropdown options (works in most browsers) */
+
     #logFilter option {
       background: var(--bg-card);
       color: var(--text-main);
@@ -881,11 +960,24 @@
       }
       .board {
         padding: 0.8rem 1rem;
+        overflow-x: auto;
+      }
+      .board-table {
+        font-size: 0.7rem;
+        min-width: 700px;
       }
       .board-table thead th,
       .board-table tbody td {
-        padding: 10px 12px;
+        padding: 8px 10px;
         font-size: 0.7rem;
+      }
+      .board-table .actions-cell {
+        flex-direction: column;
+        gap: 4px;
+      }
+      .btn-action {
+        font-size: 10px;
+        padding: 8px 16px;
       }
       .logs-panel {
         padding: 1rem;
@@ -940,8 +1032,9 @@
 
         <span id="connDot" class="conn-dot" title="Live feed"></span>
         <span id="connLabel" class="conn-label">connecting…</span>
+
         <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
-        <button id="btnAddSymbol" class="btn btn-primary btn-add-symbol">+ Add Symbol</button>
+        <button id="btnAddSymbol" class="btn">+ Add Symbol</button>
         <button id="btnLogout" class="btn btn-ghost" title="Sign out">⎋ Logout</button>
       </div>
     </header>
@@ -957,7 +1050,55 @@
           </tr>
         </thead>
         <tbody id="boardBody">
-          <tr class="empty-row"><td colspan="12">No symbols yet. Click “+ Add Symbol” to configure your first Renko strategy.</td></tr>
+          <!-- ===== SAMPLE ROW 1: SENSEX ===== -->
+          <tr>
+            <td>
+              <strong>SENSEX2681377500CE</strong><br />
+              <span style="color:var(--text-muted);font-size:11px;">BFO:SENSEX2681378500CE</span>
+            </td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span style="color:#facc15;">FLAT</span></td>
+            <td>—</td>
+            <td>20</td>
+            <td>20</td>
+            <td><span style="color:#60a5fa;">LONG ONLY</span></td>
+            <td><span style="color:#f87171;">STOPPED</span></td>
+            <td>—</td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn-action btn-start">Start</button>
+                <button class="btn-action btn-edit">Edit</button>
+                <button class="btn-action btn-delete">Delete</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- ===== SAMPLE ROW 2: YESBANK ===== -->
+          <tr>
+            <td>
+              <strong>YESBANK-EQ</strong><br />
+              <span style="color:var(--text-muted);font-size:11px;">NSE:YESBANK-EQ</span>
+            </td>
+            <td>—</td>
+            <td>—</td>
+            <td>—</td>
+            <td><span style="color:#facc15;">FLAT</span></td>
+            <td>—</td>
+            <td>20</td>
+            <td>20</td>
+            <td><span style="color:#60a5fa;">LONG ONLY</span></td>
+            <td><span style="color:#f87171;">STOPPED</span></td>
+            <td>—</td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn-action btn-start">Start</button>
+                <button class="btn-action btn-edit">Edit</button>
+                <button class="btn-action btn-delete">Delete</button>
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
     </main>
@@ -995,7 +1136,7 @@
               <select id="product_type">
                 <option value="I">Intraday (I)</option>
                 <option value="C">CNC (C)</option>
-                <option value="M">Margin (M)</option>
+                <option value="M">NRML (M)</option>
               </select>
             </label>
           </div>
@@ -1107,7 +1248,6 @@
     });
   </script>
 
-  <!-- Your existing app.js will handle the rest -->
   <script src="/static/app.js"></script>
 </body>
 </html>
