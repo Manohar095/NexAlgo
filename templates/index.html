@@ -490,6 +490,7 @@
       box-shadow: 0 12px 48px rgba(0,0,0,0.25);
       transition: border-color 0.4s ease, box-shadow 0.4s ease;
       padding: 1.5rem 2rem;
+      animation: borderPulse 6s infinite;  /* ← ADD THIS LINE */
     }
 
     .board:hover {
@@ -516,17 +517,6 @@
       border-bottom: 2px solid var(--border-color);
       position: relative;
       white-space: nowrap;
-    }
-
-    .board-table thead th::after {
-      content: "";
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
-      animation: lightSweep 4s linear infinite;
     }
 
     .board-table tbody td {
@@ -620,7 +610,8 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      transition: border-color 0.4s ease;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+      animation: borderPulse 6s infinite;  /* ← ADD THIS LINE */
     }
 
     .logs-panel:hover {
