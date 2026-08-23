@@ -93,7 +93,6 @@ function rowHTML(rec) {
     <tr data-row="${rec.id}">
       <td>
         <span class="sym-name">${escapeHTML(cfg.strategy_name)}</span>
-        <span class="sym-sub">${escapeHTML(cfg.exchange)}:${escapeHTML(cfg.trading_symbol)}</span>
       </td>
       <td>${fmtNum(live.ltp)}</td>
       <td>${brickHTML}</td>
