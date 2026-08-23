@@ -1,14 +1,364 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Sign in — CogniX Algo</title>
-<link rel="stylesheet" href="/static/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in — CogniX Algo</title>
+  <style>
+    /* ── Reset & base ── */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse at 20% 50%, #0b1120, #0a0f1a);
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* ── Animated orbs ── */
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.35;
+      z-index: 0;
+      pointer-events: none;
+    }
+    body::before {
+      width: 600px;
+      height: 600px;
+      top: -200px;
+      right: -150px;
+      background: #6c3bf5;
+      animation: orbFloat 18s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 500px;
+      height: 500px;
+      bottom: -180px;
+      left: -120px;
+      background: #00b8d4;
+      animation: orbFloat 22s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes orbFloat {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(60px, 40px) scale(1.2); }
+    }
+
+    /* ── Subtle grid overlay ── */
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ── Login wrapper ── */
+    .login-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 420px;
+      animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Card ── */
+    .login-card {
+      background: rgba(16, 22, 40, 0.72);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border-radius: 1.5rem;
+      padding: 2.5rem 2.2rem 2.8rem;
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.03) inset;
+      transition: box-shadow 0.4s ease;
+    }
+
+    .login-card:hover {
+      box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    }
+
+    /* ── Brand ── */
+    .login-brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 2.2rem;
+    }
+
+    .brand-mark {
+      font-size: 2.2rem;
+      color: #8b6eff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 3.2rem;
+      height: 3.2rem;
+      background: linear-gradient(135deg, rgba(139,110,255,0.18), rgba(0,184,212,0.12));
+      border-radius: 0.8rem;
+      border: 1px solid rgba(139,110,255,0.20);
+      animation: pulseMark 3s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulseMark {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(139,110,255,0.2); }
+      50% { box-shadow: 0 0 0 8px rgba(139,110,255,0.05); }
+    }
+
+    .brand-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #ffffff 30%, #b4a6ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.45);
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      margin-top: 0.05rem;
+    }
+
+    /* ── Form ── */
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .login-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: rgba(255,255,255,0.6);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .login-form input {
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1.1rem;
+      font-size: 1rem;
+      font-weight: 450;
+      color: #f0f0ff;
+      outline: none;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      font-family: inherit;
+      width: 100%;
+    }
+
+    .login-form input::placeholder {
+      color: rgba(255,255,255,0.20);
+      font-weight: 350;
+    }
+
+    .login-form input:focus {
+      border-color: #8b6eff;
+      background: rgba(139,110,255,0.06);
+      box-shadow: 0 0 0 4px rgba(139,110,255,0.12), 0 0 0 1px rgba(139,110,255,0.15) inset;
+    }
+
+    .login-form input:hover {
+      border-color: rgba(255,255,255,0.15);
+    }
+
+    /* ── TOTP field ── */
+    .hidden {
+      display: none !important;
+    }
+
+    #totpField {
+      animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes slideDown {
+      0% { opacity: 0; transform: translateY(-8px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ── Error message container ── */
+    .login-error {
+      border-radius: 0.75rem;
+      padding: 0.7rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 450;
+      text-align: center;
+      transition: background 0.3s, border-color 0.3s, color 0.3s;
+      background: rgba(255,70,90,0.12);
+      border: 1px solid rgba(255,70,90,0.18);
+      color: #ff7a8a;
+    }
+
+    /* ── Button ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.9rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.3s ease,
+                  background 0.3s ease;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+      position: relative;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #7c5cfc, #5b3fd9);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(91,63,217,0.35);
+      margin-top: 0.4rem;
+    }
+
+    .btn-primary::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 1rem;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent 60%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 8px 35px rgba(91,63,217,0.50);
+      background: linear-gradient(135deg, #8a6eff, #684be0);
+    }
+
+    .btn-primary:hover::after {
+      opacity: 1;
+    }
+
+    .btn-primary:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow: 0 4px 15px rgba(91,63,217,0.30);
+    }
+
+    /* Shimmer effect */
+    .btn-primary .shimmer {
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 50%;
+      height: 200%;
+      background: linear-gradient(90deg,
+          transparent 0%,
+          rgba(255,255,255,0.08) 40%,
+          rgba(255,255,255,0.18) 50%,
+          rgba(255,255,255,0.08) 60%,
+          transparent 100%);
+      transform: rotate(25deg) translateX(-100%);
+      animation: shimmerSweep 5s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes shimmerSweep {
+      0% { transform: rotate(25deg) translateX(-100%); }
+      30% { transform: rotate(25deg) translateX(300%); }
+      100% { transform: rotate(25deg) translateX(300%); }
+    }
+
+    .btn-primary .btn-text {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-primary .btn-text .arrow {
+      display: inline-block;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .btn-primary:hover .btn-text .arrow {
+      transform: translateX(4px);
+    }
+
+    /* ── Footer ── */
+    .login-footer {
+      margin-top: 1.8rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.02em;
+    }
+
+    .login-footer a {
+      color: rgba(139,110,255,0.6);
+      text-decoration: none;
+      transition: color 0.25s ease;
+      font-weight: 500;
+    }
+
+    .login-footer a:hover {
+      color: #8b6eff;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .login-card { padding: 2rem 1.5rem 2.2rem; border-radius: 1.2rem; }
+      .brand-title { font-size: 1.25rem; }
+      .brand-mark { width: 2.8rem; height: 2.8rem; font-size: 1.8rem; border-radius: 0.6rem; }
+      .login-form input { padding: 0.75rem 1rem; font-size: 0.95rem; border-radius: 0.6rem; }
+      .btn { padding: 0.8rem 1.5rem; font-size: 0.95rem; border-radius: 0.8rem; }
+    }
+
+    @media (max-width: 380px) {
+      .login-card { padding: 1.5rem 1.2rem 1.8rem; border-radius: 1rem; }
+      .login-brand { gap: 0.7rem; }
+      .brand-mark { width: 2.4rem; height: 2.4rem; font-size: 1.4rem; }
+    }
+  </style>
 </head>
 <body>
+
+  <div class="grid-overlay"></div>
+
   <div class="login-wrap">
     <div class="login-card">
+
       <div class="login-brand">
         <span class="brand-mark">◈</span>
         <div>
@@ -19,23 +369,73 @@
 
       <form id="loginForm" class="login-form">
         <label>Username
-          <input id="username" required autocomplete="username" autofocus />
+          <input id="username" required autocomplete="username" autofocus placeholder="Enter your username" />
         </label>
+
         <label>Password
-          <input id="password" type="password" required autocomplete="current-password" />
+          <input id="password" type="password" required autocomplete="current-password" placeholder="••••••••" />
         </label>
+
         <label id="totpField" class="hidden">Authenticator Code
           <input id="totp_code" inputmode="numeric" pattern="[0-9]*" maxlength="6"
                  placeholder="6-digit code" autocomplete="one-time-code" />
         </label>
 
+        <!-- Matched ID to original code so login.js can output backend errors here -->
         <div id="loginError" class="login-error hidden"></div>
 
-        <button type="submit" class="btn btn-primary btn-full">Sign In</button>
+        <button type="submit" class="btn btn-primary">
+          <span class="shimmer"></span>
+          <span class="btn-text">
+            Sign In
+            <span class="arrow">→</span>
+          </span>
+        </button>
       </form>
+
+      <div class="login-footer">
+        <a href="#">Forgot password?</a> &nbsp;·&nbsp; <a href="#">Contact support</a>
+      </div>
+
     </div>
   </div>
 
+  <!-- Re-linked original JavaScript logic for processing login requests -->
   <script src="/static/login.js"></script>
+
+  <!-- Dynamic UI behavior for revealing TOTP field -->
+  <script>
+    (function() {
+      'use strict';
+
+      const username = document.getElementById('username');
+      const password = document.getElementById('password');
+      const totpField = document.getElementById('totpField');
+      const totpInput = document.getElementById('totp_code');
+
+      let totpVisible = false;
+
+      function checkTOTP() {
+        const u = username.value.trim();
+        const p = password.value.trim();
+        const show = (u.length > 0 && p.length >= 4);
+
+        if (show && !totpVisible) {
+          totpVisible = true;
+          totpField.classList.remove('hidden');
+          totpInput.required = true;
+        } else if (!show && totpVisible) {
+          totpVisible = false;
+          totpField.classList.add('hidden');
+          totpInput.required = false;
+          totpInput.value = '';
+        }
+      }
+
+      username.addEventListener('input', checkTOTP);
+      password.addEventListener('input', checkTOTP);
+    })();
+  </script>
+
 </body>
 </html>

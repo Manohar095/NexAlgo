@@ -195,11 +195,7 @@ symbolForm.addEventListener("submit", async (e) => {
     }
     config[f] = el.value;
   });
-  // limit_offset and entry_trail_brick_number are both Optional[...] on the
-  // backend and default themselves (to tick_size / sl_trail_brick_number
-  // respectively) when omitted from the payload entirely — sending an
-  // explicit null works too (the backend validators handle both), but
-  // dropping the key keeps the payload clean when the user left it blank.
+
   if (config.limit_offset === null) delete config.limit_offset;
   if (config.entry_trail_brick_number === null) delete config.entry_trail_brick_number;
 
@@ -243,7 +239,6 @@ btnGenerateToken.addEventListener("click", async () => {
     renderBrokerStatus(s);
     brokerTokenStatus.innerHTML = `✅ ${escapeHTML(s.message || "Token generated and applied.")}<br/>` + brokerTokenStatus.innerHTML;
     brokerTokenStatus.className = "token-status ok";
-    // Auto-fill the generated token into the input field
     if (s.access_token) {
       newAccessTokenEl.value = s.access_token;
     }
