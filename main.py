@@ -67,6 +67,11 @@ async def login_page():
     return FileResponse("templates/login.html")
 
 
+@app.get("/logs")
+async def logs_page():
+    return FileResponse("templates/logs.html")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)

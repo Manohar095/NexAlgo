@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CogniX Algo</title>
+  <title>Global Logs — CogniX Algo</title>
 
   <style>
     /* ==========================================================================
@@ -186,6 +186,8 @@
       margin: 0 auto;
       position: relative;
       z-index: 1;
+      height: 100vh;
+      overflow: hidden;
     }
 
     /* ==========================================================================
@@ -284,7 +286,7 @@
     }
 
     /* ==========================================================================
-       5. UNIFIED BUTTON STYLES – all match the Access Token button
+       5. BUTTONS & INPUT CONTROLS – unified
        ========================================================================== */
 
     .btn {
@@ -305,6 +307,7 @@
       white-space: nowrap;
       position: relative;
       overflow: hidden;
+      text-decoration: none;
     }
 
     .btn:hover {
@@ -333,37 +336,6 @@
       transform: translateY(-2px) scale(1.02);
     }
 
-    /* ===== CUSTOM "ADD SYMBOL" BUTTON – vibrant gradient ===== */
-    .btn-add-symbol {
-      background: var(--btn-add-grad) !important;
-      border: none !important;
-      color: #ffffff !important;
-      box-shadow: 0 6px 30px rgba(0, 212, 255, 0.5) !important;
-      animation: gradientShift 4s ease infinite;
-      background-size: 200% 200%;
-    }
-
-    .btn-add-symbol::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 60%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-      transform: skewX(-25deg);
-    }
-
-    .btn-add-symbol:hover {
-      transform: translateY(-3px) scale(1.03);
-      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.7) !important;
-    }
-
-    .btn-add-symbol:hover::after {
-      animation: lightSweep 1.0s ease-in-out infinite;
-    }
-
-    /* ===== LOGOUT BUTTON – matches Access Token with red hover ===== */
     .btn-ghost {
       background: var(--input-bg);
       border: 1px solid var(--input-border);
@@ -382,7 +354,12 @@
       box-shadow: 0 8px 30px rgba(248, 113, 113, 0.15);
     }
 
-    /* ===== THEME SELECT – matches button style ===== */
+    .btn-active {
+      color: var(--text-main);
+      border-color: var(--border-glow);
+      background: rgba(123,47,252,0.08);
+    }
+
     .theme-select {
       background: var(--input-bg);
       color: var(--text-main);
@@ -425,21 +402,6 @@
       padding: 8px 12px;
     }
 
-    .btn-secondary {
-      background: var(--input-bg);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255,255,255,0.08);
-    }
-
-    .btn-full {
-      width: 100%;
-      justify-content: center;
-    }
-
     .btn-sm {
       padding: 4px 10px;
       font-size: 11px;
@@ -477,145 +439,28 @@
     }
 
     /* ==========================================================================
-       6. TABLE & DASHBOARD BOARD – compact rows
+       6. FULL-PAGE LOGS PANEL
        ========================================================================== */
 
-    .board {
-      background: var(--bg-card);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 12px 48px rgba(0,0,0,0.25);
-      transition: border-color 0.4s ease, box-shadow 0.4s ease;
-      padding: 1.5rem 2rem;
-      animation: borderPulse 6s infinite;
-    }
-
-    .board:hover {
-      border-color: var(--border-glow);
-      box-shadow: 0 12px 60px rgba(255,0,200,0.15);
-    }
-
-    .board-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      text-align: left;
-      font-size: 0.8rem;
-    }
-
-    .board-table thead th {
-      background: var(--table-header-grad);
-      color: var(--text-main);
-      padding: 16px 14px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border-bottom: 2px solid var(--border-color);
-      position: relative;
-      white-space: nowrap;
-    }
-
-    .board-table tbody td {
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border-color);
-      color: var(--text-main);
-      font-size: 12px;
-      transition: background 0.2s ease;
-      vertical-align: middle;
-    }
-
-    .board-table tbody tr {
-      transition: all 0.25s ease;
-    }
-
-    .board-table tbody tr:hover {
-      background: rgba(123,47,252,0.12);
-      box-shadow: inset 0 0 30px rgba(123,47,252,0.05);
-    }
-
-    .board-table tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    .board-table .actions-cell {
+    .logs-full {
+      flex: 1;
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .btn-action {
-      padding: 12px 26px;
-      font-size: 16px;
-      border-radius: 6px;
-      font-weight: 600;
-      border: 1px solid transparent;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: transparent;
-      color: var(--text-muted);
-    }
-    .btn-action:hover {
-      transform: translateY(-1px);
-    }
-    .btn-start {
-      color: #22c55e;
-      border-color: #22c55e55;
-    }
-    .btn-start:hover {
-      background: #22c55e22;
-      border-color: #22c55e;
-      box-shadow: 0 0 20px #22c55e33;
-    }
-    .btn-edit {
-      color: #60a5fa;
-      border-color: #60a5fa55;
-    }
-    .btn-edit:hover {
-      background: #60a5fa22;
-      border-color: #60a5fa;
-      box-shadow: 0 0 20px #60a5fa33;
-    }
-    .btn-delete {
-      color: #f87171;
-      border-color: #f8717155;
-    }
-    .btn-delete:hover {
-      background: #f8717122;
-      border-color: #f87171;
-      box-shadow: 0 0 20px #f8717133;
-    }
-
-    .empty-row td {
-      text-align: center;
-      padding: 30px 14px;
-      color: var(--text-muted);
-      font-style: italic;
-    }
-
-    /* ==========================================================================
-       7. TERMINAL / GLOBAL LOG PANEL – FIXED
-       ========================================================================== */
-
-    .logs-panel {
+      flex-direction: column;
       background: var(--bg-card);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--border-color);
       border-radius: 16px;
       padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
       transition: border-color 0.4s ease, box-shadow 0.4s ease;
       animation: borderPulse 6s infinite;
+      min-height: 0;
+      overflow: hidden;
     }
 
-    .logs-panel:hover {
+    .logs-full:hover {
       border-color: var(--border-glow);
+      box-shadow: 0 12px 60px rgba(255,0,200,0.15);
     }
 
     .logs-header {
@@ -624,6 +469,7 @@
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 0.8rem;
+      flex-shrink: 0;
     }
 
     .logs-title {
@@ -636,7 +482,6 @@
       letter-spacing: 0.05em;
     }
 
-    /* ===== LOG FILTER – matches button style ===== */
     #logFilter {
       background: var(--input-bg);
       color: var(--text-main);
@@ -675,28 +520,27 @@
       padding: 8px 12px;
     }
 
-    /* ===== LOG STREAM – FIXED: taller + scrollable ===== */
     .log-stream {
       background-color: var(--term-bg);
       border: 1px solid var(--term-border);
       color: var(--term-text);
       border-radius: 12px;
       padding: 16px;
-      height: 260px;              /* Increased to show more lines */
-      overflow-y: auto;           /* Enable scrolling */
+      flex: 1;
+      min-height: 300px;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
       font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
       font-size: 12px;
       line-height: 1.6;
       scroll-behavior: smooth;
       box-shadow: inset 0 4px 20px rgba(0,0,0,0.6), 0 0 30px rgba(123,47,252,0.05);
       position: relative;
-      /* REMOVED: overflow: hidden – this was blocking scrolling */
+      margin-top: 12px;
     }
 
-    /* Scanline effect – stays */
     .log-stream::after {
       content: "";
       position: absolute;
@@ -708,7 +552,6 @@
       pointer-events: none;
     }
 
-    /* Scrollbar styling */
     .log-stream::-webkit-scrollbar {
       width: 6px;
     }
@@ -720,224 +563,46 @@
       border-radius: 4px;
     }
 
-    /* Log line styles */
     .log-line {
       white-space: pre-wrap;
       word-break: break-all;
       border-left: 2px solid transparent;
-      padding-left: 8px;
+      padding: 2px 8px;
       transition: border-color 0.2s ease;
+      border-radius: 2px;
     }
     .log-line:hover {
       border-left-color: #ff2d95;
+      background: rgba(255,45,149,0.04);
     }
+
+    .log-line .log-time {
+      color: var(--text-muted);
+      margin-right: 8px;
+      font-weight: 500;
+    }
+
+    .log-line .log-sym {
+      color: #60a5fa;
+      margin-right: 6px;
+      font-weight: 600;
+    }
+
+    .log-line.log-INFO { color: var(--term-text); }
+    .log-line.log-WARNING { color: #f59e0b; }
+    .log-line.log-ERROR { color: #f87171; }
+    .log-line.log-SUCCESS { color: #34d399; }
 
     /* ==========================================================================
-       8. MODALS & FORM GRID
+       7. HIDDEN BOARD – prevents app.js errors
        ========================================================================== */
 
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--overlay-bg);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 1.5rem;
-      z-index: 100;
-      transition: opacity 0.4s ease;
-    }
-    .modal-overlay.hidden {
+    .board-hidden {
       display: none;
     }
 
-    .modal {
-      background: var(--modal-grad);
-      color: var(--text-main);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(123,47,252,0.1);
-      width: 100%;
-      max-width: 780px;
-      max-height: 90vh;
-      overflow-y: auto;
-      animation: modalPop 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 1.8rem;
-    }
-
-    .modal-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.2rem;
-    }
-
-    .modal-header h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 700;
-      background: var(--brand-gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-size: 200% 200%;
-      animation: gradientShift 5s ease infinite;
-    }
-
-    .modal-body {
-      display: flex;
-      flex-direction: column;
-      gap: 1.2rem;
-    }
-
-    .modal-body fieldset {
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 18px 22px;
-      margin: 0;
-      background: rgba(255,255,255,0.03);
-      transition: border-color 0.3s ease;
-    }
-    .modal-body fieldset:hover {
-      border-color: var(--border-glow);
-    }
-
-    .modal-body legend {
-      font-weight: 600;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      padding: 0 10px;
-      background: var(--bg-card);
-      border-radius: 20px;
-      padding: 4px 12px;
-      backdrop-filter: blur(4px);
-    }
-
-    .grid2 {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 16px;
-    }
-    .grid3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-
-    .modal-body label {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--text-muted);
-    }
-
-    .modal-body input,
-    .modal-body select {
-      background-color: var(--input-bg) !important;
-      color: var(--text-main) !important;
-      border: 1px solid var(--input-border) !important;
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 12px;
-      transition: all 0.3s ease;
-      backdrop-filter: blur(4px);
-      width: 100%;
-      font-family: inherit;
-    }
-
-    .modal-body input:focus,
-    .modal-body select:focus {
-      border-color: #ff2d95 !important;
-      box-shadow: 0 0 0 4px rgba(255,45,149,0.2), 0 0 24px rgba(255,45,149,0.1);
-      outline: none;
-    }
-
-    .checkbox-row {
-      flex-direction: row !important;
-      align-items: center;
-      gap: 10px;
-      grid-column: span 3;
-      margin-top: 8px;
-      cursor: pointer;
-    }
-    .checkbox-row input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: #ff2d95;
-      cursor: pointer;
-      margin: 0;
-    }
-
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      gap: 14px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .token-hint {
-      font-size: 13px;
-      color: var(--text-muted);
-      line-height: 1.6;
-      margin: 0;
-      padding: 12px;
-      background: rgba(255,255,255,0.03);
-      border-radius: 10px;
-      border-left: 3px solid #ff2d95;
-    }
-    .token-hint code {
-      background: rgba(255,255,255,0.08);
-      padding: 2px 10px;
-      border-radius: 6px;
-      color: #ff2d95;
-      font-weight: 600;
-    }
-
-    .token-status {
-      padding: 12px 18px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.04);
-      font-size: 12px;
-      border: 1px solid var(--border-color);
-      transition: border-color 0.3s ease;
-    }
-    .token-status:hover {
-      border-color: var(--border-glow);
-    }
-
-    .token-divider {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 12px;
-      margin: 12px 0;
-    }
-    .token-divider::before,
-    .token-divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid var(--border-color);
-      transition: border-color 0.3s ease;
-    }
-    .token-divider:hover::before,
-    .token-divider:hover::after {
-      border-color: var(--border-glow);
-    }
-    .token-divider span {
-      padding: 0 14px;
-      font-weight: 600;
-    }
-
     /* ==========================================================================
-       9. RESPONSIVE
+       8. RESPONSIVE
        ========================================================================== */
 
     @media (max-width: 768px) {
@@ -953,42 +618,18 @@
       .brand-title {
         font-size: 1.3rem;
       }
-      .board {
-        padding: 0.8rem 1rem;
-        overflow-x: auto;
-      }
-      .board-table {
-        font-size: 0.7rem;
-        min-width: 700px;
-      }
-      .board-table thead th,
-      .board-table tbody td {
-        padding: 8px 10px;
-        font-size: 0.7rem;
-      }
-      .board-table .actions-cell {
-        flex-direction: column;
-        gap: 4px;
-      }
-      .btn-action {
-        font-size: 10px;
-        padding: 8px 16px;
-      }
-      .logs-panel {
+      .logs-full {
         padding: 1rem;
+        min-height: 300px;
       }
       .log-stream {
-        height: 200px; /* Slightly smaller on mobile */
+        min-height: 200px;
+        font-size: 11px;
+        padding: 12px;
       }
-      .modal {
-        padding: 1.2rem;
-        max-width: 95%;
-      }
-      .grid2, .grid3 {
-        grid-template-columns: 1fr;
-      }
-      .checkbox-row {
-        grid-column: span 1;
+      .btn {
+        font-size: 12px;
+        padding: 8px 14px;
       }
     }
 
@@ -1003,6 +644,15 @@
       .brand-sub {
         font-size: 0.7rem;
         white-space: normal;
+      }
+      #logFilter {
+        font-size: 12px;
+        padding: 8px 32px 8px 14px;
+      }
+      .log-stream {
+        min-height: 150px;
+        font-size: 10px;
+        padding: 10px;
       }
     }
   </style>
@@ -1031,166 +681,41 @@
         <span id="connDot" class="conn-dot" title="Live feed"></span>
         <span id="connLabel" class="conn-label">connecting…</span>
 
-        <a href="/logs" class="btn btn-ghost">📋 Logs</a>
+        <a href="/" class="btn btn-ghost">📊 Dashboard</a>
+        <a href="/logs" class="btn btn-active">📋 Logs</a>
 
         <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
-        <button id="btnAddSymbol" class="btn">+ Add Symbol</button>
         <button id="btnLogout" class="btn btn-ghost" title="Sign out">⎋ Logout</button>
       </div>
     </header>
 
-    <main class="board">
-      <table class="board-table">
-        <thead>
-          <tr>
-            <th>Symbol</th><th>LTP</th><th>Brick</th><th>Trend</th>
-            <th>Position</th><th>Entry</th><th>Stop Loss</th>
-            <th>Qty</th><th>Mode</th><th>Status</th>
-            <th>Updated</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="boardBody">
-          <!-- ===== SAMPLE ROW 1: SENSEX – FIXED: proper td closure ===== -->
-          <tr>
-            <td><strong>SENSEX2681377500CE</strong></td>
-            <td>—</td>
-            <td>—</td>
-            <td>—</td>
-            <td><span style="color:#facc15;">FLAT</span></td>
-            <td>—</td>
-            <td>20</td>
-            <td>20</td>
-            <td><span style="color:#60a5fa;">LONG ONLY</span></td>
-            <td><span style="color:#f87171;">STOPPED</span></td>
-            <td>—</td>
-            <td>
-              <div class="actions-cell">
-                <button class="btn-action btn-start">Start</button>
-                <button class="btn-action btn-edit">Edit</button>
-                <button class="btn-action btn-delete">Delete</button>
-              </div>
-            </td>
-          </tr>
-
-          <!-- ===== SAMPLE ROW 2: YESBANK – FIXED: proper td closure ===== -->
-          <tr>
-            <td><strong>YESBANK-EQ</strong></td>
-            <td>—</td>
-            <td>—</td>
-            <td>—</td>
-            <td><span style="color:#facc15;">FLAT</span></td>
-            <td>—</td>
-            <td>20</td>
-            <td>20</td>
-            <td><span style="color:#60a5fa;">LONG ONLY</span></td>
-            <td><span style="color:#f87171;">STOPPED</span></td>
-            <td>—</td>
-            <td>
-              <div class="actions-cell">
-                <button class="btn-action btn-start">Start</button>
-                <button class="btn-action btn-edit">Edit</button>
-                <button class="btn-action btn-delete">Delete</button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </main>
-
-    <section class="logs-panel">
+    <main class="logs-full">
       <div class="logs-header">
-        <div class="logs-title">Global Log</div>
+        <div class="logs-title">📋 Global Logs</div>
         <select id="logFilter">
           <option value="__all__">All symbols</option>
         </select>
       </div>
       <div id="logStream" class="log-stream"></div>
-    </section>
+    </main>
   </div>
 
-  <!-- Symbol Modal -->
-  <div id="modalOverlay" class="modal-overlay hidden">
-    <div class="modal">
-      <div class="modal-header">
-        <h2 id="modalTitle">New Symbol</h2>
-        <button id="modalClose" class="icon-btn">✕</button>
-      </div>
-      <form id="symbolForm" class="modal-body">
-        <input type="hidden" id="symbolId" />
-
-        <fieldset>
-          <legend>General</legend>
-          <div class="grid2">
-            <label>Strategy Name <input required id="strategy_name" placeholder="SENSEX CE" /></label>
-            <label>Exchange <input required id="exchange" placeholder="BFO" /></label>
-            <label>Trading Symbol <input required id="trading_symbol" placeholder="SENSEX2670276500PE" /></label>
-            <label>Token <input required id="token" placeholder="820767" /></label>
-            <label>Quantity <input required type="number" min="1" id="quantity" value="20" /></label>
-            <label>Product Type
-              <select id="product_type">
-                <option value="I">Intraday (I)</option>
-                <option value="C">CNC (C)</option>
-                <option value="M">NRML (M)</option>
-              </select>
-            </label>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Renko Settings</legend>
-          <div class="grid3">
-            <label>Brick Size <input required type="number" step="any" id="brick_size" value="4" /></label>
-            <label>Green→Red Rev <input required type="number" id="green_to_red_rev" value="2" /></label>
-            <label>Red→Green Rev <input required type="number" id="red_to_green_rev" value="2" /></label>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Entry Settings</legend>
-          <div class="grid3">
-            <label>Buy Brick # <input required type="number" id="buy_brick_no" value="1" /></label>
-            <label>Sell Brick # <input required type="number" id="sell_brick_no" value="-1" /></label>
-            <label>Tick Size <input required type="number" step="0.01" id="tick_size" value="0.05" /></label>
-            <label>Buy Limit Offset (bricks) <input required type="number" id="limit_price_buy_brick_no" value="3" /></label>
-            <label>Sell Limit Offset (bricks) <input required type="number" id="limit_price_sell_brick_no" value="3" /></label>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Stop Loss &amp; Entry Trailing</legend>
-          <div class="grid3">
-            <label>SL_Trail_Brick_Number <input required type="number" step="0.5" id="sl_trail_brick_number" value="2" /></label>
-            <label>Entry_Trail_Brick_Number <input required type="number" step="0.5" id="entry_trail_brick_number" value="2" /></label>
-            <label>Limit_Offset <input type="number" step="0.01" id="limit_offset" placeholder="defaults to tick size" /></label>
-          </div>
-        </fieldset>
-
-        <fieldset>
-          <legend>Trading</legend>
-          <div class="grid3">
-            <label>Trade Mode
-              <select id="trade_mode">
-                <option value="LONG_ONLY">Long Only</option>
-                <option value="SHORT_ONLY">Short Only</option>
-                <option value="LONG_SHORT">Long &amp; Short</option>
-              </select>
-            </label>
-            <label>Squareoff Hour (IST) <input required type="number" min="0" max="23" id="squareoff_hour" value="15" /></label>
-            <label>Squareoff Minute <input required type="number" min="0" max="59" id="squareoff_minute" value="15" /></label>
-            <label>SL-LMT Buffer <input required type="number" step="0.01" id="sl_lmt_buffer" value="0.10" /></label>
-            <label class="checkbox-row"><input type="checkbox" id="autostart" /> Auto-start with platform</label>
-          </div>
-        </fieldset>
-
-        <div class="modal-footer">
-          <button type="button" id="btnCancel" class="btn btn-ghost">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Symbol</button>
-        </div>
-      </form>
-    </div>
+  <!-- Hidden board – prevents app.js errors (kept for compatibility) -->
+  <div class="board-hidden">
+    <table>
+      <thead>
+        <tr>
+          <th>Symbol</th><th>LTP</th><th>Brick</th><th>Trend</th>
+          <th>Position</th><th>Entry</th><th>Stop Loss</th>
+          <th>Qty</th><th>Mode</th><th>Status</th>
+          <th>Updated</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="boardBody"></tbody>
+    </table>
   </div>
 
-  <!-- Broker Token Modal -->
+  <!-- Hidden modals (keep for Access Token functionality) -->
   <div id="brokerModalOverlay" class="modal-overlay hidden">
     <div class="modal" style="max-width: 480px;">
       <div class="modal-header">
@@ -1227,6 +752,160 @@
       </div>
     </div>
   </div>
+
+  <!-- ====== Modal styles (minimal, reused from dashboard) ====== -->
+  <style>
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--overlay-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 100;
+      transition: opacity 0.4s ease;
+    }
+    .modal-overlay.hidden {
+      display: none;
+    }
+    .modal {
+      background: var(--modal-grad);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5), 0 0 60px rgba(123,47,252,0.1);
+      width: 100%;
+      max-width: 780px;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: modalPop 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 1.8rem;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+    }
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: var(--brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-size: 200% 200%;
+      animation: gradientShift 5s ease infinite;
+    }
+    .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+    }
+    .modal-body label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .modal-body input {
+      background-color: var(--input-bg) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--input-border) !important;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      transition: all 0.3s ease;
+      width: 100%;
+      font-family: inherit;
+    }
+    .modal-body input:focus {
+      border-color: #ff2d95 !important;
+      box-shadow: 0 0 0 4px rgba(255,45,149,0.2), 0 0 24px rgba(255,45,149,0.1);
+      outline: none;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 14px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+    .btn-full {
+      width: 100%;
+      justify-content: center;
+    }
+    .btn-secondary {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .token-hint {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin: 0;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+      border-left: 3px solid #ff2d95;
+    }
+    .token-hint code {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 10px;
+      border-radius: 6px;
+      color: #ff2d95;
+      font-weight: 600;
+    }
+    .token-status {
+      padding: 12px 18px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      font-size: 12px;
+      border: 1px solid var(--border-color);
+      transition: border-color 0.3s ease;
+    }
+    .token-status:hover {
+      border-color: var(--border-glow);
+    }
+    .token-divider {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin: 12px 0;
+    }
+    .token-divider::before,
+    .token-divider::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--border-color);
+      transition: border-color 0.3s ease;
+    }
+    .token-divider:hover::before,
+    .token-divider:hover::after {
+      border-color: var(--border-glow);
+    }
+    .token-divider span {
+      padding: 0 14px;
+      font-weight: 600;
+    }
+    .hidden {
+      display: none !important;
+    }
+  </style>
 
   <script>
     const themeSelect = document.getElementById('themeSelect');
