@@ -356,11 +356,18 @@ class TradingEngine:
 
             positions = self.broker.get_positions()
             self.position_qty = 0
+            avg_price = None
             if positions:
                 for p in positions:
                     if p.get("tsym") == self.cfg.trading_symbol and p.get("exch") == self.cfg.exchange:
                         self.position_qty = int(p.get("netqty", 0))
+                        avg_price = float(p.get("avgprc", 0))   # ← capture average price
                         break
+
+            # ── Recover entry_price from broker position ──
+            if self.position_qty != 0 and self.entry_price is None and avg_price and avg_price > 0:
+                self.entry_price = self._round_price(avg_price)
+                self._log("INFO", f"🔧 Recovered entry_price from broker position: {self.entry_price}")
 
             # ── Origin-price snapshot recovery, independently per side ──
             # pending_buy_origin_price / pending_sell_origin_price are
