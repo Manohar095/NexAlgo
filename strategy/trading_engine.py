@@ -730,21 +730,21 @@ class TradingEngine:
 
     # ================= OPPOSITE-DIRECTION ENTRY (LONG_SHORT only) =================
     # ================= PLACE SL ORDER =================
-    def _place_sl_order(self, sl_side, trigger_price, qty):
+    def _place_sl_order(self, sl_side, limit_price, qty):
         if self.sl_order_id:
             self._log("INFO", f"⛔ SL order already exists ({self.sl_order_id}) → not placing another")
             return
 
-        trigger = self._round_price(trigger_price)
-        if trigger <= 0:
-            self._log("ERROR", f"❌ Invalid SL trigger price: {trigger_price}")
+        limit = self._round_price(limit_price)
+        if limit <= 0:
+            self._log("ERROR", f"❌ Invalid SL limit price: {limit_price}")
             return
 
         offset = self.cfg.limit_offset or self.cfg.tick_size
-        if sl_side == "S":
-            limit = self._round_price(trigger - offset)
-        else:
-            limit = self._round_price(trigger + offset)
+        if sl_side == "S":      # SELL order (exit LONG): trigger below limit
+            trigger = self._round_price(limit - offset)
+        else:                   # BUY order (exit SHORT): trigger above limit
+            trigger = self._round_price(limit + offset)
 
         self._log("INFO", f"📤 PLACING SL | side={sl_side} trigger={trigger:.2f} limit={limit:.2f} qty={qty}")
 
@@ -767,34 +767,34 @@ class TradingEngine:
             if response and response.get("stat") == "Ok":
                 self.sl_order_id      = response.get("norenordno")
                 self.sl_side          = sl_side
-                self.sl_trigger_price = trigger
+                self.sl_trigger_price = trigger   # stored for reference
                 self.sl_limit_price   = limit
-                self._log("INFO", f"✅ SL Placed | oid={self.sl_order_id} trigger={trigger:.2f}")
+                self._log("INFO", f"✅ SL Placed | oid={self.sl_order_id} trigger={trigger:.2f} limit={limit:.2f}")
             else:
                 self._log("ERROR", f"📤 SL Order FAILED ❌ | emsg={response.get('emsg') if response else None}")
-
         except Exception as e:
             self._log("ERROR", f"SL order exception → {e}")
 
     # ================= TRAIL SL (tighten-only) =================
-    def _modify_sl_order(self, new_trigger):
+    def _modify_sl_order(self, new_limit):
         if not self.sl_order_id or self.position_qty == 0:
             return
 
-        new_trigger = self._round_price(new_trigger)
+        new_limit = self._round_price(new_limit)
         offset = self.cfg.limit_offset or self.cfg.tick_size
 
-        if self.position_qty > 0:
-            if self.sl_trigger_price is not None and new_trigger <= self.sl_trigger_price:
+        # Tighten‑only comparison on LIMIT prices
+        if self.position_qty > 0:      # LONG – limit must move UP
+            if self.sl_limit_price is not None and new_limit <= self.sl_limit_price:
                 return
-            new_limit = self._round_price(new_trigger - offset)
-        else:
-            if self.sl_trigger_price is not None and new_trigger >= self.sl_trigger_price:
+            new_trigger = self._round_price(new_limit - offset)
+        else:                          # SHORT – limit must move DOWN
+            if self.sl_limit_price is not None and new_limit >= self.sl_limit_price:
                 return
-            new_limit = self._round_price(new_trigger + offset)
+            new_trigger = self._round_price(new_limit + offset)
 
         try:
-            self._log("INFO", f"🔧 Trailing SL | oid={self.sl_order_id} | {self.sl_trigger_price or 0:.2f} → {new_trigger:.2f}")
+            self._log("INFO", f"🔧 Trailing SL | oid={self.sl_order_id} | limit {self.sl_limit_price or 0:.2f} → {new_limit:.2f}")
 
             response = self.broker.modify_order(
                 exchange=self.cfg.exchange,
@@ -809,7 +809,7 @@ class TradingEngine:
             if response and response.get("stat") == "Ok":
                 self.sl_trigger_price = new_trigger
                 self.sl_limit_price   = new_limit
-                self._log("INFO", f"🔧 SL Trailed ✅ | new trigger={new_trigger:.2f}")
+                self._log("INFO", f"🔧 SL Trailed ✅ | new limit={new_limit:.2f} trigger={new_trigger:.2f}")
             else:
                 self._log("ERROR", f"🔧 Modify SL FAILED ❌ | {response}")
         except Exception as e:
@@ -1200,17 +1200,17 @@ class TradingEngine:
                 self._log("ERROR", "❌ Cannot compute SL — no entry_price and renko.last_close is None")
                 return
             if self.position_qty > 0:
-                sl_trigger = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                sl_limit = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 sl_side = "S"
             else:
-                sl_trigger = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                sl_limit = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 sl_side = "B"
 
             self._log(
                 "INFO",
-                f"🛡️ Reconciling SL for position={self.position_qty} | side={sl_side} trigger={sl_trigger:.2f}"
+                f"🛡️ Reconciling SL for position={self.position_qty} | side={sl_side} trigger={sl_limit:.2f}"
             )
-            self._place_sl_order(sl_side, sl_trigger, abs(self.position_qty))
+            self._place_sl_order(sl_side, sl_limit, abs(self.position_qty))
 
     # ================= FEED CALLBACK =================
     def feed_handler(self, msg):
