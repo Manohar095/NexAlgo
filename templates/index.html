@@ -490,7 +490,7 @@
       box-shadow: 0 12px 48px rgba(0,0,0,0.25);
       transition: border-color 0.4s ease, box-shadow 0.4s ease;
       padding: 1.5rem 2rem;
-      animation: borderPulse 6s infinite;  /* ← ADD THIS LINE */
+      animation: borderPulse 6s infinite;
     }
 
     .board:hover {
@@ -597,7 +597,7 @@
     }
 
     /* ==========================================================================
-       7. TERMINAL / GLOBAL LOG PANEL
+       7. TERMINAL / GLOBAL LOG PANEL – FIXED
        ========================================================================== */
 
     .logs-panel {
@@ -611,7 +611,7 @@
       flex-direction: column;
       gap: 14px;
       transition: border-color 0.4s ease, box-shadow 0.4s ease;
-      animation: borderPulse 6s infinite;  /* ← ADD THIS LINE */
+      animation: borderPulse 6s infinite;
     }
 
     .logs-panel:hover {
@@ -675,14 +675,15 @@
       padding: 8px 12px;
     }
 
+    /* ===== LOG STREAM – FIXED: taller + scrollable ===== */
     .log-stream {
       background-color: var(--term-bg);
       border: 1px solid var(--term-border);
       color: var(--term-text);
       border-radius: 12px;
       padding: 16px;
-      height: 200px;
-      overflow-y: auto;
+      height: 260px;              /* Increased to show more lines */
+      overflow-y: auto;           /* Enable scrolling */
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -692,9 +693,10 @@
       scroll-behavior: smooth;
       box-shadow: inset 0 4px 20px rgba(0,0,0,0.6), 0 0 30px rgba(123,47,252,0.05);
       position: relative;
-      overflow: hidden;
+      /* REMOVED: overflow: hidden – this was blocking scrolling */
     }
 
+    /* Scanline effect – stays */
     .log-stream::after {
       content: "";
       position: absolute;
@@ -706,6 +708,7 @@
       pointer-events: none;
     }
 
+    /* Scrollbar styling */
     .log-stream::-webkit-scrollbar {
       width: 6px;
     }
@@ -717,6 +720,7 @@
       border-radius: 4px;
     }
 
+    /* Log line styles */
     .log-line {
       white-space: pre-wrap;
       word-break: break-all;
@@ -973,6 +977,9 @@
       .logs-panel {
         padding: 1rem;
       }
+      .log-stream {
+        height: 200px; /* Slightly smaller on mobile */
+      }
       .modal {
         padding: 1.2rem;
         max-width: 95%;
@@ -1041,10 +1048,9 @@
           </tr>
         </thead>
         <tbody id="boardBody">
-          <!-- ===== SAMPLE ROW 1: SENSEX ===== -->
+          <!-- ===== SAMPLE ROW 1: SENSEX – FIXED: proper td closure ===== -->
           <tr>
-            <td>
-              <strong>SENSEX2681377500CE</strong><br />
+            <td><strong>SENSEX2681377500CE</strong></td>
             <td>—</td>
             <td>—</td>
             <td>—</td>
@@ -1064,10 +1070,9 @@
             </td>
           </tr>
 
-          <!-- ===== SAMPLE ROW 2: YESBANK ===== -->
+          <!-- ===== SAMPLE ROW 2: YESBANK – FIXED: proper td closure ===== -->
           <tr>
-            <td>
-              <strong>YESBANK-EQ</strong><br />
+            <td><strong>YESBANK-EQ</strong></td>
             <td>—</td>
             <td>—</td>
             <td>—</td>
