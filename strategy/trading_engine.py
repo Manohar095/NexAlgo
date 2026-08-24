@@ -787,11 +787,11 @@ class TradingEngine:
         if self.position_qty > 0:      # LONG – limit must move UP
             if self.sl_limit_price is not None and new_limit <= self.sl_limit_price:
                 return
-            new_trigger = self._round_price(new_limit - offset)
+            new_trigger = self._round_price(new_limit + offset)
         else:                          # SHORT – limit must move DOWN
             if self.sl_limit_price is not None and new_limit >= self.sl_limit_price:
                 return
-            new_trigger = self._round_price(new_limit + offset)
+            new_trigger = self._round_price(new_limit - offset)
 
         try:
             self._log("INFO", f"🔧 Trailing SL | oid={self.sl_order_id} | limit {self.sl_limit_price or 0:.2f} → {new_limit:.2f}")
