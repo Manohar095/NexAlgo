@@ -604,7 +604,7 @@ class TradingEngine:
                 elif task["type"] == "CANCEL":
                     self._cancel_order_direct(task["order_id"])
                 elif task["type"] == "MODIFY_SL":
-                    self._modify_sl_order(task["new_trigger"])
+                    self._modify_sl_order(task["new_limit"])
                 elif task["type"] == "MODIFY_PENDING_ENTRY":
                     self._modify_pending_entry_order(task["side"], task["new_trigger"], task["new_limit"])
             except Exception as e:
@@ -742,9 +742,9 @@ class TradingEngine:
 
         offset = self.cfg.limit_offset or self.cfg.tick_size
         if sl_side == "S":      # SELL order (exit LONG): trigger below limit
-            trigger = self._round_price(limit - offset)
-        else:                   # BUY order (exit SHORT): trigger above limit
             trigger = self._round_price(limit + offset)
+        else:                   # BUY order (exit SHORT): trigger above limit
+            trigger = self._round_price(limit - offset)
 
         self._log("INFO", f"📤 PLACING SL | side={sl_side} trigger={trigger:.2f} limit={limit:.2f} qty={qty}")
 
@@ -1298,10 +1298,10 @@ class TradingEngine:
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
             if self.position_qty != 0:
                 if self.position_qty > 0:
-                    candidate_trigger = brick_price - (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                    candidate_limit = brick_price - (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 else:
-                    candidate_trigger = brick_price + (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
-                self.trail_sl(candidate_trigger)
+                    candidate_limit = brick_price + (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                self.trail_sl(candidate_limit)
 
             # ===== ENTRY SIGNALS — BUY and SELL are independent in LONG_SHORT =====
             # LONG_ONLY / SHORT_ONLY: unchanged — only their own side's
@@ -1349,10 +1349,10 @@ class TradingEngine:
     def cancel_order(self, order_id):
         self.order_queue.put({"type": "CANCEL", "order_id": order_id})
 
-    def trail_sl(self, new_trigger):
+    def trail_sl(self, new_limit):
         if self.trades_blocked or not self.sl_order_id or self.position_qty == 0:
             return
-        self.order_queue.put({"type": "MODIFY_SL", "new_trigger": new_trigger})
+        self.order_queue.put({"type": "MODIFY_SL", "new_limit": new_limit})
 
     def trail_pending_entry(self, side, new_trigger, new_limit):
         """Trails a resting pending ENTRY order for ONE SIDE (BUY or
