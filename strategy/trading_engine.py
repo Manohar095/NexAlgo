@@ -1206,6 +1206,17 @@ class TradingEngine:
             if not ref_price:
                 self._log("ERROR", "❌ Cannot compute SL — no entry_price and renko.last_close is None")
                 return
+            if not self.entry_price:
+                # entry_price was missing (this leg's fill was only ever
+                # caught via the periodic safety net, never through
+                # order_handler's pending-fill branches where the exact
+                # broker fill price is normally recorded) — record the
+                # renko.last_close fallback we're using anyway, so the
+                # dashboard's Entry column has a reasonable value instead
+                # of staying permanently blank for this leg, and so any
+                # later reconciliation call has a trustworthy reference
+                # instead of falling back again.
+                self.entry_price = ref_price
             if self.position_qty > 0:
                 sl_limit = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
                 sl_side = "S"
