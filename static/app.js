@@ -43,12 +43,12 @@ async function loadSymbols() {
   const records = await api("/api/symbols");
   symbols = {};
   records.forEach(r => { symbols[r.id] = r; knownSymbolNames[r.id] = r.config.strategy_name; });
-  renderBoard();          // safe – it checks if boardBody exists
+  renderBoard();
   renderLogFilterOptions();
 }
 
 function renderBoard() {
-  if (!boardBody) return;   // logs page: no board, skip rendering
+  if (!boardBody) return;
   const ids = Object.keys(symbols);
   if (ids.length === 0) {
     boardBody.innerHTML = `<tr class="empty-row"><td colspan="12">No symbols yet. Click “+ Add Symbol” to configure your first Renko strategy.</td></tr>`;
@@ -152,7 +152,7 @@ async function deleteSymbol(id) {
   catch (e) { alert(e.message); }
 }
 
-// ---------------- Modal / form ---------------- (only if elements exist)
+// ---------------- Modal / form ----------------
 if (document.getElementById("btnAddSymbol")) {
   document.getElementById("btnAddSymbol").addEventListener("click", () => openCreateModal());
 }
@@ -331,6 +331,576 @@ if (brokerTokenForm) {
   });
 }
 
+// ---------------- Search Symbol ----------------
+const btnSearchSymbol = document.getElementById("btnSearchSymbol");
+const searchInputLarge = document.getElementById("searchInputLarge");
+const searchExchangeSelect = document.getElementById("searchExchangeSelect");
+const searchResultsList = document.getElementById("searchResultsList");
+
+let searchResultsData = [];
+let searchTimeout = null;
+
+// Function to perform search
+async function performSearch() {
+  const query = searchInputLarge?.value?.trim() || '';
+  const exchange = searchExchangeSelect?.value || "NSE";
+
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
+    searchTimeout = null;
+  }
+
+  if (query.length < 2) {
+    if (searchResultsList) {
+      searchResultsList.innerHTML = '<div class="no-results">Type at least 2 characters…</div>';
+    }
+    searchResultsData = [];
+    return;
+  }
+
+  if (searchResultsList) {
+    searchResultsList.innerHTML = '<div class="no-results">Searching...</div>';
+  }
+
+  searchTimeout = setTimeout(async () => {
+    try {
+      const result = await api("/api/search-symbols", {
+        method: "POST",
+        body: JSON.stringify({ query: query, exchange: exchange })
+      });
+
+      if (result.stat !== "Ok") {
+        if (searchResultsList) {
+          searchResultsList.innerHTML = `<div class="no-results">${escapeHTML(result.emsg || "Search failed")}</div>`;
+        }
+        searchResultsData = [];
+        return;
+      }
+
+      const values = result.values || [];
+      searchResultsData = values;
+
+      if (!searchResultsList) return;
+
+      if (values.length === 0) {
+        searchResultsList.innerHTML = '<div class="no-results">No symbols found</div>';
+        return;
+      }
+
+      searchResultsList.innerHTML = values.map((item, index) => {
+        return `
+          <div class="result-item" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer;">
+            <div style="flex: 1;" onclick="selectSearchResult(${index})">
+              <strong>${escapeHTML(item.tsym || "")}</strong>
+              <span style="margin-left: 8px; font-size: 12px; color: #718096;">${escapeHTML(item.exch || "")}</span>
+              <span style="margin-left: 8px; font-size: 12px; color: #718096;">Token: ${escapeHTML(item.token || "")}</span>
+            </div>
+            <div>
+              <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); getQuotes('${escapeHTML(item.exch || 'NSE')}', '${escapeHTML(item.token || '')}', '${escapeHTML(item.tsym || '')}')" style="margin-right: 4px;">
+                Quotes
+              </button>
+              <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); selectSearchResult(${index})">
+                Select
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      searchResultsList.querySelectorAll('.result-item').forEach(el => {
+        el.addEventListener('click', function(e) {
+          if (!e.target.closest('button')) {
+            const index = parseInt(this.dataset.index);
+            selectSearchResult(index);
+          }
+        });
+      });
+
+    } catch (error) {
+      console.error("SEARCH API ERROR:", error);
+      if (searchResultsList) {
+        searchResultsList.innerHTML = `<div class="no-results">${escapeHTML(error.message)}</div>`;
+      }
+      searchResultsData = [];
+    }
+  }, 300);
+}
+
+// Search input handler
+if (searchInputLarge) {
+  searchInputLarge.addEventListener("input", performSearch);
+  searchInputLarge.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+        searchTimeout = null;
+      }
+      performSearch();
+    }
+  });
+}
+
+// Exchange dropdown change handler
+if (searchExchangeSelect) {
+  searchExchangeSelect.addEventListener("change", performSearch);
+}
+
+// Open search modal
+if (btnSearchSymbol) {
+  btnSearchSymbol.addEventListener("click", () => {
+    const overlay = document.getElementById("searchModalOverlay");
+    if (overlay) {
+      overlay.classList.remove("hidden");
+    }
+    if (searchInputLarge) {
+      searchInputLarge.focus();
+      searchInputLarge.select();
+      if (searchInputLarge.value.trim().length >= 2) {
+        performSearch();
+      }
+    }
+  });
+}
+
+// Select search result and populate form
+function selectSearchResult(index) {
+  const item = searchResultsData[index];
+  if (!item) return;
+
+  console.log("SELECTED SYMBOL:", item);
+
+  // Close search popup
+  const searchOverlay = document.getElementById("searchModalOverlay");
+  if (searchOverlay) searchOverlay.classList.add("hidden");
+
+  // Open Add Symbol form
+  openCreateModal();
+
+  // Populate the form with the selected data
+  const strategyNameField = document.getElementById("strategy_name");
+  const exchangeField = document.getElementById("exchange");
+  const tradingSymbolField = document.getElementById("trading_symbol");
+  const tokenField = document.getElementById("token");
+  const tickSizeField = document.getElementById("tick_size");
+
+  if (strategyNameField) strategyNameField.value = item.tsym || "";
+  if (exchangeField) exchangeField.value = item.exch || "";
+  if (tradingSymbolField) tradingSymbolField.value = item.tsym || "";
+  if (tokenField) tokenField.value = item.token || "";
+  if (tickSizeField) tickSizeField.value = item.ti || "";
+
+  console.log("SCRIP POPULATED:", item.tsym, "TOKEN:", item.token, "EXCHANGE:", item.exch);
+}
+
+// Close search popup
+const searchModalClose = document.getElementById("searchModalClose");
+if (searchModalClose) {
+  searchModalClose.addEventListener("click", () => {
+    const overlay = document.getElementById("searchModalOverlay");
+    if (overlay) overlay.classList.add("hidden");
+  });
+}
+
+const searchModalOverlay = document.getElementById("searchModalOverlay");
+if (searchModalOverlay) {
+  searchModalOverlay.addEventListener("click", (e) => {
+    if (e.target === searchModalOverlay) {
+      searchModalOverlay.classList.add("hidden");
+    }
+  });
+}
+
+
+// ---------------- Select from Quotes Function (like selectSearchResult) ----------------
+function selectFromQuotes() {
+  console.log("selectFromQuotes called!");
+  
+  const quoteData = window._selectedQuoteData;
+  if (!quoteData) {
+    console.error("No quote data found!");
+    return;
+  }
+  
+  console.log("Quote data:", quoteData);
+  
+  // Close quotes modal
+  const quotesModalOverlay = document.getElementById('quotesModalOverlay');
+  if (quotesModalOverlay) {
+    quotesModalOverlay.classList.add('hidden');
+  }
+  
+  // Open Add Symbol form - using the same function as search results
+  openCreateModal();
+  
+  // Populate form fields
+  const strategyNameField = document.getElementById("strategy_name");
+  const exchangeField = document.getElementById("exchange");
+  const tradingSymbolField = document.getElementById("trading_symbol");
+  const tokenField = document.getElementById("token");
+  const tickSizeField = document.getElementById("tick_size");
+  
+  const symbolName = quoteData.tsym || quoteData.cname || '';
+  const exchange = quoteData.exch || '';
+  const token = quoteData.token || '';
+  const tickSize = quoteData.ti || '';
+  
+  console.log("Populating with:", { symbolName, exchange, token, tickSize });
+  
+  if (strategyNameField) strategyNameField.value = symbolName;
+  if (exchangeField) exchangeField.value = exchange;
+  if (tradingSymbolField) tradingSymbolField.value = symbolName;
+  if (tokenField) tokenField.value = token;
+  if (tickSizeField) tickSizeField.value = tickSize;
+  
+  console.log("Form populated successfully from quotes!");
+}
+
+// ---------------- Get Quotes Functionality ----------------
+async function getQuotes(exchange, token, symbol) {
+  const modal = document.getElementById('quotesModalOverlay');
+  const modalContent = document.getElementById('quotesModalContent');
+  const modalTitle = document.getElementById('quotesModalTitle');
+  const loadingIndicator = document.getElementById('quotesLoading');
+  
+  if (!modal) {
+    console.error('Quotes modal not found');
+    return;
+  }
+  
+  modalTitle.textContent = `Quote Details - ${symbol}`;
+  modalContent.innerHTML = '';
+  loadingIndicator.classList.remove('hidden');
+  modal.classList.remove('hidden');
+  
+  try {
+    const url = `/api/get-quotes?exchange=${encodeURIComponent(exchange)}&token=${encodeURIComponent(token)}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+    loadingIndicator.classList.add('hidden');
+    
+    if (data.success) {
+      displayQuotesInModal(data.data);
+    } else {
+      modalContent.innerHTML = `
+        <div class="alert-error" style="padding: 12px 16px; border-radius: 8px; background: #fed7d7; color: #742a2a; border: 1px solid #fc8181;">
+          Failed to get quotes: ${escapeHTML(data.error || 'Unknown error')}
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.error('Get quotes error:', error);
+    loadingIndicator.classList.add('hidden');
+    modalContent.innerHTML = `
+      <div class="alert-error" style="padding: 12px 16px; border-radius: 8px; background: #fed7d7; color: #742a2a; border: 1px solid #fc8181;">
+        Error fetching quotes: ${escapeHTML(error.message)}
+      </div>
+    `;
+  }
+}
+
+// ---------------- Display Quotes in Modal ----------------
+function displayQuotesInModal(data) {
+  const modalContent = document.getElementById('quotesModalContent');
+  
+  window._selectedQuoteData = data;
+  
+  let html = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">
+      <!-- Basic Information -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Company Name</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.cname || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Symbol Name</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.symname || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Exchange</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">
+          <span style="background: #bee3f8; color: #2a4365; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">${escapeHTML(data.exch || 'N/A')}</span>
+        </span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Trading Symbol</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);"><strong>${escapeHTML(data.tsym || 'N/A')}</strong></span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Token</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">
+          <code style="background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 4px; font-size: 13px;">${escapeHTML(data.token || 'N/A')}</code>
+        </span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">ISIN</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.isin || 'N/A')}</span>
+      </div>
+      
+      <!-- Instrument Details -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Instrument</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">
+          <span style="background: #e9d8fd; color: #553c9a; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">${escapeHTML(data.instname || 'N/A')}</span>
+        </span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Segment</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.seg || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Lot Size</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.ls || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Tick Size</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.ti || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Multiplier</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.mult || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Price Precision</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.pp || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); grid-column: span 2;">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Price Factor</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.prcftr_d || 'N/A')}</span>
+      </div>
+      
+      <!-- Price & Market Data -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Last Price</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.lp || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Day High</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.h || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Day Low</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.l || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Volume</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.v || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Upper Circuit</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.uc || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Lower Circuit</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.lc || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Last Trade Qty</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.ltq || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Last Trade Time</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.ltt || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); grid-column: span 2;">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Last Trade Date</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.ltd || data.exd || 'N/A')}</span>
+      </div>
+      
+      <!-- Best Bid/Ask (Level 1) -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Best Bid Price</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp1 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Best Ask Price</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp1 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Best Bid Qty</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq1 || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Best Ask Qty</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq1 || '0')}</span>
+      </div>
+      
+      <!-- Best Bid/Ask (Level 2) -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 2</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp2 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 2</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp2 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 2</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq2 || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 2</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq2 || '0')}</span>
+      </div>
+      
+      <!-- Best Bid/Ask (Level 3) -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 3</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp3 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 3</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp3 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 3</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq3 || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 3</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq3 || '0')}</span>
+      </div>
+      
+      <!-- Best Bid/Ask (Level 4) -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 4</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp4 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 4</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp4 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 4</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq4 || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 4</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq4 || '0')}</span>
+      </div>
+      
+      <!-- Best Bid/Ask (Level 5) -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 5</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp5 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 5</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp5 || '0.00')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 5</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq5 || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 5</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq5 || '0')}</span>
+      </div>
+      
+      <!-- Best Bid/Ask Orders -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Orders 1</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bo1 || '0')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Orders 1</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.so1 || '0')}</span>
+      </div>
+      
+      <!-- Additional Fields -->
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Option Type</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">
+          <span style="background: #feebc8; color: #744210; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">${escapeHTML(data.optt || data.opt || 'N/A')}</span>
+        </span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Expiry Date</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.exd || 'N/A')}</span>
+      </div>
+      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); grid-column: span 2;">
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Request Time</span>
+        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.request_time || 'N/A')}</span>
+      </div>
+    </div>
+  `;
+  
+  
+  // Add Close button only
+  html += `
+    <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+      <button 
+        class="btn btn-secondary" 
+        style="padding: 12px 24px; font-size: 14px; cursor: pointer;"
+        onclick="closeQuotesModal()"
+      >
+        Close
+      </button>
+    </div>
+  `;
+  
+  modalContent.innerHTML = html;
+}
+
+
+// ---------------- Close Quotes Modal Function ----------------
+function closeQuotesModal() {
+  console.log("closeQuotesModal called!");
+  const quotesModalOverlay = document.getElementById('quotesModalOverlay');
+  if (quotesModalOverlay) {
+    quotesModalOverlay.classList.add('hidden');
+  }
+  const modalContent = document.getElementById('quotesModalContent');
+  if (modalContent) {
+    setTimeout(() => {
+      if (quotesModalOverlay && quotesModalOverlay.classList.contains('hidden')) {
+        modalContent.innerHTML = '';
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'quotesLoading';
+        loadingDiv.className = 'loading';
+        loadingDiv.innerHTML = `
+          <div class="spinner"></div>
+          <p style="margin-top: 8px; color: var(--text-muted);">Fetching quotes...</p>
+        `;
+        modalContent.appendChild(loadingDiv);
+        delete window._selectedQuoteData;
+      }
+    }, 300);
+  }
+}
+
+// ---------------- Quotes Modal Event Listeners ----------------
+const quotesModalOverlay = document.getElementById('quotesModalOverlay');
+const quotesModalClose = document.getElementById('quotesModalClose');
+
+if (quotesModalClose) {
+  quotesModalClose.addEventListener('click', closeQuotesModal);
+}
+
+if (quotesModalOverlay) {
+  quotesModalOverlay.addEventListener('click', function(e) {
+    if (e.target === quotesModalOverlay) {
+      closeQuotesModal();
+    }
+  });
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && quotesModalOverlay && !quotesModalOverlay.classList.contains('hidden')) {
+    closeQuotesModal();
+  }
+});
+
+// ---------------- Make functions globally accessible ----------------
+window.closeQuotesModal = closeQuotesModal;
+window.getQuotes = getQuotes;
+window.selectSearchResult = selectSearchResult;
+
 // ---------------- Logs ----------------
 function renderLogFilterOptions() {
   if (!logFilter) return;
@@ -395,7 +965,7 @@ function connectWS() {
     if (msg.type === "status") {
       if (symbols[msg.instance_id]) {
         symbols[msg.instance_id].live_status = msg.status;
-        renderBoard();   // safe – it checks boardBody
+        renderBoard();
       }
     } else if (msg.type === "log") {
       const name = knownSymbolNames[msg.instance_id];
@@ -422,10 +992,10 @@ if (logoutBtn) {
     if (!authStatus.auth_enabled && logoutBtn) {
       logoutBtn.classList.add("hidden");
     }
-  } catch (e) { /* ignore — leave logout button visible */ }
+  } catch (e) { /* ignore */ }
 
-  await loadSymbols();            // will render board only if boardBody exists
-  await loadInitialLogs();        // only if logStream exists
+  await loadSymbols();
+  await loadInitialLogs();
   connectWS();
-  setInterval(loadSymbols, 15000); // periodic refresh (safe)
+  setInterval(loadSymbols, 15000);
 })();

@@ -359,6 +359,13 @@ class BrokerSession:
         self.login()
         return self.api.get_quotes(exchange=exchange, token=token)
 
+    def search_symbols(self, exchange, search_text):
+        self.login()
+        return self.api.searchscrip(
+            exchange=exchange,
+            searchtext=search_text
+        )    
+
     def place_order(self, **kwargs):
         self.login()
         return self.api.place_order(**kwargs)

@@ -447,6 +447,23 @@
       border-radius: 6px;
     }
 
+    .btn-success-sm {
+      background: #22c55e22;
+      color: #22c55e;
+      border: 1px solid #22c55e55;
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-success-sm:hover {
+      background: #22c55e44;
+      border-color: #22c55e;
+      box-shadow: 0 0 20px #22c55e33;
+    }
+
     .icon-btn {
       background: transparent;
       border: none;
@@ -683,8 +700,8 @@
       color: var(--term-text);
       border-radius: 12px;
       padding: 16px;
-      height: 260px;              /* Increased to show more lines */
-      overflow-y: auto;           /* Enable scrolling */
+      height: 260px;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -694,7 +711,6 @@
       scroll-behavior: smooth;
       box-shadow: inset 0 4px 20px rgba(0,0,0,0.6), 0 0 30px rgba(123,47,252,0.05);
       position: relative;
-      /* REMOVED: overflow: hidden – this was blocking scrolling */
     }
 
     /* Scanline effect – stays */
@@ -938,7 +954,226 @@
     }
 
     /* ==========================================================================
-       9. RESPONSIVE
+       9. SEARCH MODAL STYLES - IMPROVED
+       ========================================================================== */
+
+    .search-input-wrapper {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .search-input-wrapper .search-input-field {
+      flex: 2;
+      min-width: 200px;
+    }
+
+    .search-input-wrapper .search-exchange-field {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .search-input-wrapper input,
+    .search-input-wrapper select {
+      width: 100%;
+      background-color: var(--input-bg) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--input-border) !important;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .search-input-wrapper input:focus,
+    .search-input-wrapper select:focus {
+      border-color: #ff2d95 !important;
+      box-shadow: 0 0 0 4px rgba(255,45,149,0.2);
+      outline: none;
+    }
+
+    .search-results {
+      max-height: 420px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--input-bg);
+      min-height: 80px;
+    }
+
+    .search-results .result-item {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-results .result-item:last-child {
+      border-bottom: none;
+    }
+
+    .search-results .result-item:hover {
+      background: rgba(123,47,252,0.15);
+    }
+
+    .search-results .result-item .symbol-info {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .search-results .result-item .symbol-info strong {
+      font-size: 14px;
+    }
+
+    .search-results .result-item .symbol-info .symbol-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
+    .search-results .result-item .symbol-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .search-results .no-results {
+      padding: 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    .search-result-count {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* ==========================================================================
+       10. QUOTES MODAL STYLES
+       ========================================================================== */
+
+    .quote-details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .quote-item {
+      background: var(--input-bg);
+      padding: 12px 16px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .quote-item .label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .quote-item .value {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .quote-item .value code {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .tag-info {
+      background: #bee3f8;
+      color: #2a4365;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag-purple {
+      background: #e9d8fd;
+      color: #553c9a;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .tag-warning {
+      background: #feebc8;
+      color: #744210;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .quote-full-data {
+      background: var(--input-bg);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      margin-top: 12px;
+    }
+
+    .alert-error {
+      padding: 12px 16px;
+      border-radius: 8px;
+      background: #fed7d7;
+      color: #742a2a;
+      border: 1px solid #fc8181;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .loading.hidden {
+      display: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid var(--border-color);
+      border-top-color: #ff2d95;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ==========================================================================
+       11. RESPONSIVE
        ========================================================================== */
 
     @media (max-width: 768px) {
@@ -979,7 +1214,7 @@
         padding: 1rem;
       }
       .log-stream {
-        height: 200px; /* Slightly smaller on mobile */
+        height: 200px;
       }
       .modal {
         padding: 1.2rem;
@@ -990,6 +1225,25 @@
       }
       .checkbox-row {
         grid-column: span 1;
+      }
+      .quote-details-grid {
+        grid-template-columns: 1fr;
+      }
+      .search-input-wrapper {
+        flex-direction: column;
+      }
+      .search-input-wrapper .search-input-field,
+      .search-input-wrapper .search-exchange-field {
+        flex: none;
+        width: 100%;
+        min-width: unset;
+      }
+      .search-results .result-item {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .search-results .result-item .symbol-actions {
+        margin-top: 8px;
       }
     }
 
@@ -1035,7 +1289,7 @@
         <a href="/logs" class="btn btn-ghost">📋 Logs</a>
 
         <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
-        <button id="btnAddSymbol" class="btn">+ Add Symbol</button>
+        <button id="btnSearchSymbol" class="btn">🔍 Search & Add Symbol</button>
         <button id="btnLogout" class="btn btn-ghost" title="Sign out">⎋ Logout</button>
       </div>
     </header>
@@ -1051,49 +1305,7 @@
           </tr>
         </thead>
         <tbody id="boardBody">
-          <!-- ===== SAMPLE ROW 1: SENSEX – FIXED: proper td closure ===== -->
-          <tr>
-            <td><strong>SENSEX2681377500CE</strong></td>
-            <td>—</td>
-            <td>—</td>
-            <td>—</td>
-            <td><span style="color:#facc15;">FLAT</span></td>
-            <td>—</td>
-            <td>20</td>
-            <td>20</td>
-            <td><span style="color:#60a5fa;">LONG ONLY</span></td>
-            <td><span style="color:#f87171;">STOPPED</span></td>
-            <td>—</td>
-            <td>
-              <div class="actions-cell">
-                <button class="btn-action btn-start">Start</button>
-                <button class="btn-action btn-edit">Edit</button>
-                <button class="btn-action btn-delete">Delete</button>
-              </div>
-            </td>
-          </tr>
-
-          <!-- ===== SAMPLE ROW 2: YESBANK – FIXED: proper td closure ===== -->
-          <tr>
-            <td><strong>YESBANK-EQ</strong></td>
-            <td>—</td>
-            <td>—</td>
-            <td>—</td>
-            <td><span style="color:#facc15;">FLAT</span></td>
-            <td>—</td>
-            <td>20</td>
-            <td>20</td>
-            <td><span style="color:#60a5fa;">LONG ONLY</span></td>
-            <td><span style="color:#f87171;">STOPPED</span></td>
-            <td>—</td>
-            <td>
-              <div class="actions-cell">
-                <button class="btn-action btn-start">Start</button>
-                <button class="btn-action btn-edit">Edit</button>
-                <button class="btn-action btn-delete">Delete</button>
-              </div>
-            </td>
-          </tr>
+          <!-- Dynamic rows rendered by app.js -->
         </tbody>
       </table>
     </main>
@@ -1225,6 +1437,62 @@
             <button type="submit" class="btn btn-primary">Save & Apply</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search Symbol Modal - IMPROVED -->
+  <div id="searchModalOverlay" class="modal-overlay hidden">
+    <div class="modal" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">
+        <h2>🔍 Search Symbol</h2>
+        <button id="searchModalClose" class="icon-btn" style="font-size: 24px;">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- Search Input Row -->
+        <div class="search-input-wrapper">
+          <div class="search-input-field">
+            <input 
+              type="text" 
+              id="searchInputLarge" 
+              placeholder="Type symbol name (e.g., SBIN, RELIANCE, SENSEX 77500, NIFTY 24000)" 
+              autofocus
+            />
+          </div>
+          <div class="search-exchange-field">
+            <select id="searchExchangeSelect">
+              <option value="NSE">NSE</option>
+              <option value="BSE">BSE</option>
+              <option value="NFO">NFO</option>
+              <option value="BFO">BFO</option>
+              <option value="MCX">MCX</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Search Results Container -->
+        <div id="searchResultsList" class="search-results">
+          <div class="no-results">Type at least 2 characters to search…</div>
+        </div>
+        
+        <!-- Result Count -->
+        <div id="searchResultCount" class="search-result-count"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quotes Modal -->
+  <div id="quotesModalOverlay" class="modal-overlay hidden">
+    <div class="modal" style="max-width: 700px;">
+      <div class="modal-header">
+        <h2 id="quotesModalTitle">Quote Details</h2>
+        <button id="quotesModalClose" class="icon-btn" style="font-size: 24px;">✕</button>
+      </div>
+      <div id="quotesModalContent" class="modal-body">
+        <div id="quotesLoading" class="loading">
+          <div class="spinner"></div>
+          <p style="margin-top: 8px; color: var(--text-muted);">Fetching quotes...</p>
+        </div>
       </div>
     </div>
   </div>

@@ -806,3 +806,42 @@ input:focus, select:focus {
   font-weight: 600;
   color: var(--text-muted);
 }
+
+
+/* Get Quotes Modal Styles */
+.tag-info {
+    background: #bee3f8;
+    color: #2a4365;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tag-purple {
+    background: #e9d8fd;
+    color: #553c9a;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.tag-warning {
+    background: #feebc8;
+    color: #744210;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Quotes Modal */
+#quotesModalOverlay .modal {
+    max-width: 700px;
+}
+
+#quotesModalOverlay .modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+}

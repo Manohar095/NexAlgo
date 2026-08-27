@@ -5,6 +5,7 @@ api/routes.py
 REST endpoints consumed by the dashboard (static/app.js).
 """
 
+import logging
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
 
@@ -25,6 +26,16 @@ class LoginPayload(BaseModel):
     username: str
     password: str
     totp_code: str = ""
+
+
+class SearchSymbolsPayload(BaseModel):
+    query: str
+    exchange: str = "NSE"
+
+
+class GetQuotesPayload(BaseModel):
+    exchange: str
+    token: str
 
 
 @router.get("/auth/status")
@@ -195,3 +206,77 @@ def all_statuses():
 @router.get("/logs")
 def global_logs(limit: int = 200):
     return instance_manager.global_logs(limit=limit)
+
+
+# ============================================================
+# SEARCH AND GET QUOTES ENDPOINTS
+# ============================================================
+
+@router.post("/search-symbols")
+def search_symbols(payload: SearchSymbolsPayload):
+    """
+    Search for symbols using the broker's search functionality.
+    Expects: { "query": "RELIANCE", "exchange": "NSE" }
+    """
+    try:
+        result = instance_manager.broker.search_symbols(
+            exchange=payload.exchange,
+            search_text=payload.query
+        )
+        
+        # Format the response for the frontend
+        if result and isinstance(result, dict):
+            # If result already has the expected format
+            if 'values' in result:
+                return result
+            # Try to extract values from other formats
+            for key, value in result.items():
+                if isinstance(value, list):
+                    return {'stat': 'Ok', 'values': value}
+        
+        # If result is a list directly
+        if isinstance(result, list):
+            return {'stat': 'Ok', 'values': result}
+        
+        # If nothing works, return empty
+        return {'stat': 'Ok', 'values': []}
+        
+    except Exception as e:
+        logging.error(f"Search symbols error: {e}")
+        return {
+            'stat': 'Not_Ok',
+            'emsg': str(e)
+        }
+
+@router.post("/get-quotes")
+def get_quotes(exchange: str, token: str):
+    """
+    Get quotes for a specific token using the broker session.
+    Returns ALL fields from the Get Quotes API response.
+    """
+    try:
+        # Use the broker's get_quotes method
+        result = instance_manager.broker.get_quotes(
+            exchange=exchange, 
+            token=token
+        )
+        
+        if result and result.get('stat') == 'Ok':
+            # Return ALL fields from the response
+            return {
+                'success': True,
+                'data': result
+            }
+        else:
+            error_msg = result.get('emsg', 'Failed to get quotes') if result else 'No response from broker'
+            return {
+                'success': False,
+                'error': error_msg
+            }
+            
+    except Exception as e:
+        logging.error(f"Get quotes error: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
