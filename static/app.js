@@ -400,7 +400,7 @@ async function performSearch() {
                 Quotes
               </button>
               <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); selectSearchResult(${index})">
-                Select
+                Add Symbol
               </button>
             </div>
           </div>
