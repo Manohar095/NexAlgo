@@ -463,7 +463,6 @@ if (btnSearchSymbol) {
   });
 }
 
-// Select search result and populate form
 function selectSearchResult(index) {
   const item = searchResultsData[index];
   if (!item) return;
@@ -484,13 +483,18 @@ function selectSearchResult(index) {
   const tokenField = document.getElementById("token");
   const tickSizeField = document.getElementById("tick_size");
 
-  if (strategyNameField) strategyNameField.value = item.tsym || "";
+  // For options, try multiple fields to get the best name
+  // cname might be "NIFTY 01SEP26 25900 CE" or similar
+  // name or sname might also have the full name
+  const displayName = item.dname || item.cname || "";
+  
+  if (strategyNameField) strategyNameField.value = displayName;
   if (exchangeField) exchangeField.value = item.exch || "";
   if (tradingSymbolField) tradingSymbolField.value = item.tsym || "";
   if (tokenField) tokenField.value = item.token || "";
   if (tickSizeField) tickSizeField.value = item.ti || "";
 
-  console.log("SCRIP POPULATED:", item.tsym, "TOKEN:", item.token, "EXCHANGE:", item.exch);
+  console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
 }
 
 // Close search popup
@@ -540,18 +544,21 @@ function selectFromQuotes() {
   const tokenField = document.getElementById("token");
   const tickSizeField = document.getElementById("tick_size");
   
-  const symbolName = quoteData.tsym || quoteData.cname || '';
+  // For options, cname might have the full name with expiry
+  // If cname is empty, try symname or tsym
+  const displayName = quoteData.cname || quoteData.dname || '';
   const exchange = quoteData.exch || '';
   const token = quoteData.token || '';
   const tickSize = quoteData.ti || '';
+  const tsym = quoteData.tsym || '';
   
-  console.log("Populating with:", { symbolName, exchange, token, tickSize });
+  console.log("Populating with:", { displayName, exchange, token, tickSize, tsym });
   
-  if (strategyNameField) strategyNameField.value = symbolName;
-  if (exchangeField) exchangeField.value = exchange;
-  if (tradingSymbolField) tradingSymbolField.value = symbolName;
-  if (tokenField) tokenField.value = token;
-  if (tickSizeField) tickSizeField.value = tickSize;
+  if (strategyNameField) strategyNameField.value = displayName;      // Strategy Name = cname or fallback
+  if (exchangeField) exchangeField.value = exchange;                 // Exchange = exch
+  if (tradingSymbolField) tradingSymbolField.value = tsym;           // Trading Symbol = tsym
+  if (tokenField) tokenField.value = token;                          // Token = token
+  if (tickSizeField) tickSizeField.value = tickSize;                // Tick Size = ti
   
   console.log("Form populated successfully from quotes!");
 }
@@ -582,6 +589,7 @@ async function getQuotes(exchange, token, symbol) {
     });
     
     const data = await response.json();
+    console.log("RAW QUOTE DATA:", JSON.stringify(data.data));
     loadingIndicator.classList.add('hidden');
     
     if (data.success) {
