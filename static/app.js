@@ -331,7 +331,7 @@ if (brokerTokenForm) {
   });
 }
 
-// ---------------- Search Symbol ----------------
+// ---------------- Search Symbol with LTP ----------------
 const btnSearchSymbol = document.getElementById("btnSearchSymbol");
 const searchInputLarge = document.getElementById("searchInputLarge");
 const searchExchangeSelect = document.getElementById("searchExchangeSelect");
@@ -340,7 +340,7 @@ const searchResultsList = document.getElementById("searchResultsList");
 let searchResultsData = [];
 let searchTimeout = null;
 
-// Function to perform search
+// Function to perform search with LTP
 async function performSearch() {
   const query = searchInputLarge?.value?.trim() || '';
   const exchange = searchExchangeSelect?.value || "NSE";
@@ -387,25 +387,119 @@ async function performSearch() {
         return;
       }
 
-      searchResultsList.innerHTML = values.map((item, index) => {
-        return `
-          <div class="result-item" data-index="${index}" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #e2e8f0; cursor: pointer;">
-            <div style="flex: 1;" onclick="selectSearchResult(${index})">
-              <strong>${escapeHTML(item.tsym || "")}</strong>
-              <span style="margin-left: 8px; font-size: 12px; color: #718096;">${escapeHTML(item.exch || "")}</span>
-              <span style="margin-left: 8px; font-size: 12px; color: #718096;">Token: ${escapeHTML(item.token || "")}</span>
-            </div>
-            <div>
-              <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); getQuotes('${escapeHTML(item.exch || 'NSE')}', '${escapeHTML(item.token || '')}', '${escapeHTML(item.tsym || '')}')" style="margin-right: 4px;">
-                Quotes
-              </button>
-              <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); selectSearchResult(${index})">
-                Add Symbol
-              </button>
-            </div>
+      // Show loading
+      searchResultsList.innerHTML = '<div class="no-results">Fetching live prices...</div>';
+
+      // Fetch LTP for each symbol
+      const maxResults = Math.min(values.length, 20);
+      const enhancedResults = [];
+      
+      for (let i = 0; i < maxResults; i++) {
+        const item = values[i];
+        const token = item.token;
+        const exch = item.exch || exchange;
+        
+        let ltp = '--';
+        let high = '';
+        let low = '';
+        let volume = '';
+        let open = '';
+        let bid = '';
+        let ask = '';
+        
+        if (token) {
+          try {
+            const quoteResponse = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(exch)}&token=${encodeURIComponent(token)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const quoteData = await quoteResponse.json();
+            if (quoteData.success && quoteData.data) {
+              ltp = quoteData.data.lp || '--';
+              high = quoteData.data.h || '';
+              low = quoteData.data.l || '';
+              volume = quoteData.data.v || '';
+              open = quoteData.data.pp || '';
+              bid = quoteData.data.bp1 || '';
+              ask = quoteData.data.sp1 || '';
+            }
+          } catch (e) {
+            console.error(`Failed to fetch LTP for ${item.tsym}:`, e);
+          }
+        }
+        
+        enhancedResults.push({
+          ...item,
+          ltp: ltp,
+          high: high,
+          low: low,
+          volume: volume,
+          open: open,
+          bid: bid,
+          ask: ask
+        });
+      }
+      
+      // Add remaining results without LTP
+      if (values.length > maxResults) {
+        for (let i = maxResults; i < values.length; i++) {
+          enhancedResults.push({
+            ...values[i],
+            ltp: '--',
+            high: '',
+            low: '',
+            volume: '',
+            open: '',
+            bid: '',
+            ask: ''
+          });
+        }
+      }
+      
+      searchResultsData = enhancedResults;
+
+      // Render results with dark theme compatibility - Transparent buttons
+      searchResultsList.innerHTML = `
+        <div style="display: flex; flex-direction: column; width: 100%; font-size: 12px;">
+          <!-- Table Header -->
+          <div style="display: flex; background: rgba(255, 255, 255, 0.05); padding: 8px 12px; font-weight: 600; font-size: 11px; color: var(--text-muted, #a0b4d0); border-bottom: 2px solid var(--border-color, rgba(255,255,255,0.12)); position: sticky; top: 0; z-index: 5; text-transform: uppercase; letter-spacing: 0.5px;">
+            <div style="flex: 0.25; min-width: 28px; text-align: center;">#</div>
+            <div style="flex: 2.5; min-width: 140px;">Symbol</div>
+            <div style="flex: 0.5; min-width: 45px; text-align: center;">Exch</div>
+            <div style="flex: 0.8; min-width: 65px; text-align: center;">Token</div>
+            <div style="flex: 0.9; min-width: 65px; text-align: center;">LTP</div>
+            <div style="flex: 0.8; min-width: 60px; text-align: center;">High</div>
+            <div style="flex: 0.8; min-width: 60px; text-align: center;">Low</div>
+            <div style="flex: 1; min-width: 65px; text-align: center;">Volume</div>
+            <div style="flex: 1.8; min-width: 130px; text-align: right;">Actions</div>
           </div>
-        `;
-      }).join("");
+          
+          ${enhancedResults.map((item, index) => {
+            const ltpDisplay = item.ltp !== '--' ? parseFloat(item.ltp).toFixed(2) : '--';
+            
+            return `
+              <div class="result-item" data-index="${index}" style="display: flex; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.06)); cursor: pointer; transition: background 0.15s; font-size: 12px; min-height: 32px; color: var(--text-main, #f0f4ff);">
+                <div style="flex: 0.25; min-width: 28px; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;">${index + 1}</div>
+                <div style="flex: 2.5; min-width: 140px; font-weight: 600; font-size: 12px; color: var(--text-main, #f0f4ff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="selectSearchResult(${index})">${escapeHTML(item.tsym || "")}</div>
+                <div style="flex: 0.5; min-width: 45px; font-size: 10px; text-align: center;" onclick="selectSearchResult(${index})"><span style="background: rgba(190, 227, 248, 0.15); color: #bee3f8; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 600;">${escapeHTML(item.exch || "")}</span></div>
+                <div style="flex: 0.8; min-width: 65px; font-size: 10px; color: var(--text-muted, #a0b4d0); text-align: center; font-family: monospace;" onclick="selectSearchResult(${index})">${escapeHTML(item.token || "")}</div>
+                <div style="flex: 0.9; min-width: 65px; font-weight: 400; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;" onclick="selectSearchResult(${index})">${ltpDisplay}</div>
+                <div style="flex: 0.8; min-width: 60px; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;" onclick="selectSearchResult(${index})">${item.high || '--'}</div>
+                <div style="flex: 0.8; min-width: 60px; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;" onclick="selectSearchResult(${index})">${item.low || '--'}</div>
+                <div style="flex: 1; min-width: 65px; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;" onclick="selectSearchResult(${index})">${item.volume || '--'}</div>
+                <div style="flex: 1.8; min-width: 130px; display: flex; gap: 6px; justify-content: flex-end;">
+                  <button class="btn btn-sm" onclick="event.stopPropagation(); getQuotes('${escapeHTML(item.exch || 'NSE')}', '${escapeHTML(item.token || '')}', '${escapeHTML(item.tsym || '')}')" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #dadde6; border: 1px solid rgba(82, 81, 82, 0.4); cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                    Quotes
+                  </button>
+                  <button class="btn btn-sm" onclick="event.stopPropagation(); selectSearchResult(${index})" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #dadde6; border: 1px solid rgba(82, 81, 82, 0.4); cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                    Add Symbol
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
 
       searchResultsList.querySelectorAll('.result-item').forEach(el => {
         el.addEventListener('click', function(e) {
@@ -482,20 +576,18 @@ function selectSearchResult(index) {
   const tradingSymbolField = document.getElementById("trading_symbol");
   const tokenField = document.getElementById("token");
   const tickSizeField = document.getElementById("tick_size");
-  const quantityField = document.getElementById("quantity");  
-
+  const quantityField = document.getElementById("quantity");
 
   // For options, try multiple fields to get the best name
-  // cname might be "NIFTY 01SEP26 25900 CE" or similar
   const displayName = item.dname || item.cname || "";
-  
+
   if (strategyNameField) strategyNameField.value = displayName;
   if (exchangeField) exchangeField.value = item.exch || "";
   if (tradingSymbolField) tradingSymbolField.value = item.tsym || "";
   if (tokenField) tokenField.value = item.token || "";
   if (tickSizeField) tickSizeField.value = item.ti || "";
-  if (quantityField && item.ls) quantityField.value = item.ls; 
-  
+  if (quantityField && item.ls) quantityField.value = item.ls;
+
   console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
 }
 
@@ -516,7 +608,6 @@ if (searchModalOverlay) {
     }
   });
 }
-
 
 // ---------------- Select from Quotes Function (like selectSearchResult) ----------------
 function selectFromQuotes() {
@@ -545,9 +636,9 @@ function selectFromQuotes() {
   const tradingSymbolField = document.getElementById("trading_symbol");
   const tokenField = document.getElementById("token");
   const tickSizeField = document.getElementById("tick_size");
+  const quantityField = document.getElementById("quantity");
   
   // For options, cname might have the full name with expiry
-  // If cname is empty, try symname or tsym
   const displayName = quoteData.cname || quoteData.dname || '';
   const exchange = quoteData.exch || '';
   const token = quoteData.token || '';
@@ -557,11 +648,11 @@ function selectFromQuotes() {
 
   console.log("Populating with:", { displayName, exchange, token, tickSize, tsym });
   
-  if (strategyNameField) strategyNameField.value = displayName;      // Strategy Name = cname or fallback
-  if (exchangeField) exchangeField.value = exchange;                 // Exchange = exch
-  if (tradingSymbolField) tradingSymbolField.value = tsym;           // Trading Symbol = tsym
-  if (tokenField) tokenField.value = token;                          // Token = token
-  if (tickSizeField) tickSizeField.value = tickSize;                // Tick Size = ti
+  if (strategyNameField) strategyNameField.value = displayName;
+  if (exchangeField) exchangeField.value = exchange;
+  if (tradingSymbolField) tradingSymbolField.value = tsym;
+  if (tokenField) tokenField.value = token;
+  if (tickSizeField) tickSizeField.value = tickSize;
   if (quantityField && lotSize) quantityField.value = lotSize;
 
   console.log("Form populated successfully from quotes!");
@@ -841,8 +932,7 @@ function displayQuotesInModal(data) {
       </div>
     </div>
   `;
-  
-  
+
   // Add Close button only
   html += `
     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
@@ -855,10 +945,9 @@ function displayQuotesInModal(data) {
       </button>
     </div>
   `;
-  
+
   modalContent.innerHTML = html;
 }
-
 
 // ---------------- Close Quotes Modal Function ----------------
 function closeQuotesModal() {
@@ -912,6 +1001,7 @@ document.addEventListener('keydown', function(e) {
 window.closeQuotesModal = closeQuotesModal;
 window.getQuotes = getQuotes;
 window.selectSearchResult = selectSearchResult;
+window.selectFromQuotes = selectFromQuotes;
 
 // ---------------- Logs ----------------
 function renderLogFilterOptions() {
@@ -1011,3 +1101,226 @@ if (logoutBtn) {
   connectWS();
   setInterval(loadSymbols, 15000);
 })();
+
+
+// ---------------- Option Chain Functionality ----------------
+function showOptionAlert(message, type = 'info') {
+    const container = document.getElementById('optionAlertContainer');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    container.appendChild(alert);
+    
+    setTimeout(() => {
+        if (alert.parentNode) {
+            alert.remove();
+        }
+    }, 5000);
+}
+
+function showOptionLoading(show) {
+    document.getElementById('optionLoading').classList.toggle('active', show);
+}
+
+function clearOptionResults() {
+    document.getElementById('optionResultsContainer').classList.add('hidden');
+    document.getElementById('optionTableContainer').innerHTML = '';
+    document.getElementById('optionResultCount').textContent = '';
+}
+
+async function getOptionChain() {
+    const tsym = document.getElementById('optionSymbol').value.trim().toUpperCase();
+    const exchange = document.getElementById('optionExchange').value;
+    const strprc = document.getElementById('optionStrike').value.trim();
+    const cnt = parseInt(document.getElementById('optionCount').value) || 5;
+    
+    if (!tsym) {
+        showOptionAlert('Please enter an underlying symbol', 'error');
+        return;
+    }
+    
+    showOptionLoading(true);
+    
+    try {
+        const payload = {
+            tsym: tsym,
+            exchange: exchange,
+            cnt: cnt
+        };
+        
+        if (strprc) {
+            payload.strprc = parseFloat(strprc);
+        }
+        
+        const response = await fetch('/api/option-chain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await response.json();
+        showOptionLoading(false);
+        
+        if (data.success) {
+            displayOptionChain(data.data);
+            showOptionAlert(`Option chain fetched successfully for ${tsym}`, 'success');
+        } else {
+            showOptionAlert('Failed to get option chain: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Option chain error:', error);
+        showOptionLoading(false);
+        showOptionAlert('Error fetching option chain: ' + error.message, 'error');
+    }
+}
+
+function displayOptionChain(data) {
+    const container = document.getElementById('optionResultsContainer');
+    const tableContainer = document.getElementById('optionTableContainer');
+    const countDisplay = document.getElementById('optionResultCount');
+    
+    const values = data.values || [];
+    
+    if (!values.length) {
+        container.classList.remove('hidden');
+        countDisplay.textContent = '(No options found)';
+        tableContainer.innerHTML = '<p class="text-muted text-center">No options found for this symbol</p>';
+        return;
+    }
+    
+    countDisplay.textContent = `(${values.length} options found)`;
+    
+    const strikes = {};
+    values.forEach(item => {
+        const strike = item.strprc;
+        if (!strikes[strike]) {
+            strikes[strike] = { call: null, put: null };
+        }
+        if (item.optt === 'CE') {
+            strikes[strike].call = item;
+        } else if (item.optt === 'PE') {
+            strikes[strike].put = item;
+        }
+    });
+    
+    const sortedStrikes = Object.keys(strikes).sort((a, b) => parseFloat(a) - parseFloat(b));
+    
+    let currentStrike = null;
+    if (data.strprc) {
+        const midPrice = parseFloat(data.strprc);
+        let minDiff = Infinity;
+        sortedStrikes.forEach(strike => {
+            const diff = Math.abs(parseFloat(strike) - midPrice);
+            if (diff < minDiff) {
+                minDiff = diff;
+                currentStrike = strike;
+            }
+        });
+    }
+    
+    let html = `
+        <div class="option-chain-summary">
+            <div class="summary-item">
+                <div class="label">Underlying</div>
+                <div class="value">${data.tsym || 'N/A'}</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">Exchange</div>
+                <div class="value">${data.exch || 'N/A'}</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">Total Options</div>
+                <div class="value">${values.length}</div>
+            </div>
+            <div class="summary-item">
+                <div class="label">Strikes</div>
+                <div class="value">${sortedStrikes.length}</div>
+            </div>
+            ${data.strprc ? `<div class="summary-item">
+                <div class="label">Mid Price</div>
+                <div class="value">${data.strprc}</div>
+            </div>` : ''}
+        </div>
+        <div class="option-chain-wrapper">
+            <table class="option-chain-table">
+                <thead>
+                    <tr>
+                        <th colspan="4">CALL (CE)</th>
+                        <th>Strike</th>
+                        <th colspan="4">PUT (PE)</th>
+                    </tr>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>LTP</th>
+                        <th>Volume</th>
+                        <th>OI</th>
+                        <th>Price</th>
+                        <th>OI</th>
+                        <th>Volume</th>
+                        <th>LTP</th>
+                        <th>Symbol</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    sortedStrikes.forEach(strike => {
+        const call = strikes[strike].call;
+        const put = strikes[strike].put;
+        const isCurrent = strike === currentStrike;
+        const strikeClass = isCurrent ? 'strike-current' : 'strike';
+        
+        html += `<tr>`;
+        
+        if (call) {
+            html += `
+                <td><span class="call">${call.tsym || '-'}</span></td>
+                <td class="call">${call.lp || '-'}</td>
+                <td>${call.v || '0'}</td>
+                <td>${call.oi || '0'}</td>
+            `;
+        } else {
+            html += `<td colspan="4" class="text-muted">-</td>`;
+        }
+        
+        html += `<td><span class="${strikeClass}">${strike}</span></td>`;
+        
+        if (put) {
+            html += `
+                <td>${put.oi || '0'}</td>
+                <td>${put.v || '0'}</td>
+                <td class="put">${put.lp || '-'}</td>
+                <td><span class="put">${put.tsym || '-'}</span></td>
+            `;
+        } else {
+            html += `<td colspan="4" class="text-muted">-</td>`;
+        }
+        
+        html += `</tr>`;
+    });
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+    
+    html += `
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+            <h4 style="font-size: 14px; color: #4a5568; margin-bottom: 8px;">Full Response Data</h4>
+            <div style="background: #f7fafc; padding: 12px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto;">
+                ${JSON.stringify(data, null, 2)}
+            </div>
+        </div>
+    `;
+    
+    container.classList.remove('hidden');
+    tableContainer.innerHTML = html;
+}
+
+// Enter key support for option chain search
+document.getElementById('optionSymbol')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        getOptionChain();
+    }
+});
