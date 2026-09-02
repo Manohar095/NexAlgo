@@ -4,7 +4,7 @@ api/routes.py
 ==============
 REST endpoints consumed by the dashboard (static/app.js).
 """
-
+import json
 import logging
 from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel
@@ -61,9 +61,6 @@ def auth_login(payload: LoginPayload, response: Response):
         max_age=SESSION_MAX_AGE_SECONDS,
         httponly=True,
         samesite="lax",
-        # secure=True belongs here once this is served over HTTPS (e.g.
-        # behind a reverse proxy with TLS) — left off since a bare
-        # SSH-tunnel/private-IP deployment is plain HTTP by default.
     )
     return {"success": True}
 
@@ -90,9 +87,6 @@ def update_broker_settings(payload: BrokerTokenPayload):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Login likely failed against the broker with this token — still
-        # saved, so the dashboard reflects what was entered, but surface
-        # the failure so the user knows to double check it.
         raise HTTPException(status_code=502, detail=f"Token saved, but broker login failed: {e}")
     return instance_manager.broker.get_access_token_status()
 
@@ -224,21 +218,16 @@ def search_symbols(payload: SearchSymbolsPayload):
             search_text=payload.query
         )
         
-        # Format the response for the frontend
         if result and isinstance(result, dict):
-            # If result already has the expected format
             if 'values' in result:
                 return result
-            # Try to extract values from other formats
             for key, value in result.items():
                 if isinstance(value, list):
                     return {'stat': 'Ok', 'values': value}
         
-        # If result is a list directly
         if isinstance(result, list):
             return {'stat': 'Ok', 'values': result}
         
-        # If nothing works, return empty
         return {'stat': 'Ok', 'values': []}
         
     except Exception as e:
@@ -248,6 +237,7 @@ def search_symbols(payload: SearchSymbolsPayload):
             'emsg': str(e)
         }
 
+
 @router.post("/get-quotes")
 def get_quotes(exchange: str, token: str):
     """
@@ -255,14 +245,12 @@ def get_quotes(exchange: str, token: str):
     Returns ALL fields from the Get Quotes API response.
     """
     try:
-        # Use the broker's get_quotes method
         result = instance_manager.broker.get_quotes(
             exchange=exchange, 
             token=token
         )
         
         if result and result.get('stat') == 'Ok':
-            # Return ALL fields from the response
             return {
                 'success': True,
                 'data': result
@@ -280,3 +268,9 @@ def get_quotes(exchange: str, token: str):
             'success': False,
             'error': str(e)
         }
+
+
+@router.get("/charts")
+async def get_charts():
+    from fastapi.responses import FileResponse
+    return FileResponse("templates/charts.html")

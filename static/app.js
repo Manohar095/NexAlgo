@@ -64,6 +64,9 @@ function renderBoard() {
     document.querySelector(`[data-edit="${id}"]`)?.addEventListener("click", () => openEditModal(id));
     document.querySelector(`[data-delete="${id}"]`)?.addEventListener("click", () => deleteSymbol(id));
   });
+
+  // Update watchlist from strategy symbols LTP data
+  updateWatchlistFromSymbols();
 }
 
 function rowHTML(rec) {
@@ -458,13 +461,13 @@ async function performSearch() {
       
       searchResultsData = enhancedResults;
 
-      // Render results with dark theme compatibility - Transparent buttons
+      // Render results with dark theme compatibility - With Watchlist button
       searchResultsList.innerHTML = `
         <div style="display: flex; flex-direction: column; width: 100%; font-size: 12px;">
           <!-- Table Header -->
           <div style="display: flex; background: rgba(255, 255, 255, 0.05); padding: 8px 12px; font-weight: 600; font-size: 11px; color: var(--text-muted, #a0b4d0); border-bottom: 2px solid var(--border-color, rgba(255,255,255,0.12)); position: sticky; top: 0; z-index: 5; text-transform: uppercase; letter-spacing: 0.5px;">
             <div style="flex: 0.25; min-width: 28px; text-align: center;">#</div>
-            <div style="flex: 2.5; min-width: 140px;">Symbol</div>
+            <div style="flex: 1.8; min-width: 100px;">Symbol</div>
             <div style="flex: 0.5; min-width: 45px; text-align: center;">Exch</div>
             <div style="flex: 0.8; min-width: 65px; text-align: center;">Token</div>
             <div style="flex: 0.9; min-width: 65px; text-align: center;">LTP</div>
@@ -480,7 +483,7 @@ async function performSearch() {
             return `
               <div class="result-item" data-index="${index}" style="display: flex; align-items: center; padding: 6px 12px; border-bottom: 1px solid var(--border-color, rgba(255,255,255,0.06)); cursor: pointer; transition: background 0.15s; font-size: 12px; min-height: 32px; color: var(--text-main, #f0f4ff);">
                 <div style="flex: 0.25; min-width: 28px; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;">${index + 1}</div>
-                <div style="flex: 2.5; min-width: 140px; font-weight: 600; font-size: 12px; color: var(--text-main, #f0f4ff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="selectSearchResult(${index})">${escapeHTML(item.tsym || "")}</div>
+                <div style="flex: 1.8; min-width: 100px; font-weight: 600; font-size: 12px; color: var(--text-main, #f0f4ff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" onclick="selectSearchResult(${index})">${escapeHTML(item.tsym || "")}</div>
                 <div style="flex: 0.5; min-width: 45px; font-size: 10px; text-align: center;" onclick="selectSearchResult(${index})"><span style="background: rgba(190, 227, 248, 0.15); color: #bee3f8; padding: 2px 8px; border-radius: 10px; font-size: 9px; font-weight: 600;">${escapeHTML(item.exch || "")}</span></div>
                 <div style="flex: 0.8; min-width: 65px; font-size: 10px; color: var(--text-muted, #a0b4d0); text-align: center; font-family: monospace;" onclick="selectSearchResult(${index})">${escapeHTML(item.token || "")}</div>
                 <div style="flex: 0.9; min-width: 65px; font-weight: 400; font-size: 11px; color: var(--text-muted, #a0b4d0); text-align: center;" onclick="selectSearchResult(${index})">${ltpDisplay}</div>
@@ -491,7 +494,12 @@ async function performSearch() {
                   <button class="btn btn-sm" onclick="event.stopPropagation(); getQuotes('${escapeHTML(item.exch || 'NSE')}', '${escapeHTML(item.token || '')}', '${escapeHTML(item.tsym || '')}')" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #dadde6; border: 1px solid rgba(82, 81, 82, 0.4); cursor: pointer; white-space: nowrap; transition: all 0.2s;">
                     Quotes
                   </button>
-                  <button class="btn btn-sm" onclick="event.stopPropagation(); selectSearchResult(${index})" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #dadde6; border: 1px solid rgba(82, 81, 82, 0.4); cursor: pointer; white-space: nowrap; transition: all 0.2s;">
+                  <button class="btn btn-sm" onclick="event.stopPropagation(); addToWatchlistFromSearch(${index})" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); cursor: pointer; white-space: nowrap; transition: all 0.2s;" 
+                    onmouseover="this.style.background='rgba(251, 191, 36, 0.1)'" 
+                    onmouseout="this.style.background='transparent'">
+                    ⭐
+                  </button>
+                  <button class="btn btn-sm" onclick="event.stopPropagation(); selectSearchResult(${index})" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: var(--btn-add-grad, linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%)); color: #ffffff; border: none; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
                     Add Symbol
                   </button>
                 </div>
@@ -1098,229 +1106,395 @@ if (logoutBtn) {
 
   await loadSymbols();
   await loadInitialLogs();
+  loadWatchlist();
   connectWS();
   setInterval(loadSymbols, 15000);
 })();
 
 
-// ---------------- Option Chain Functionality ----------------
-function showOptionAlert(message, type = 'info') {
-    const container = document.getElementById('optionAlertContainer');
-    const alert = document.createElement('div');
-    alert.className = `alert alert-${type}`;
-    alert.textContent = message;
-    container.appendChild(alert);
-    
-    setTimeout(() => {
-        if (alert.parentNode) {
-            alert.remove();
-        }
-    }, 5000);
-}
+// ---------------- Watchlist Functionality ----------------
 
-function showOptionLoading(show) {
-    document.getElementById('optionLoading').classList.toggle('active', show);
-}
+// Watchlist data stored in localStorage
+let watchlistData = [];
+// Watchlist LTP cache for real-time updates
+let watchlistLTPCache = {};
 
-function clearOptionResults() {
-    document.getElementById('optionResultsContainer').classList.add('hidden');
-    document.getElementById('optionTableContainer').innerHTML = '';
-    document.getElementById('optionResultCount').textContent = '';
-}
-
-async function getOptionChain() {
-    const tsym = document.getElementById('optionSymbol').value.trim().toUpperCase();
-    const exchange = document.getElementById('optionExchange').value;
-    const strprc = document.getElementById('optionStrike').value.trim();
-    const cnt = parseInt(document.getElementById('optionCount').value) || 5;
-    
-    if (!tsym) {
-        showOptionAlert('Please enter an underlying symbol', 'error');
-        return;
+// Load watchlist from localStorage
+function loadWatchlist() {
+  try {
+    const saved = localStorage.getItem('cognix_watchlist');
+    if (saved) {
+      watchlistData = JSON.parse(saved);
+    } else {
+      // Default watchlist items
+      watchlistData = [
+        { symbol: 'NIFTY', exchange: 'NSE', token: '26000' },
+        { symbol: 'BANKNIFTY', exchange: 'NSE', token: '26009' },
+        { symbol: 'RELIANCE', exchange: 'NSE', token: '2885' },
+        { symbol: 'TCS', exchange: 'NSE', token: '11536' },
+        { symbol: 'HDFCBANK', exchange: 'NSE', token: '341' }
+      ];
+      saveWatchlist();
     }
+  } catch (e) {
+    console.error('Error loading watchlist:', e);
+    watchlistData = [];
+  }
+  
+  // Update count
+  const countEl = document.getElementById('watchlistCount');
+  if (countEl) {
+    countEl.textContent = watchlistData.length;
+  }
+  
+  renderWatchlist();
+}
+
+// Save watchlist to localStorage
+function saveWatchlist() {
+  try {
+    localStorage.setItem('cognix_watchlist', JSON.stringify(watchlistData));
+  } catch (e) {
+    console.error('Error saving watchlist:', e);
+  }
+  
+  const countEl = document.getElementById('watchlistCount');
+  if (countEl) {
+    countEl.textContent = watchlistData.length;
+  }
+}
+
+// Add symbol to watchlist
+function addToWatchlist(symbol, exchange, token) {
+  // Check if already exists
+  const exists = watchlistData.some(item => 
+    String(item.token) === String(token) && item.exchange === exchange
+  );
+  
+  if (exists) {
+    showAlert('Symbol already in watchlist', 'info');
+    return;
+  }
+  
+  watchlistData.push({ symbol, exchange, token });
+  saveWatchlist();
+  renderWatchlist();
+  showAlert(`Added ${symbol} to watchlist`, 'success');
+}
+
+// Remove symbol from watchlist
+function removeFromWatchlist(index) {
+  const removed = watchlistData[index];
+  watchlistData.splice(index, 1);
+  saveWatchlist();
+  renderWatchlist();
+  showAlert(`Removed ${removed.symbol} from watchlist`, 'info');
+}
+
+// Update watchlist from strategy symbols LTP data
+function updateWatchlistFromSymbols() {
+  const watchlistBody = document.getElementById('watchlistBody');
+  if (!watchlistBody || watchlistData.length === 0) return;
+  
+  let updated = false;
+  
+  // Loop through all strategy symbols
+  Object.values(symbols).forEach(rec => {
+    const cfg = rec.config;
+    const live = rec.live_status || {};
+    const token = cfg.token;
     
-    showOptionLoading(true);
-    
-    try {
-        const payload = {
-            tsym: tsym,
-            exchange: exchange,
-            cnt: cnt
+    if (token && live.ltp !== undefined && live.ltp !== null) {
+      // Check if this token is in the watchlist
+      const watchlistItem = watchlistData.find(item => String(item.token) === String(token));
+      if (watchlistItem) {
+        const ltp = parseFloat(live.ltp) || 0;
+        const open = parseFloat(live.open_price) || parseFloat(live.pp) || 0;
+        let change = 0;
+        if (open > 0) {
+          change = ltp - open;
+        }
+        
+        watchlistLTPCache[String(token)] = {
+          ltp: ltp,
+          change: change,
+          lastUpdated: live.last_updated || new Date().toLocaleTimeString()
         };
-        
-        if (strprc) {
-            payload.strprc = parseFloat(strprc);
-        }
-        
-        const response = await fetch('/api/option-chain', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        
-        const data = await response.json();
-        showOptionLoading(false);
-        
-        if (data.success) {
-            displayOptionChain(data.data);
-            showOptionAlert(`Option chain fetched successfully for ${tsym}`, 'success');
-        } else {
-            showOptionAlert('Failed to get option chain: ' + (data.error || 'Unknown error'), 'error');
-        }
-    } catch (error) {
-        console.error('Option chain error:', error);
-        showOptionLoading(false);
-        showOptionAlert('Error fetching option chain: ' + error.message, 'error');
+        updated = true;
+      }
     }
+  });
+  
+  if (updated) {
+    updateWatchlistDisplay();
+  }
 }
 
-function displayOptionChain(data) {
-    const container = document.getElementById('optionResultsContainer');
-    const tableContainer = document.getElementById('optionTableContainer');
-    const countDisplay = document.getElementById('optionResultCount');
+// Update watchlist display from cache
+function updateWatchlistDisplay() {
+  const tbody = document.getElementById('watchlistBody');
+  if (!tbody) return;
+  
+  if (!watchlistData || watchlistData.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
+          No symbols in watchlist
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  let html = '';
+  
+  watchlistData.forEach((item) => {
+    const cached = watchlistLTPCache[String(item.token)];
     
-    const values = data.values || [];
-    
-    if (!values.length) {
-        container.classList.remove('hidden');
-        countDisplay.textContent = '(No options found)';
-        tableContainer.innerHTML = '<p class="text-muted text-center">No options found for this symbol</p>';
-        return;
+    if (cached && cached.ltp > 0) {
+      const changeColor = cached.change > 0 ? '#48bb78' : (cached.change < 0 ? '#fc8181' : 'var(--text-muted)');
+      const changeArrow = cached.change > 0 ? '▲' : (cached.change < 0 ? '▼' : '');
+      const changeDisplay = cached.change !== 0 ? `${changeArrow} ${cached.change > 0 ? '+' : ''}${cached.change.toFixed(2)}` : '--';
+      
+      html += `
+        <tr>
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
+            <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
+            <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
+            ${cached.lastUpdated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${cached.lastUpdated}</span>` : ''}
+          </td>
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: center; font-weight: 600;">
+            ${cached.ltp.toFixed(2)}
+          </td>
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: center; font-weight: 600; white-space: nowrap;">
+            ${changeDisplay}
+          </td>
+        </tr>
+      `;
+    } else {
+      // Show loading state
+      html += `
+        <tr>
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
+            <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
+            <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
+          </td>
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
+            <span style="opacity: 0.5;">⌛</span>
+          </td>
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
+            --
+          </td>
+        </tr>
+      `;
     }
-    
-    countDisplay.textContent = `(${values.length} options found)`;
-    
-    const strikes = {};
-    values.forEach(item => {
-        const strike = item.strprc;
-        if (!strikes[strike]) {
-            strikes[strike] = { call: null, put: null };
-        }
-        if (item.optt === 'CE') {
-            strikes[strike].call = item;
-        } else if (item.optt === 'PE') {
-            strikes[strike].put = item;
-        }
-    });
-    
-    const sortedStrikes = Object.keys(strikes).sort((a, b) => parseFloat(a) - parseFloat(b));
-    
-    let currentStrike = null;
-    if (data.strprc) {
-        const midPrice = parseFloat(data.strprc);
-        let minDiff = Infinity;
-        sortedStrikes.forEach(strike => {
-            const diff = Math.abs(parseFloat(strike) - midPrice);
-            if (diff < minDiff) {
-                minDiff = diff;
-                currentStrike = strike;
-            }
-        });
-    }
-    
-    let html = `
-        <div class="option-chain-summary">
-            <div class="summary-item">
-                <div class="label">Underlying</div>
-                <div class="value">${data.tsym || 'N/A'}</div>
-            </div>
-            <div class="summary-item">
-                <div class="label">Exchange</div>
-                <div class="value">${data.exch || 'N/A'}</div>
-            </div>
-            <div class="summary-item">
-                <div class="label">Total Options</div>
-                <div class="value">${values.length}</div>
-            </div>
-            <div class="summary-item">
-                <div class="label">Strikes</div>
-                <div class="value">${sortedStrikes.length}</div>
-            </div>
-            ${data.strprc ? `<div class="summary-item">
-                <div class="label">Mid Price</div>
-                <div class="value">${data.strprc}</div>
-            </div>` : ''}
-        </div>
-        <div class="option-chain-wrapper">
-            <table class="option-chain-table">
-                <thead>
-                    <tr>
-                        <th colspan="4">CALL (CE)</th>
-                        <th>Strike</th>
-                        <th colspan="4">PUT (PE)</th>
-                    </tr>
-                    <tr>
-                        <th>Symbol</th>
-                        <th>LTP</th>
-                        <th>Volume</th>
-                        <th>OI</th>
-                        <th>Price</th>
-                        <th>OI</th>
-                        <th>Volume</th>
-                        <th>LTP</th>
-                        <th>Symbol</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-    
-    sortedStrikes.forEach(strike => {
-        const call = strikes[strike].call;
-        const put = strikes[strike].put;
-        const isCurrent = strike === currentStrike;
-        const strikeClass = isCurrent ? 'strike-current' : 'strike';
-        
-        html += `<tr>`;
-        
-        if (call) {
-            html += `
-                <td><span class="call">${call.tsym || '-'}</span></td>
-                <td class="call">${call.lp || '-'}</td>
-                <td>${call.v || '0'}</td>
-                <td>${call.oi || '0'}</td>
-            `;
-        } else {
-            html += `<td colspan="4" class="text-muted">-</td>`;
-        }
-        
-        html += `<td><span class="${strikeClass}">${strike}</span></td>`;
-        
-        if (put) {
-            html += `
-                <td>${put.oi || '0'}</td>
-                <td>${put.v || '0'}</td>
-                <td class="put">${put.lp || '-'}</td>
-                <td><span class="put">${put.tsym || '-'}</span></td>
-            `;
-        } else {
-            html += `<td colspan="4" class="text-muted">-</td>`;
-        }
-        
-        html += `</tr>`;
-    });
-    
-    html += `
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    html += `
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-            <h4 style="font-size: 14px; color: #4a5568; margin-bottom: 8px;">Full Response Data</h4>
-            <div style="background: #f7fafc; padding: 12px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow-y: auto;">
-                ${JSON.stringify(data, null, 2)}
-            </div>
-        </div>
-    `;
-    
-    container.classList.remove('hidden');
-    tableContainer.innerHTML = html;
+  });
+  
+  tbody.innerHTML = html;
 }
 
-// Enter key support for option chain search
-document.getElementById('optionSymbol')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        getOptionChain();
+// Fetch LTP for watchlist items
+async function refreshWatchlist() {
+  const container = document.getElementById('watchlistBody');
+  if (!container) return;
+  
+  // Show loading if no cache
+  const hasCache = watchlistData.some(item => watchlistLTPCache[String(item.token)]);
+  if (!hasCache && watchlistData.length > 0) {
+    container.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted);">
+          <div class="spinner" style="display: inline-block; width: 20px; height: 20px;"></div>
+          <p style="margin-top: 8px; font-size: 12px;">Loading prices...</p>
+        </td>
+      </tr>
+    `;
+  }
+  
+  for (const item of watchlistData) {
+    try {
+      const response = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(item.exchange)}&token=${encodeURIComponent(item.token)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const quote = data.data;
+        const ltp = parseFloat(quote.lp) || 0;
+        const open = parseFloat(quote.pp) || 0;
+        let change = 0;
+        if (open > 0) {
+          change = ltp - open;
+        }
+        
+        watchlistLTPCache[String(item.token)] = {
+          ltp: ltp,
+          change: change,
+          lastUpdated: new Date().toLocaleTimeString()
+        };
+      }
+    } catch (e) {
+      console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
     }
-});
+  }
+  
+  updateWatchlistDisplay();
+}
+
+// Render watchlist (initial)
+function renderWatchlist() {
+  const container = document.getElementById('watchlistBody');
+  if (!container) return;
+  
+  // Check if we have cached data
+  const hasCache = watchlistData.some(item => watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0);
+  
+  if (hasCache) {
+    // Render from cache instantly
+    updateWatchlistDisplay();
+  } else if (watchlistData.length > 0) {
+    // Show loading state
+    container.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted);">
+          <div class="spinner" style="display: inline-block; width: 20px; height: 20px;"></div>
+          <p style="margin-top: 8px; font-size: 12px;">Loading watchlist...</p>
+        </td>
+      </tr>
+    `;
+    // Fetch data
+    refreshWatchlist();
+  } else {
+    // Empty state
+    container.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
+          No symbols in watchlist
+        </td>
+      </tr>
+    `;
+  }
+}
+
+// Add "Add to Watchlist" button to search results
+// Modify the selectSearchResult function to include watchlist option
+const originalSelectSearchResult = selectSearchResult;
+selectSearchResult = function(index) {
+  const item = searchResultsData[index];
+  if (!item) return;
+  
+  // Close search popup
+  const searchOverlay = document.getElementById("searchModalOverlay");
+  if (searchOverlay) searchOverlay.classList.add("hidden");
+  
+  // Open Add Symbol form
+  openCreateModal();
+  
+  // Populate the form with the selected data
+  const strategyNameField = document.getElementById("strategy_name");
+  const exchangeField = document.getElementById("exchange");
+  const tradingSymbolField = document.getElementById("trading_symbol");
+  const tokenField = document.getElementById("token");
+  const tickSizeField = document.getElementById("tick_size");
+  const quantityField = document.getElementById("quantity");
+  
+  const displayName = item.dname || item.cname || "";
+  
+  if (strategyNameField) strategyNameField.value = displayName;
+  if (exchangeField) exchangeField.value = item.exch || "";
+  if (tradingSymbolField) tradingSymbolField.value = item.tsym || "";
+  if (tokenField) tokenField.value = item.token || "";
+  if (tickSizeField) tickSizeField.value = item.ti || "";
+  if (quantityField && item.ls) quantityField.value = item.ls;
+  
+  console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
+};
+
+// ---------------- Watchlist Modal ----------------
+function openWatchlistModal() {
+  const overlay = document.getElementById("watchlistModalOverlay");
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    refreshWatchlist();
+  }
+}
+
+function closeWatchlistModal() {
+  const overlay = document.getElementById("watchlistModalOverlay");
+  if (overlay) {
+    overlay.classList.add("hidden");
+  }
+}
+
+// ---------------- Add to Watchlist from Search Results ----------------
+function addToWatchlistFromSearch(index) {
+  const item = searchResultsData[index];
+  if (!item) return;
+  
+  const symbol = item.tsym || item.symbol || '';
+  const exchange = item.exch || item.exchange || '';
+  const token = item.token || '';
+  
+  if (symbol && exchange && token) {
+    addToWatchlist(symbol, exchange, token);
+  } else {
+    showAlert('Invalid symbol data', 'error');
+  }
+}
+
+// ---------------- Refresh Watchlist Button Handler ----------------
+const refreshBtn = document.getElementById('refreshWatchlistBtn');
+if (refreshBtn) {
+  refreshBtn.addEventListener('click', () => {
+    refreshWatchlist();
+  });
+}
+
+// ---------------- Alert Function ----------------
+function showAlert(message, type = 'info') {
+  // Create a simple alert popup
+  const alertDiv = document.createElement('div');
+  alertDiv.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    animation: modalPop 0.3s ease forwards;
+  `;
+  
+  // Set color based on type
+  if (type === 'success') {
+    alertDiv.style.borderColor = '#48bb78';
+    alertDiv.style.borderLeft = '4px solid #48bb78';
+  } else if (type === 'error') {
+    alertDiv.style.borderColor = '#fc8181';
+    alertDiv.style.borderLeft = '4px solid #fc8181';
+  } else if (type === 'info') {
+    alertDiv.style.borderColor = '#60a5fa';
+    alertDiv.style.borderLeft = '4px solid #60a5fa';
+  }
+  
+  alertDiv.textContent = message;
+  document.body.appendChild(alertDiv);
+  
+  setTimeout(() => {
+    alertDiv.style.opacity = '0';
+    alertDiv.style.transform = 'translateY(20px)';
+    alertDiv.style.transition = 'all 0.3s ease';
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
+    }, 300);
+  }, 4000);
+}

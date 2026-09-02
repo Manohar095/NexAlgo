@@ -284,7 +284,7 @@
     }
 
     /* ==========================================================================
-       5. UNIFIED BUTTON STYLES – all match the Access Token button
+       5. UNIFIED BUTTON STYLES
        ========================================================================== */
 
     .btn {
@@ -334,7 +334,6 @@
       transform: translateY(-2px) scale(1.02);
     }
 
-    /* ===== CUSTOM "ADD SYMBOL" BUTTON – vibrant gradient ===== */
     .btn-add-symbol {
       background: var(--btn-add-grad) !important;
       border: none !important;
@@ -364,7 +363,6 @@
       animation: lightSweep 1.0s ease-in-out infinite;
     }
 
-    /* ===== LOGOUT BUTTON – matches Access Token with red hover ===== */
     .btn-ghost {
       background: var(--input-bg);
       border: 1px solid var(--input-border);
@@ -383,7 +381,6 @@
       box-shadow: 0 8px 30px rgba(248, 113, 113, 0.15);
     }
 
-    /* ===== THEME SELECT – matches button style ===== */
     .theme-select {
       background: var(--input-bg);
       color: var(--text-main);
@@ -495,7 +492,7 @@
     }
 
     /* ==========================================================================
-       6. TABLE & DASHBOARD BOARD – compact rows
+       6. DASHBOARD BOARD - TWO COLUMN LAYOUT
        ========================================================================== */
 
     .board {
@@ -504,9 +501,7 @@
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid var(--border-color);
       border-radius: 16px;
-      overflow: hidden;
       box-shadow: 0 12px 48px rgba(0,0,0,0.25);
-      transition: border-color 0.4s ease, box-shadow 0.4s ease;
       padding: 1.5rem 2rem;
       animation: borderPulse 6s infinite;
     }
@@ -516,29 +511,110 @@
       box-shadow: 0 12px 60px rgba(255,0,200,0.15);
     }
 
+    .board-grid {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .board-grid .strategy-col {
+      flex: 1;
+      min-width: 0;
+    }
+    .board-grid .watchlist-col {
+      width: 24%;
+      min-width: 180px;
+      flex-shrink: 0;
+    }
+
+    .board-section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .board-section-title h3 {
+      color: var(--text-main);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .board-section-title .count {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .board-section-title .refresh-btn {
+      padding: 4px 10px;
+      font-size: 11px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .board-section-title .refresh-btn:hover {
+      border-color: var(--border-glow);
+      color: var(--text-main);
+    }
+
+    .table-wrapper {
+      max-height: 500px;
+      overflow-y: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .table-wrapper::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: var(--input-border);
+      border-radius: 4px;
+    }
+
     .board-table {
       width: 100%;
       border-collapse: separate;
       border-spacing: 0;
       text-align: left;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
+      min-width: 600px;
     }
+    
+    .watchlist-table {
+      min-width: 0;
+      table-layout: fixed;
+    }
+
+    .watchlist-table thead th,
+    .watchlist-table tbody td {
+      padding: 8px 6px;
+      font-size: 11px;
+    }
+
+
 
     .board-table thead th {
       background: var(--table-header-grad);
       color: var(--text-main);
-      padding: 16px 14px;
-      font-size: 11px;
+      padding: 12px 12px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
       border-bottom: 2px solid var(--border-color);
-      position: relative;
+      position: sticky;
+      top: 0;
+      z-index: 10;
       white-space: nowrap;
     }
 
     .board-table tbody td {
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-bottom: 1px solid var(--border-color);
       color: var(--text-main);
       font-size: 12px;
@@ -551,8 +627,7 @@
     }
 
     .board-table tbody tr:hover {
-      background: rgba(123,47,252,0.12);
-      box-shadow: inset 0 0 30px rgba(123,47,252,0.05);
+      background: rgba(123,47,252,0.08);
     }
 
     .board-table tbody tr:last-child td {
@@ -565,9 +640,59 @@
       flex-wrap: wrap;
     }
 
+    /* Watchlist specific styles */
+    .watchlist-symbol {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .watchlist-exch {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .watchlist-ltp {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    .watchlist-change-positive {
+      color: #48bb78;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .watchlist-change-negative {
+      color: #fc8181;
+      font-weight: 600;
+      font-size: 12px;
+    }
+
+    .watchlist-change-flat {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .watchlist-remove-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 4px 8px;
+      transition: color 0.2s;
+      border-radius: 4px;
+    }
+
+    .watchlist-remove-btn:hover {
+      color: #fc8181;
+      background: rgba(252, 129, 129, 0.1);
+    }
+
     .btn-action {
-      padding: 12px 26px;
-      font-size: 16px;
+      padding: 6px 14px;
+      font-size: 11px;
       border-radius: 6px;
       font-weight: 600;
       border: 1px solid transparent;
@@ -615,7 +740,7 @@
     }
 
     /* ==========================================================================
-       7. TERMINAL / GLOBAL LOG PANEL – FIXED
+       7. TERMINAL / GLOBAL LOG PANEL
        ========================================================================== */
 
     .logs-panel {
@@ -654,7 +779,6 @@
       letter-spacing: 0.05em;
     }
 
-    /* ===== LOG FILTER – matches button style ===== */
     #logFilter {
       background: var(--input-bg);
       color: var(--text-main);
@@ -693,7 +817,6 @@
       padding: 8px 12px;
     }
 
-    /* ===== LOG STREAM – FIXED: taller + scrollable ===== */
     .log-stream {
       background-color: var(--term-bg);
       border: 1px solid var(--term-border);
@@ -713,7 +836,6 @@
       position: relative;
     }
 
-    /* Scanline effect – stays */
     .log-stream::after {
       content: "";
       position: absolute;
@@ -725,7 +847,6 @@
       pointer-events: none;
     }
 
-    /* Scrollbar styling */
     .log-stream::-webkit-scrollbar {
       width: 6px;
     }
@@ -737,7 +858,6 @@
       border-radius: 4px;
     }
 
-    /* Log line styles */
     .log-line {
       white-space: pre-wrap;
       word-break: break-all;
@@ -954,7 +1074,7 @@
     }
 
     /* ==========================================================================
-       9. SEARCH MODAL STYLES - IMPROVED
+       9. SEARCH MODAL STYLES
        ========================================================================== */
 
     .search-input-wrapper {
@@ -1176,6 +1296,17 @@
        11. RESPONSIVE
        ========================================================================== */
 
+    @media (max-width: 1024px) {
+      .board-grid {
+        flex-direction: column;
+        gap: 20px;
+      }
+      .board-grid .watchlist-col {
+        width: 100%;
+        flex-shrink: 1;
+      }
+    }
+
     @media (max-width: 768px) {
       .topbar {
         flex-direction: column;
@@ -1287,27 +1418,71 @@
         <span id="connLabel" class="conn-label">connecting…</span>
 
         <a href="/logs" class="btn btn-ghost">📋 Logs</a>
-        
+        <a href="/charts" class="btn">📈 Charts</a>
+
         <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
         <button id="btnSearchSymbol" class="btn">🔍 Search & Add Symbol</button>
         <button id="btnLogout" class="btn btn-ghost" title="Sign out">⎋ Logout</button>
       </div>
     </header>
 
+    <!-- ============================================================
+    TWO COLUMN DASHBOARD: STRATEGY TABLE + WATCHLIST
+    ============================================================ -->
     <main class="board">
-      <table class="board-table">
-        <thead>
-          <tr>
-            <th>Symbol Name</th><th>LTP</th><th>Brick</th><th>Trend</th>
-            <th>Position</th><th>Entry</th><th>Stop Loss</th>
-            <th>Qty</th><th>Mode</th><th>Status</th>
-            <th>Updated</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="boardBody">
-          <!-- Dynamic rows rendered by app.js -->
-        </tbody>
-      </table>
+      <div class="board-grid">
+        <!-- Left Column: Strategy Symbols (flexible) -->
+        <div class="strategy-col">
+          <div class="board-section-title">
+            <h3>📊 Strategy Symbols</h3>
+            <span class="count" id="strategyCount">0 symbols</span>
+          </div>
+          <div class="table-wrapper">
+            <table class="board-table">
+              <thead>
+                <tr>
+                  <th>Symbol Name</th><th>LTP</th><th>Brick</th><th>Trend</th>
+                  <th>Position</th><th>Entry</th><th>Stop Loss</th>
+                  <th>Qty</th><th>Mode</th><th>Status</th>
+                  <th>Updated</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="boardBody">
+                <!-- Dynamic rows rendered by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right Column: Watchlist (fixed 220px) -->
+        <div class="watchlist-col">
+          <div class="board-section-title" style="margin-bottom: 8px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: var(--text-main);">⭐ Watchlist</h3>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span class="count" id="watchlistCount" style="font-size: 12px; color: var(--text-muted);">0</span>
+              <button id="refreshWatchlistBtn" class="refresh-btn">⟳</button>
+            </div>
+          </div>
+          <div class="table-wrapper" style="max-height: 500px; overflow-y: auto;">
+            <table class="board-table watchlist-table">
+              <thead>
+                <tr>
+                  <th style="width: 45%; padding: 12px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); background: var(--table-header-grad); border-bottom: 2px solid var(--border-color); text-align: left;">Symbol</th>
+                  <th style="width: 25%; padding: 12px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); background: var(--table-header-grad); border-bottom: 2px solid var(--border-color); text-align: center;">LTP</th>
+                  <th style="width: 30%; padding: 12px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); background: var(--table-header-grad); border-bottom: 2px solid var(--border-color); text-align: center;">Chg</th>
+                </tr>
+              </thead>
+              <tbody id="watchlistBody">
+                <tr>
+                  <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
+                    No symbols
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </main>
 
     <section class="logs-panel">
@@ -1433,7 +1608,7 @@
     </div>
   </div>
 
-  <!-- Search Symbol Modal - IMPROVED -->
+  <!-- Search Symbol Modal -->
   <div id="searchModalOverlay" class="modal-overlay hidden">
     <div class="modal" style="max-width: 970px; width: 98%;">
       <div class="modal-header">
@@ -1441,7 +1616,6 @@
         <button id="searchModalClose" class="icon-btn" style="font-size: 24px;">✕</button>
       </div>
       <div class="modal-body">
-        <!-- Search Input Row -->
         <div class="search-input-wrapper">
           <div class="search-input-field">
             <input 
@@ -1462,12 +1636,10 @@
           </div>
         </div>
         
-        <!-- Search Results Container -->
         <div id="searchResultsList" class="search-results">
           <div class="no-results">Type at least 2 characters to search…</div>
         </div>
         
-        <!-- Result Count -->
         <div id="searchResultCount" class="search-result-count"></div>
       </div>
     </div>

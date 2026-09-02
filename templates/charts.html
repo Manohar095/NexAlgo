@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CogniX Algo — Charts</title>
+
+  <style>
+    /* ==========================================================================
+       THEME DEFINITIONS
+       ========================================================================== */
+    :root, [data-theme="dark"] {
+      --bg-base: #05080f;
+      --bg-card: rgba(10, 16, 30, 0.85);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --border-glow: rgba(255, 0, 200, 0.5);
+      --text-main: #f0f4ff;
+      --text-muted: #a0b4d0;
+      --input-bg: rgba(8, 12, 28, 0.9);
+      --input-border: rgba(180, 80, 255, 0.4);
+      --brand-gradient: linear-gradient(135deg, #00f0ff 0%, #7b2ffc 40%, #ff2d95 70%, #ffb300 100%);
+      --btn-add-grad: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%);
+    }
+
+    [data-theme="light"] {
+      --bg-base: #f2f6ff;
+      --bg-card: rgba(255, 255, 255, 0.85);
+      --border-color: rgba(80, 100, 200, 0.2);
+      --border-glow: rgba(255, 0, 150, 0.4);
+      --text-main: #1c1e21;
+      --text-muted: #4a5a7a;
+      --input-bg: #ffffff;
+      --input-border: #ad9eb4;
+      --brand-gradient: linear-gradient(135deg, #0066ff 0%, #a855f7 50%, #ec4899 100%);
+      --btn-add-grad: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%);
+    }
+
+    /* ==========================================================================
+       ANIMATIONS
+       ========================================================================== */
+    @keyframes borderPulse {
+      0%, 100% { border-color: var(--border-color); box-shadow: 0 0 8px rgba(255,0,200,0); }
+      50% { border-color: var(--border-glow); box-shadow: 0 0 25px rgba(255,0,200,0.15); }
+    }
+
+    @keyframes ambientGlow {
+      0% { transform: translate(0,0) scale(1) rotate(0deg); }
+      50% { transform: translate(40px,-40px) scale(1.1) rotate(10deg); }
+      100% { transform: translate(0,0) scale(1) rotate(0deg); }
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ==========================================================================
+       BASE STYLES
+       ========================================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      transition: background-color 0.4s ease, color 0.4s ease;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: -1;
+      background: radial-gradient(circle, rgba(0, 240, 255, 0.2) 0%, rgba(123, 47, 252, 0.15) 50%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      animation: ambientGlow 22s infinite ease-in-out;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(140px);
+      pointer-events: none;
+      z-index: -1;
+      background: radial-gradient(circle, rgba(255, 45, 149, 0.2) 0%, rgba(123, 47, 252, 0.15) 50%, transparent 70%);
+      bottom: -200px;
+      left: -200px;
+      animation: ambientGlow 22s infinite ease-in-out reverse;
+    }
+
+    /* ==========================================================================
+       LAYOUT
+       ========================================================================== */
+    #app {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ==========================================================================
+       TOPBAR
+       ========================================================================== */
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      border-radius: 16px;
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 12px 48px rgba(0,0,0,0.3);
+      animation: borderPulse 6s infinite;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .brand-mark {
+      font-size: 2rem;
+      background: var(--brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 20px rgba(255,0,200,0.3));
+    }
+
+    .brand-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: var(--brand-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-size: 200% 200%;
+      animation: gradientShift 6s ease infinite;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* ==========================================================================
+       BUTTONS
+       ========================================================================== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--input-bg);
+      color: var(--text-main);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+      text-decoration: none;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-glow);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 8px 30px rgba(123,47,252,0.15);
+    }
+
+    .btn-primary {
+      background: var(--btn-add-grad) !important;
+      border: none !important;
+      color: #ffffff !important;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3) !important;
+      background-size: 200% 200%;
+      animation: gradientShift 4s ease infinite;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px) scale(1.03);
+      box-shadow: 0 8px 30px rgba(0, 212, 255, 0.5) !important;
+    }
+
+    /* ==========================================================================
+       SELECTS
+       ========================================================================== */
+    .theme-select,
+    .symbol-select {
+      background: var(--input-bg);
+      color: var(--text-main);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 9px 36px 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a0b4d0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: all 0.25s ease;
+    }
+
+    .theme-select:hover,
+    .symbol-select:hover {
+      border-color: var(--border-glow);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(123,47,252,0.1);
+    }
+
+    .theme-select:focus,
+    .symbol-select:focus {
+      border-color: var(--border-glow);
+      box-shadow: 0 0 0 3px rgba(123,47,252,0.15);
+    }
+
+    /* ==========================================================================
+       PANELS
+       ========================================================================== */
+    .panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      animation: borderPulse 6s infinite;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+
+    .panel:hover {
+      border-color: var(--border-glow);
+      box-shadow: 0 8px 40px rgba(255,0,200,0.05);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .panel-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* ==========================================================================
+       TICKER TAPE - MODERN WEB COMPONENT
+       ========================================================================== */
+    .ticker-panel {
+      padding: 4px 8px;
+      min-height: 48px;
+      overflow: hidden;
+    }
+
+    tv-ticker-tape {
+      --tv-ticker-tape-color: var(--text-main);
+      --tv-ticker-tape-background: transparent;
+      --tv-ticker-tape-border: var(--border-color);
+      display: block;
+      width: 100%;
+    }
+
+    /* ==========================================================================
+       CHART
+       ========================================================================== */
+    #tv_chart_main {
+      height: 620px;
+      width: 100%;
+      min-height: 400px;
+    }
+
+    .chart-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .chart-toolbar label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    /* ==========================================================================
+       WATCHLIST
+       ========================================================================== */
+    .watchlist-panel {
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 400px;
+      max-height: 700px;
+    }
+
+    .watchlist-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .watchlist-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .watchlist-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .watchlist-body::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .watchlist-body::-webkit-scrollbar-thumb {
+      background: var(--input-border);
+      border-radius: 4px;
+    }
+
+    .watchlist-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 13px;
+      border: 1px solid transparent;
+    }
+
+    .watchlist-item:hover {
+      background: rgba(123, 47, 252, 0.08);
+    }
+
+    .watchlist-item.active {
+      background: rgba(123, 47, 252, 0.15);
+      border-color: var(--border-glow);
+      box-shadow: 0 0 20px rgba(123, 47, 252, 0.05);
+    }
+
+    .watchlist-item .name {
+      font-weight: 600;
+    }
+
+    .watchlist-item .exch {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: var(--input-bg);
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+
+    /* ==========================================================================
+       GRID LAYOUT
+       ========================================================================== */
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ==========================================================================
+       RESPONSIVE
+       ========================================================================== */
+    @media (max-width: 1024px) {
+      .grid-layout {
+        grid-template-columns: 1fr;
+      }
+      .watchlist-panel {
+        max-height: 400px;
+        min-height: 200px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      #app {
+        padding: 16px;
+        gap: 16px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px 18px;
+      }
+
+      .topbar-actions {
+        justify-content: flex-start;
+      }
+
+      #tv_chart_main {
+        height: 380px;
+        min-height: 300px;
+      }
+
+      .chart-toolbar {
+        padding: 10px 14px;
+        gap: 8px;
+      }
+
+      .brand-title {
+        font-size: 1.1rem;
+      }
+
+      .brand-mark {
+        font-size: 1.5rem;
+      }
+
+      .watchlist-panel {
+        max-height: 300px;
+        min-height: 150px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .topbar-actions .btn {
+        font-size: 11px;
+        padding: 6px 12px;
+      }
+
+      .theme-select,
+      .symbol-select {
+        font-size: 11px;
+        padding: 6px 30px 6px 12px;
+      }
+
+      #tv_chart_main {
+        height: 280px;
+        min-height: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <!-- ============================================================
+    TOPBAR
+    ============================================================ -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">◈</span>
+        <div>
+          <div class="brand-title">CogniX Algo</div>
+          <div class="brand-sub">Live Charts</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <select id="themeSelect" class="theme-select" title="Switch UI Theme">
+          <option value="dark">🌙 Dark</option>
+          <option value="light">☀️ Light</option>
+        </select>
+        <a href="/" class="btn">← Dashboard</a>
+      </div>
+    </header>
+
+    <!-- ============================================================
+    TICKER TAPE - MODERN WEB COMPONENT
+    ============================================================ -->
+    <div class="panel ticker-panel">
+      <script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js"></script>
+      <tv-ticker-tape 
+        symbols="NSE:NIFTY,BSE:SENSEX,NSE:BANKNIFTY,NSE:RELIANCE,NSE:TCS"
+        color-theme="dark"
+        transparent="true"
+        locale="en"
+      ></tv-ticker-tape>
+    </div>
+
+    <!-- ============================================================
+    GRID: CHART + WATCHLIST
+    ============================================================ -->
+    <div class="grid-layout">
+      <!-- CHART PANEL -->
+      <div class="panel">
+        <div class="chart-toolbar">
+          <label>Symbol</label>
+          <select id="symbolSelect" class="symbol-select">
+            <option value="NSE:NIFTY">NIFTY 50</option>
+            <option value="NSE:BANKNIFTY">BANK NIFTY</option>
+            <option value="BSE:SENSEX">SENSEX</option>
+            <option value="NSE:RELIANCE">RELIANCE</option>
+            <option value="NSE:TCS">TCS</option>
+            <option value="NSE:HDFCBANK">HDFC BANK</option>
+            <option value="NSE:INFY">INFOSYS</option>
+            <option value="NSE:SBIN">SBI</option>
+          </select>
+
+          <label style="margin-left: 8px;">Interval</label>
+          <select id="intervalSelect" class="symbol-select">
+            <option value="1">1m</option>
+            <option value="5" selected>5m</option>
+            <option value="15">15m</option>
+            <option value="60">1h</option>
+            <option value="D">1D</option>
+            <option value="W">1W</option>
+          </select>
+        </div>
+
+        <div class="tradingview-widget-container" style="height:620px; width:100%;">
+          <div id="tv_chart_main" class="tradingview-widget-container__widget"></div>
+        </div>
+      </div>
+
+      <!-- WATCHLIST PANEL -->
+      <div class="panel watchlist-panel">
+        <div class="watchlist-header">
+          <span class="watchlist-title">📋 Watchlist</span>
+          <span style="font-size: 11px; color: var(--text-muted);">Click to view</span>
+        </div>
+        <div id="watchlistBody" class="watchlist-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+  TRADINGVIEW LIBRARY
+  ============================================================ -->
+  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+
+  <script>
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
+    const WATCHLIST = [
+      { symbol: "NSE:NIFTY",     name: "NIFTY 50",    exch: "NSE" },
+      { symbol: "NSE:BANKNIFTY", name: "BANK NIFTY",  exch: "NSE" },
+      { symbol: "BSE:SENSEX",    name: "SENSEX",      exch: "BSE" },
+      { symbol: "NSE:RELIANCE",  name: "RELIANCE",    exch: "NSE" },
+      { symbol: "NSE:TCS",       name: "TCS",         exch: "NSE" },
+      { symbol: "NSE:HDFCBANK",  name: "HDFC BANK",   exch: "NSE" },
+      { symbol: "NSE:INFY",      name: "INFOSYS",     exch: "NSE" },
+      { symbol: "NSE:SBIN",      name: "SBI",         exch: "NSE" }
+    ];
+
+    let currentSymbol = "NSE:NIFTY";
+    let currentInterval = "5";
+    let chartWidget = null;
+
+    // ============================================================
+    // THEME
+    // ============================================================
+    function currentTheme() {
+      return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    }
+
+    // ============================================================
+    // UPDATE TICKER TAPE THEME
+    // ============================================================
+    function updateTickerTheme() {
+      const ticker = document.querySelector('tv-ticker-tape');
+      if (ticker) {
+        const theme = currentTheme();
+        ticker.setAttribute('color-theme', theme);
+      }
+    }
+
+    // ============================================================
+    // CHART
+    // ============================================================
+    function renderChart() {
+      const container = document.getElementById("tv_chart_main");
+      container.innerHTML = "";
+
+      if (chartWidget) {
+        try { chartWidget.remove(); } catch (e) {}
+        chartWidget = null;
+      }
+
+      chartWidget = new TradingView.widget({
+        container_id: "tv_chart_main",
+        autosize: true,
+        symbol: currentSymbol,
+        interval: currentInterval,
+        timezone: "Asia/Kolkata",
+        theme: currentTheme(),
+        style: "1",
+        locale: "en",
+        toolbar_bg: "rgba(0,0,0,0)",
+        enable_publishing: false,
+        hide_legend: false,
+        save_image: false,
+        studies: ["STD;MACD"],
+        backgroundColor: "rgba(0,0,0,0)",
+        gridColor: "rgba(150,150,150,0.08)",
+        allow_symbol_change: true,
+        details: true,
+        hotlist: true,
+        calendar: true,
+        withdateranges: true
+      });
+    }
+
+    // ============================================================
+    // WATCHLIST
+    // ============================================================
+    function renderWatchlist() {
+      const body = document.getElementById("watchlistBody");
+      body.innerHTML = WATCHLIST.map(item => `
+        <div class="watchlist-item ${item.symbol === currentSymbol ? 'active' : ''}" data-symbol="${item.symbol}">
+          <span class="name">${item.name}</span>
+          <span class="exch">${item.exch}</span>
+        </div>
+      `).join("");
+
+      body.querySelectorAll(".watchlist-item").forEach(el => {
+        el.addEventListener("click", () => {
+          currentSymbol = el.dataset.symbol;
+          document.getElementById("symbolSelect").value = currentSymbol;
+          renderChart();
+          renderWatchlist();
+        });
+      });
+    }
+
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    document.getElementById("symbolSelect").addEventListener("change", (e) => {
+      currentSymbol = e.target.value;
+      renderChart();
+      renderWatchlist();
+    });
+
+    document.getElementById("intervalSelect").addEventListener("change", (e) => {
+      currentInterval = e.target.value;
+      renderChart();
+    });
+
+    // ============================================================
+    // THEME TOGGLE
+    // ============================================================
+    const themeSelect = document.getElementById("themeSelect");
+    const savedTheme = localStorage.getItem("cognix_theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+    themeSelect.value = savedTheme;
+
+    themeSelect.addEventListener("change", (e) => {
+      const selected = e.target.value;
+      document.documentElement.setAttribute("data-theme", selected);
+      localStorage.setItem("cognix_theme", selected);
+      renderChart();
+      updateTickerTheme();
+    });
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    renderChart();
+    renderWatchlist();
+    updateTickerTheme();
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (chartWidget) {
+          try { chartWidget.resize(); } catch (e) {}
+        }
+      }, 200);
+    });
+
+    console.log("📊 TradingView Charts loaded");
+    console.log(`📈 Current symbol: ${currentSymbol}`);
+  </script>
+</body>
+</html>

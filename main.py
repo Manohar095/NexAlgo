@@ -72,6 +72,17 @@ async def logs_page():
     return FileResponse("templates/logs.html")
 
 
+@app.get("/charts")
+async def charts_page():
+    """TradingView Charts page"""
+    return FileResponse("templates/charts.html")
+
+
+@app.get("/option-chain")
+async def option_chain_page():
+    return FileResponse("templates/option_chain.html")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await ws_manager.connect(websocket)
