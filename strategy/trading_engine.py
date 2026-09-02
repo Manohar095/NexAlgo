@@ -137,6 +137,15 @@ class TradingEngine:
         self._stop_event = threading.Event()
         self._threads = []
 
+        # Decouples UI push (on_log/on_status → socket emit) from the
+        # tick-processing path in feed_handler, so a slow/blocking emit
+        # can never delay reading the next broker tick.
+        self._push_queue = Queue(maxsize=2000)
+        self._push_thread = threading.Thread(
+            target=self._push_worker, daemon=True, name=f"{instance_id}-push"
+        )
+        self._push_thread.start()
+
         self._log("INFO", f"Instance created for {cfg.exchange}:{cfg.trading_symbol}")
 
     # ================= LOGGING (per-instance) =================
@@ -147,7 +156,7 @@ class TradingEngine:
         getattr(logging, level.lower(), logging.info)(f"[{self.cfg.strategy_name}] {message}")
         if self.on_log:
             try:
-                self.on_log(self.id, entry)
+                self._push_queue.put_nowait(("log", entry))
             except Exception:
                 pass
 
@@ -158,6 +167,26 @@ class TradingEngine:
                 self.on_status(self.id, self.get_status())
             except Exception:
                 pass
+
+    def _push_worker(self):
+        """Drains queued log/status pushes to the UI off the tick-processing
+        path — feed_handler enqueues and returns immediately instead of
+        blocking on a socket emit, so a slow UI push can never delay the
+        next broker tick from being read."""
+        while not self._stop_event.is_set():
+            try:
+                kind, payload = self._push_queue.get(timeout=1)
+            except Empty:
+                continue
+            try:
+                if kind == "log" and self.on_log:
+                    self.on_log(self.id, payload)
+                elif kind == "status" and self.on_status:
+                    self.on_status(self.id, payload)
+            except Exception:
+                pass
+            finally:
+                self._push_queue.task_done()
 
     def get_status(self):
         return {
@@ -229,6 +258,8 @@ class TradingEngine:
         self._log("INFO", "🛑 Stopped (open positions/orders at the broker are left untouched)")
         self._push_status()
 
+        self._push_thread.join(timeout=3)   # <-- added
+        
     def restart(self):
         self._log("INFO", "🔄 Restarting...")
         self.stop()
