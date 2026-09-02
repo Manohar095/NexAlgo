@@ -128,6 +128,9 @@ class TradingEngine:
         self.state_lock  = threading.Lock()
         self.order_queue = Queue()
         self.last_sync_time = 0
+        self._last_ltp_push = 0
+        self._ltp_push_interval = 0.15   # ~6-7 pushes/sec — feels live, won't flood
+
 
         self.log_buffer = deque(maxlen=500)
 
@@ -1237,6 +1240,11 @@ class TradingEngine:
 
         ltp = float(msg["lp"])
         self.last_ltp = ltp
+
+        now = time.time()
+        if now - self._last_ltp_push >= self._ltp_push_interval:
+            self._last_ltp_push = now
+            self._push_status()
 
         bricks = self.renko.process_price(ltp)
         if not bricks:
