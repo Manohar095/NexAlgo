@@ -1060,53 +1060,176 @@ function connectWS() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(`${proto}//${location.host}/ws`);
 
-  ws.onopen = () => { connDot.className = "conn-dot live"; connLabel.textContent = "live"; };
+  ws.onopen = () => { 
+    connDot.className = "conn-dot live"; 
+    connLabel.textContent = "live"; 
+  };
+  
   ws.onclose = () => {
-    connDot.className = "conn-dot down"; connLabel.textContent = "reconnecting…";
+    connDot.className = "conn-dot down"; 
+    connLabel.textContent = "reconnecting…";
     setTimeout(connectWS, 2000);
   };
+  
   ws.onerror = () => ws.close();
 
   ws.onmessage = (evt) => {
-    const msg = JSON.parse(evt.data);
-    if (msg.type === "status") {
-      if (symbols[msg.instance_id]) {
-        symbols[msg.instance_id].live_status = msg.status;
-        renderBoard();
-      }
-    } else if (msg.type === "log") {
-      const name = knownSymbolNames[msg.instance_id];
-      appendLogLine({ ...msg.entry, id: msg.instance_id, symbol: name });
-    } else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
-      // Update watchlist with real-time LTP data from WebSocket
-      const data = msg.data || msg;
-      if (data && data.token) {
-        const token = String(data.token);
-        const watchlistItem = watchlistData.find(item => String(item.token) === token);
-        if (watchlistItem) {
-          const ltp = parseFloat(data.lp || data.ltp || data.last_price || 0);
-          const open = parseFloat(data.pp || data.open || 0);
-          let change = 0;
-          if (open > 0) {
-            change = ltp - open;
-          } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
-            const prevLtp = watchlistLTPCache[token].ltp || ltp;
-            change = ltp - prevLtp;
-          }
+    try {
+      const msg = JSON.parse(evt.data);
+      
+      // --- STATUS MESSAGES (Strategy Updates) ---
+      if (msg.type === "status") {
+        if (symbols[msg.instance_id]) {
+          symbols[msg.instance_id].live_status = msg.status;
+          renderBoard();
+        }
+      } 
+      
+      // --- LOG MESSAGES ---
+      else if (msg.type === "log") {
+        const name = knownSymbolNames[msg.instance_id];
+        appendLogLine({ ...msg.entry, id: msg.instance_id, symbol: name });
+      } 
+      
+      // --- QUOTE / LTP / TICK MESSAGES (Real-time Market Data) ---
+      else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
+        const data = msg.data || msg;
+        if (data && data.token) {
+          const token = String(data.token);
+          const watchlistItem = watchlistData.find(item => String(item.token) === token);
           
-          watchlistLTPCache[token] = {
-            ltp: ltp,
-            change: change,
-            lastUpdated: new Date().toLocaleTimeString()
-          };
-          
-          // Update UI if watchlist is visible
-          const watchlistBody = document.getElementById('watchlistBody');
-          if (watchlistBody && watchlistData.length > 0) {
-            updateWatchlistDisplay();
+          if (watchlistItem) {
+            // Extract price data
+            const ltp = parseFloat(data.lp || data.ltp || data.last_price || 0);
+            const prevClose = parseFloat(data.c || data.prev_close || 0);  // Previous Close from WebSocket
+            const open = parseFloat(data.o || data.open || 0);
+            
+            let change = 0;
+            let changePercent = 0;
+            
+            // Method 1: Use Previous Close (c) - Most accurate for daily change
+            if (prevClose > 0) {
+              change = ltp - prevClose;
+              changePercent = (change / prevClose) * 100;
+            } 
+            // Method 2: Use Open Price (o) - Fallback
+            else if (open > 0) {
+              change = ltp - open;
+              changePercent = (change / open) * 100;
+            }
+            // Method 3: Use cached LTP - Last resort
+            else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
+              const prevLtp = watchlistLTPCache[token].ltp || ltp;
+              change = ltp - prevLtp;
+              changePercent = (change / prevLtp) * 100;
+            }
+            
+            // Store in cache
+            watchlistLTPCache[token] = {
+              ltp: ltp,
+              change: change,
+              changePercent: changePercent,
+              prevClose: prevClose,
+              open: open,
+              lastUpdated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
+            };
+            
+            // Update UI if watchlist is visible
+            const watchlistBody = document.getElementById('watchlistBody');
+            if (watchlistBody && watchlistData.length > 0) {
+              updateWatchlistDisplay();
+            }
           }
         }
       }
+      
+      // --- DEPTH MESSAGES (Market Depth / Level 2 Data) ---
+      else if (msg.type === "depth" || msg.type === "df" || msg.type === "dk") {
+        const data = msg.data || msg;
+        if (data && data.token) {
+          const token = String(data.token);
+          const watchlistItem = watchlistData.find(item => String(item.token) === token);
+          
+          if (watchlistItem) {
+            // Extract price data from depth message
+            const ltp = parseFloat(data.lp || data.ltp || 0);
+            const prevClose = parseFloat(data.c || data.prev_close || 0);  // Previous Close from depth
+            const open = parseFloat(data.o || data.open || 0);
+            const high = parseFloat(data.h || data.high || 0);
+            const low = parseFloat(data.l || data.low || 0);
+            const volume = parseFloat(data.v || data.volume || 0);
+            
+            let change = 0;
+            let changePercent = 0;
+            
+            // Use Previous Close for accurate daily change
+            if (prevClose > 0) {
+              change = ltp - prevClose;
+              changePercent = (change / prevClose) * 100;
+            } else if (open > 0) {
+              change = ltp - open;
+              changePercent = (change / open) * 100;
+            } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
+              const prevLtp = watchlistLTPCache[token].ltp || ltp;
+              change = ltp - prevLtp;
+              changePercent = (change / prevLtp) * 100;
+            }
+            
+            // Store in cache with additional depth data
+            watchlistLTPCache[token] = {
+              ltp: ltp,
+              change: change,
+              changePercent: changePercent,
+              prevClose: prevClose,
+              open: open,
+              high: high,
+              low: low,
+              volume: volume,
+              // Bid/Ask Levels
+              bid: {
+                price1: parseFloat(data.bp1 || 0),
+                qty1: parseFloat(data.bq1 || 0),
+                price2: parseFloat(data.bp2 || 0),
+                qty2: parseFloat(data.bq2 || 0),
+                price3: parseFloat(data.bp3 || 0),
+                qty3: parseFloat(data.bq3 || 0),
+                price4: parseFloat(data.bp4 || 0),
+                qty4: parseFloat(data.bq4 || 0),
+                price5: parseFloat(data.bp5 || 0),
+                qty5: parseFloat(data.bq5 || 0)
+              },
+              ask: {
+                price1: parseFloat(data.sp1 || 0),
+                qty1: parseFloat(data.sq1 || 0),
+                price2: parseFloat(data.sp2 || 0),
+                qty2: parseFloat(data.sq2 || 0),
+                price3: parseFloat(data.sp3 || 0),
+                qty3: parseFloat(data.sq3 || 0),
+                price4: parseFloat(data.sp4 || 0),
+                qty4: parseFloat(data.sq4 || 0),
+                price5: parseFloat(data.sp5 || 0),
+                qty5: parseFloat(data.sq5 || 0)
+              },
+              lastUpdated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
+            };
+            
+            // Update UI if watchlist is visible
+            const watchlistBody = document.getElementById('watchlistBody');
+            if (watchlistBody && watchlistData.length > 0) {
+              updateWatchlistDisplay();
+            }
+          }
+        }
+      }
+      
+      // --- Any other message types (debug) ---
+      else {
+        // Uncomment for debugging
+        // console.log('📨 Unknown WebSocket message type:', msg.type, msg);
+      }
+      
+    } catch (error) {
+      console.error('WebSocket message parse error:', error);
     }
   };
 }
@@ -1228,7 +1351,7 @@ function removeFromWatchlist(index) {
   }
 }
 
-// Update watchlist display from cache with delete button at top-right of Change column
+// Update watchlist display from cache with percentage below change
 function updateWatchlistDisplay() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
@@ -1252,25 +1375,42 @@ function updateWatchlistDisplay() {
     if (cached && cached.ltp > 0) {
       const changeColor = cached.change > 0 ? '#48bb78' : (cached.change < 0 ? '#fc8181' : 'var(--text-muted)');
       const changeArrow = cached.change > 0 ? '▲' : (cached.change < 0 ? '▼' : '');
-      const changeDisplay = cached.change !== 0 ? `${changeArrow} ${cached.change > 0 ? '+' : ''}${cached.change.toFixed(2)}` : '--';
+      
+      // Change value with arrow on the SAME LINE (arrow left, value right)
+      const changeDisplay = cached.change !== 0 ? 
+        `<span style="display: inline-flex; align-items: center; gap: 2px;">
+          <span style="font-size: 11px;">${changeArrow}</span>
+          <span>${cached.change > 0 ? '+' : ''}${cached.change.toFixed(2)}</span>
+        </span>` : 
+        '<span>--</span>';
+      
+      // Percentage (displayed below)
+      const percentDisplay = (cached.changePercent !== undefined && cached.changePercent !== 0) ?
+        `${cached.changePercent > 0 ? '+' : ''}${cached.changePercent.toFixed(2)}%` :
+        '';
+      
+      const ltpDisplay = cached.ltp.toFixed(2);
       
       html += `
         <tr>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
+          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
             <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
             <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
             ${cached.lastUpdated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${cached.lastUpdated}</span>` : ''}
           </td>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: center; font-weight: 600;">
-            ${cached.ltp.toFixed(2)}
+          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: right; font-weight: 600; vertical-align: middle;">
+            ${ltpDisplay}
           </td>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: center; font-weight: 600; white-space: nowrap; position: relative;">
-            <span style="display: block; text-align: center;">${changeDisplay}</span>
+          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: right; font-weight: 600; position: relative; vertical-align: middle; padding-right: 32px;">
+            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3;">
+              ${changeDisplay}
+              ${percentDisplay ? `<span style="font-size: 11px; opacity: 0.8; font-weight: 500;">${percentDisplay}</span>` : ''}
+            </div>
             <button 
               class="watchlist-remove-btn" 
               onclick="removeFromWatchlist(${index})" 
               title="Remove from watchlist"
-              style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
+              style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
               onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
               onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
             >
@@ -1280,23 +1420,23 @@ function updateWatchlistDisplay() {
         </tr>
       `;
     } else {
-      // Show loading state with delete button at top-right of Change column
+      // Show loading state with delete button
       html += `
         <tr>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
+          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
             <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
             <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
           </td>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
+          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: right; vertical-align: middle;">
             <span style="opacity: 0.5;">⌛</span>
           </td>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center; position: relative;">
-            <span style="display: block; text-align: center;">--</span>
+          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: right; position: relative; vertical-align: middle; padding-right: 32px;">
+            <span>--</span>
             <button 
               class="watchlist-remove-btn" 
               onclick="removeFromWatchlist(${index})" 
               title="Remove from watchlist"
-              style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
+              style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
               onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
               onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
             >
@@ -1341,18 +1481,35 @@ async function refreshWatchlist() {
       if (data.success && data.data) {
         const quote = data.data;
         const ltp = parseFloat(quote.lp) || 0;
-        const open = parseFloat(quote.pp) || 0;
+        const prevClose = parseFloat(quote.c) || 0;  // ← Previous Close from WebSocket cache
+        const open = parseFloat(quote.o) || 0;
+        
         let change = 0;
-        if (open > 0) {
+        let changePercent = 0;
+        
+        // Method 1: Use Previous Close (c) - Most accurate for daily change
+        if (prevClose > 0) {
+          change = ltp - prevClose;
+          changePercent = (change / prevClose) * 100;
+        } 
+        // Method 2: Use Open Price (o) - Fallback
+        else if (open > 0) {
           change = ltp - open;
-        } else if (watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0) {
+          changePercent = (change / open) * 100;
+        }
+        // Method 3: Use cached LTP - Last resort
+        else if (watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0) {
           const prevLtp = watchlistLTPCache[String(item.token)].ltp || ltp;
           change = ltp - prevLtp;
+          changePercent = (change / prevLtp) * 100;
         }
         
         watchlistLTPCache[String(item.token)] = {
           ltp: ltp,
           change: change,
+          changePercent: changePercent,
+          prevClose: prevClose,
+          open: open,
           lastUpdated: new Date().toLocaleTimeString()
         };
       } else {
@@ -1360,6 +1517,7 @@ async function refreshWatchlist() {
           watchlistLTPCache[String(item.token)] = {
             ltp: 0,
             change: 0,
+            changePercent: 0,
             lastUpdated: new Date().toLocaleTimeString(),
             error: true
           };
@@ -1371,13 +1529,14 @@ async function refreshWatchlist() {
         watchlistLTPCache[String(item.token)] = {
           ltp: 0,
           change: 0,
+          changePercent: 0,
           lastUpdated: new Date().toLocaleTimeString(),
           error: true
         };
       }
     }
-  }
-  
+  } 
+
   updateWatchlistDisplay();
 }
 

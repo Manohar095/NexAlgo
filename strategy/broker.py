@@ -69,11 +69,13 @@ class BrokerSession:
         self._logged_in = False
         self._ws_started = False
         self._lock = threading.Lock()
+        
 
         # key: "EXCH|TOKEN" -> callback(msg)
         self.feed_subscribers = {}
         # key: (EXCH, TSYM) -> callback(msg)
         self.order_subscribers = {}
+        self.prev_close_cache = {}  # (key: "EXCH|TOKEN" -> previous close)
 
         # -------- connection health --------
         self.ws_connected = False
@@ -194,6 +196,13 @@ class BrokerSession:
     # -------- central dispatch --------
     def _central_feed_handler(self, msg):
         self._last_msg_time = time.time()
+        # ← ADD THIS BLOCK (cache previous close from WebSocket)
+        if 'c' in msg and 'tk' in msg and 'e' in msg:
+            key = f"{msg.get('e')}|{msg.get('tk')}"
+            self.prev_close_cache[key] = float(msg.get('c', 0))
+            # Optional: log occasionally
+            # logging.debug(f"📊 Cached previous close for {key}: {self.prev_close_cache[key]}")
+
         if "lp" not in msg:
             return
         key = f"{msg.get('e')}|{msg.get('tk')}"
@@ -357,7 +366,17 @@ class BrokerSession:
 
     def get_quotes(self, exchange, token):
         self.login()
-        return self.api.get_quotes(exchange=exchange, token=token)
+        result = self.api.get_quotes(exchange=exchange, token=token)
+        
+        # ← ADD THIS BLOCK (inject previous close from cache)
+        if result and result.get('stat') == 'Ok':
+            key = f"{exchange}|{token}"
+            if key in self.prev_close_cache:
+                result['c'] = str(self.prev_close_cache[key])
+                # Optional: log occasionally
+                # logging.debug(f"📊 Injected previous close for {key}: {result['c']}")
+        
+        return result
 
     def search_symbols(self, exchange, search_text):
         self.login()

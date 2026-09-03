@@ -397,7 +397,6 @@ body::after {
    6. UNIFIED TABLE STYLES - Strategy & Watchlist (CONSISTENT FONTS)
    ========================================================================== */
 
-/* Both tables use same font sizes */
 .board-table {
   width: 100%;
   border-collapse: separate;
@@ -442,7 +441,7 @@ body::after {
 }
 
 /* ==========================================================================
-   6a. TWO COLUMN LAYOUT - STRATEGY TABLE (FLEXIBLE) + WATCHLIST (FIXED 220px)
+   6a. TWO COLUMN LAYOUT - STRATEGY TABLE (FLEXIBLE) + WATCHLIST (FIXED)
    ========================================================================== */
 
 .board-grid {
@@ -459,7 +458,7 @@ body::after {
 
 .board-grid .watchlist-col {
   width: 10%;
-  min-width: 180px;   /* prevents crushing the 3 headers */
+  min-width: 180px;
   flex-shrink: 0;
 }
 
@@ -503,10 +502,9 @@ body::after {
 }
 
 /* ==========================================================================
-   6b. WATCHLIST TABLE - SAME FONT SIZES AS STRATEGY TABLE
+   6b. WATCHLIST TABLE - PROPER ALIGNMENT
    ========================================================================== */
 
-/* Watchlist table - matching Strategy Table */
 .watchlist-table {
   width: 100%;
   table-layout: fixed;
@@ -514,7 +512,7 @@ body::after {
 }
 
 .watchlist-table thead th {
-  padding: 12px 14px;
+  padding: 10px 12px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -527,107 +525,25 @@ body::after {
   z-index: 10;
 }
 
-.watchlist-table tbody td {
-  padding: 8px 6px;
-  font-size: 11px;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-main);
-  vertical-align: middle;
-  transition: background 0.2s ease;
+/* Column widths - proper distribution */
+.watchlist-table .col-symbol {
+  width: 45%;
+  text-align: right;
 }
 
-.watchlist-table tbody tr {
-  transition: all 0.25s ease;
+.watchlist-table .col-ltp {
+  width: 20%;
+  text-align: right;
+  padding-right: 20px
 }
 
-.watchlist-table tbody tr:hover {
-  background: rgba(123, 47, 252, 0.08);
+.watchlist-table .col-change {
+  width: 35%;
+  text-align: right;
+  padding-right: 32px;
 }
 
-.watchlist-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* Watchlist specific column widths - Total 100% */
-.watchlist-table .col-symbol { width: 45%; }   /* 45% of 55px = ~25px */
-.watchlist-table .col-ltp { width: 25%; }      /* 25% of 55px = ~14px */
-.watchlist-table .col-change { width: 30%; }   /* 30% of 55px = ~16px */
-
-/* Watchlist specific text styles */
-.watchlist-symbol {
-  font-weight: 600;
-  color: var(--text-main);
-  font-size: 13px;
-}
-
-.watchlist-exch {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-left: 4px;
-}
-
-.watchlist-ltp {
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--text-main);
-  text-align: center;
-}
-
-.watchlist-change-positive {
-  color: #48bb78;
-  font-weight: 600;
-  font-size: 13px;
-  text-align: center;
-}
-
-.watchlist-change-negative {
-  color: #fc8181;
-  font-weight: 600;
-  font-size: 13px;
-  text-align: center;
-}
-
-.watchlist-change-flat {
-  color: var(--text-muted);
-  font-size: 13px;
-  text-align: center;
-}
-
-/* Watchlist table - ensure proper column sizing */
-.watchlist-table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-
-.watchlist-table thead th {
-  padding: 12px 14px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-main);
-  background: var(--table-header-grad);
-  border-bottom: 2px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-/* Column widths - adjust as needed */
-.watchlist-table .col-symbol { 
-  width: 45%; 
-}
-
-.watchlist-table .col-ltp { 
-  width: 25%; 
-}
-
-.watchlist-table .col-change { 
-  width: 30%;
-}
-
+/* Watchlist table body cells */
 .watchlist-table tbody td {
   padding: 10px 12px;
   font-size: 13px;
@@ -638,60 +554,44 @@ body::after {
   transition: background 0.2s ease;
 }
 
-.watchlist-table tbody tr {
-  transition: all 0.25s ease;
+.watchlist-table tbody td:first-child {
+  text-align: left;
 }
 
-.watchlist-table tbody tr:hover {
-  background: rgba(123, 47, 252, 0.08);
+.watchlist-table tbody td:nth-child(2) {
+  text-align: right;
+  font-weight: 600;
+  padding-right: 20px;
 }
 
-.watchlist-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* Watchlist table - ensure proper column sizing */
-.watchlist-table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: collapse;
-}
-
-.watchlist-table thead th {
-  padding: 12px 14px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-main);
-  background: var(--table-header-grad);
-  border-bottom: 2px solid var(--border-color);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-/* Column widths */
-.watchlist-table .col-symbol { 
-  width: 45%; 
-}
-
-.watchlist-table .col-ltp { 
-  width: 25%; 
-}
-
-.watchlist-table .col-change { 
-  width: 30%;
-}
-
-.watchlist-table tbody td {
-  padding: 12px 14px;
-  font-size: 13px;
-  white-space: nowrap;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-main);
+/* Change column with percentage below */
+.watchlist-table tbody td:last-child {
+  text-align: right;
+  position: relative;
+  padding-right: 32px;
+  font-weight: 600;
   vertical-align: middle;
-  transition: background 0.2s ease;
+}
+
+/* Container for change value + percentage */
+.watchlist-table tbody td:last-child > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+
+/* Change value styling */
+.watchlist-table tbody td:last-child > div span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Percentage styling (below change) */
+.watchlist-table tbody td:last-child > div span:last-child {
+  font-size: 11px;
+  opacity: 0.8;
+  font-weight: 500;
 }
 
 .watchlist-table tbody tr {
@@ -706,11 +606,44 @@ body::after {
   border-bottom: none;
 }
 
-/* Watchlist remove button - positioned at top-right of Change column */
+/* Watchlist text styles */
+.watchlist-symbol {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.watchlist-exch {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+
+.watchlist-ltp {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+/* Change colors */
+.watchlist-change-positive {
+  color: #48bb78;
+}
+
+.watchlist-change-negative {
+  color: #fc8181;
+}
+
+.watchlist-change-flat {
+  color: var(--text-muted);
+}
+
+/* Watchlist remove button - positioned at top-right */
 .watchlist-remove-btn {
   position: absolute;
-  top: 4px;
-  right: 6px;
+  top: 4px;           /* Changed from 50% */
+  right: 4px;         /* Changed from right: 4px */
+  /* Remove transform: translateY(-50%); */
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -727,27 +660,16 @@ body::after {
   color: #fc8181 !important;
   background: rgba(252, 129, 129, 0.15) !important;
   opacity: 1 !important;
-  transform: scale(1.1);
+  transform: scale(1.1);  /* Keep this for hover effect */
 }
 
-/* Make the remove button slightly more visible on row hover */
+/* Make remove button slightly more visible on row hover */
 .watchlist-table tbody tr:hover .watchlist-remove-btn {
   opacity: 0.6;
 }
 
 .watchlist-table tbody tr:hover .watchlist-remove-btn:hover {
   opacity: 1;
-}
-
-/* Ensure Change column has position relative for absolute positioning */
-.watchlist-table tbody td:last-child {
-  position: relative;
-}
-
-/* Center the change value while keeping button at top-right */
-.watchlist-table tbody td:last-child > span {
-  display: block;
-  text-align: center;
 }
 
 /* ==========================================================================
@@ -1394,33 +1316,4 @@ input:focus, select:focus {
     font-size: 0.7rem;
     white-space: normal;
   }
-}
-
-/* Watchlist remove button styles */
-.watchlist-remove-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 14px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  opacity: 0.5;
-}
-
-.watchlist-remove-btn:hover {
-  color: #fc8181 !important;
-  background: rgba(252, 129, 129, 0.1) !important;
-  opacity: 1;
-}
-
-/* Make the remove button always visible on hover row */
-.watchlist-table tbody tr:hover .watchlist-remove-btn {
-  opacity: 1;
-}
-
-/* Or make it always visible */
-.watchlist-remove-btn {
-  opacity: 0.7;
 }
