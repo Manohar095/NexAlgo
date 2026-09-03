@@ -584,7 +584,7 @@ function selectSearchResult(index) {
   const quantityField = document.getElementById("quantity");
 
   // For options, try multiple fields to get the best name
-  const displayName = item.dname || item.cname || "";
+  const displayName = item.dname || item.cname || item.tsym || "";
 
   if (strategyNameField) strategyNameField.value = displayName;
   if (exchangeField) exchangeField.value = item.exch || "";
@@ -644,7 +644,7 @@ function selectFromQuotes() {
   const quantityField = document.getElementById("quantity");
   
   // For options, cname might have the full name with expiry
-  const displayName = quoteData.cname || quoteData.dname || '';
+  const displayName = quoteData.cname || quoteData.dname || quoteData.tsym || '';
   const exchange = quoteData.exch || '';
   const token = quoteData.token || '';
   const tickSize = quoteData.ti || '';
@@ -1597,7 +1597,7 @@ selectSearchResult = function(index) {
   const tickSizeField = document.getElementById("tick_size");
   const quantityField = document.getElementById("quantity");
   
-  const displayName = item.dname || item.cname || "";
+  const displayName = item.dname || item.cname || item.tsym || "";
   
   if (strategyNameField) strategyNameField.value = displayName;
   if (exchangeField) exchangeField.value = item.exch || "";
