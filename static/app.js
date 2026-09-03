@@ -1182,13 +1182,22 @@ function addToWatchlist(symbol, exchange, token) {
   showAlert(`Added ${symbol} to watchlist`, 'success');
 }
 
-// Remove symbol from watchlist
+// Remove symbol from watchlist with confirmation
 function removeFromWatchlist(index) {
   const removed = watchlistData[index];
-  watchlistData.splice(index, 1);
-  saveWatchlist();
-  renderWatchlist();
-  showAlert(`Removed ${removed.symbol} from watchlist`, 'info');
+  if (!removed) return;
+  
+  // Show confirmation dialog
+  if (confirm(`Remove "${removed.symbol}" from watchlist?`)) {
+    watchlistData.splice(index, 1);
+    saveWatchlist();
+    
+    // Remove from cache
+    delete watchlistLTPCache[String(removed.token)];
+    
+    renderWatchlist();
+    showAlert(`Removed ${removed.symbol} from watchlist`, 'info');
+  }
 }
 
 // Update watchlist from strategy symbols LTP data
@@ -1230,7 +1239,7 @@ function updateWatchlistFromSymbols() {
   }
 }
 
-// Update watchlist display from cache
+// Update watchlist display from cache with delete buttons
 function updateWatchlistDisplay() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
@@ -1248,7 +1257,7 @@ function updateWatchlistDisplay() {
   
   let html = '';
   
-  watchlistData.forEach((item) => {
+  watchlistData.forEach((item, index) => {
     const cached = watchlistLTPCache[String(item.token)];
     
     if (cached && cached.ltp > 0) {
@@ -1268,11 +1277,21 @@ function updateWatchlistDisplay() {
           </td>
           <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: center; font-weight: 600; white-space: nowrap;">
             ${changeDisplay}
+            <button 
+              class="watchlist-remove-btn" 
+              onclick="removeFromWatchlist(${index})" 
+              title="Remove from watchlist"
+              style="margin-left: 8px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s;"
+              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.1)';"
+              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent';"
+            >
+              ✕
+            </button>
           </td>
         </tr>
       `;
     } else {
-      // Show loading state
+      // Show loading state with delete button
       html += `
         <tr>
           <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
@@ -1284,6 +1303,16 @@ function updateWatchlistDisplay() {
           </td>
           <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
             --
+            <button 
+              class="watchlist-remove-btn" 
+              onclick="removeFromWatchlist(${index})" 
+              title="Remove from watchlist"
+              style="margin-left: 8px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s;"
+              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.1)';"
+              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent';"
+            >
+              ✕
+            </button>
           </td>
         </tr>
       `;
@@ -1498,3 +1527,6 @@ function showAlert(message, type = 'info') {
     }, 300);
   }, 4000);
 }
+
+// Make remove function globally accessible
+window.removeFromWatchlist = removeFromWatchlist;

@@ -1273,3 +1273,32 @@ input:focus, select:focus {
     white-space: normal;
   }
 }
+
+/* Watchlist remove button styles */
+.watchlist-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  opacity: 0.5;
+}
+
+.watchlist-remove-btn:hover {
+  color: #fc8181 !important;
+  background: rgba(252, 129, 129, 0.1) !important;
+  opacity: 1;
+}
+
+/* Make the remove button always visible on hover row */
+.watchlist-table tbody tr:hover .watchlist-remove-btn {
+  opacity: 1;
+}
+
+/* Or make it always visible */
+.watchlist-remove-btn {
+  opacity: 0.7;
+}
