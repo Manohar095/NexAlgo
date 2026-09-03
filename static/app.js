@@ -1072,10 +1072,45 @@ function connectWS() {
 
   ws.onmessage = (evt) => {
     const msg = JSON.parse(evt.data);
+    
     if (msg.type === "status") {
+      // Update strategy symbol table
       if (symbols[msg.instance_id]) {
         symbols[msg.instance_id].live_status = msg.status;
         renderBoard();
+      }
+      
+      // ALSO UPDATE WATCHLIST FROM STATUS MESSAGES
+      // The status message contains LTP data - extract it and update watchlist
+      if (msg.status && msg.status.token) {
+        const token = String(msg.status.token);
+        const watchlistItem = watchlistData.find(item => String(item.token) === token);
+        if (watchlistItem) {
+          const ltp = parseFloat(msg.status.ltp) || 0;
+          // Try to get open price from status, or use previous cached value
+          const open = parseFloat(msg.status.open_price) || parseFloat(msg.status.pp) || 0;
+          let change = 0;
+          if (open > 0) {
+            change = ltp - open;
+          } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
+            // If we have cached data, calculate change from previous close
+            // Use the cached LTP as reference for change
+            const prevLtp = watchlistLTPCache[token].ltp || ltp;
+            change = ltp - prevLtp;
+          }
+          
+          watchlistLTPCache[token] = {
+            ltp: ltp,
+            change: change,
+            lastUpdated: msg.status.last_updated || new Date().toLocaleTimeString()
+          };
+          
+          // Update UI if watchlist is visible
+          const watchlistBody = document.getElementById('watchlistBody');
+          if (watchlistBody && watchlistData.length > 0) {
+            updateWatchlistDisplay();
+          }
+        }
       }
     } else if (msg.type === "log") {
       const name = knownSymbolNames[msg.instance_id];
@@ -1084,16 +1119,20 @@ function connectWS() {
       // Update watchlist with real-time LTP data from WebSocket
       const data = msg.data || msg;
       if (data && data.token) {
-        const watchlistItem = watchlistData.find(item => String(item.token) === String(data.token));
+        const token = String(data.token);
+        const watchlistItem = watchlistData.find(item => String(item.token) === token);
         if (watchlistItem) {
           const ltp = parseFloat(data.lp || data.ltp || data.last_price || 0);
           const open = parseFloat(data.pp || data.open || 0);
           let change = 0;
           if (open > 0) {
             change = ltp - open;
+          } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
+            const prevLtp = watchlistLTPCache[token].ltp || ltp;
+            change = ltp - prevLtp;
           }
           
-          watchlistLTPCache[String(data.token)] = {
+          watchlistLTPCache[token] = {
             ltp: ltp,
             change: change,
             lastUpdated: new Date().toLocaleTimeString()
@@ -1227,7 +1266,7 @@ function removeFromWatchlist(index) {
   }
 }
 
-// Update watchlist from strategy symbols LTP data (additional data source)
+// Update watchlist from strategy symbols LTP data
 function updateWatchlistFromSymbols() {
   const watchlistBody = document.getElementById('watchlistBody');
   if (!watchlistBody || watchlistData.length === 0) return;
@@ -1240,15 +1279,20 @@ function updateWatchlistFromSymbols() {
     const live = rec.live_status || {};
     const token = cfg.token;
     
-    if (token && live.ltp !== undefined && live.ltp !== null) {
+    if (token && live.ltp !== undefined && live.ltp !== null && live.ltp !== 0) {
       // Check if this token is in the watchlist
       const watchlistItem = watchlistData.find(item => String(item.token) === String(token));
       if (watchlistItem) {
         const ltp = parseFloat(live.ltp) || 0;
+        // Get open price from live status
         const open = parseFloat(live.open_price) || parseFloat(live.pp) || 0;
         let change = 0;
         if (open > 0) {
           change = ltp - open;
+        } else if (watchlistLTPCache[String(token)] && watchlistLTPCache[String(token)].ltp > 0) {
+          // Calculate change from previous cached value
+          const prevLtp = watchlistLTPCache[String(token)].ltp || ltp;
+          change = ltp - prevLtp;
         }
         
         watchlistLTPCache[String(token)] = {
@@ -1349,7 +1393,7 @@ function updateWatchlistDisplay() {
   tbody.innerHTML = html;
 }
 
-// Fetch LTP for all watchlist items independently (without relying on strategy symbols)
+// Fetch LTP for all watchlist items independently
 async function refreshWatchlist() {
   const container = document.getElementById('watchlistBody');
   if (!container) return;
@@ -1383,6 +1427,10 @@ async function refreshWatchlist() {
         let change = 0;
         if (open > 0) {
           change = ltp - open;
+        } else if (watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0) {
+          // Calculate change from previous cached value
+          const prevLtp = watchlistLTPCache[String(item.token)].ltp || ltp;
+          change = ltp - prevLtp;
         }
         
         watchlistLTPCache[String(item.token)] = {
@@ -1391,7 +1439,6 @@ async function refreshWatchlist() {
           lastUpdated: new Date().toLocaleTimeString()
         };
       } else {
-        // If fetch fails, keep existing cache or mark as error
         if (!watchlistLTPCache[String(item.token)]) {
           watchlistLTPCache[String(item.token)] = {
             ltp: 0,
@@ -1403,7 +1450,6 @@ async function refreshWatchlist() {
       }
     } catch (e) {
       console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
-      // Keep existing cache if available
       if (!watchlistLTPCache[String(item.token)]) {
         watchlistLTPCache[String(item.token)] = {
           ltp: 0,
