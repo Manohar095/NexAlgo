@@ -65,7 +65,7 @@ function renderBoard() {
     document.querySelector(`[data-delete="${id}"]`)?.addEventListener("click", () => deleteSymbol(id));
   });
 
-  // Update watchlist from strategy symbols LTP data
+  // Optional: Update watchlist from strategy symbols (additional data source)
   updateWatchlistFromSymbols();
 }
 
@@ -1080,6 +1080,32 @@ function connectWS() {
     } else if (msg.type === "log") {
       const name = knownSymbolNames[msg.instance_id];
       appendLogLine({ ...msg.entry, id: msg.instance_id, symbol: name });
+    } else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
+      // Update watchlist with real-time LTP data from WebSocket
+      const data = msg.data || msg;
+      if (data && data.token) {
+        const watchlistItem = watchlistData.find(item => String(item.token) === String(data.token));
+        if (watchlistItem) {
+          const ltp = parseFloat(data.lp || data.ltp || data.last_price || 0);
+          const open = parseFloat(data.pp || data.open || 0);
+          let change = 0;
+          if (open > 0) {
+            change = ltp - open;
+          }
+          
+          watchlistLTPCache[String(data.token)] = {
+            ltp: ltp,
+            change: change,
+            lastUpdated: new Date().toLocaleTimeString()
+          };
+          
+          // Update UI if watchlist is visible
+          const watchlistBody = document.getElementById('watchlistBody');
+          if (watchlistBody && watchlistData.length > 0) {
+            updateWatchlistDisplay();
+          }
+        }
+      }
     }
   };
 }
@@ -1109,6 +1135,13 @@ if (logoutBtn) {
   loadWatchlist();
   connectWS();
   setInterval(loadSymbols, 15000);
+  
+  // Auto-refresh watchlist every 10 seconds for independent LTP updates
+  setInterval(() => {
+    if (watchlistData.length > 0) {
+      refreshWatchlist();
+    }
+  }, 10000);
 })();
 
 
@@ -1126,14 +1159,8 @@ function loadWatchlist() {
     if (saved) {
       watchlistData = JSON.parse(saved);
     } else {
-      // Default watchlist items
-      watchlistData = [
-        { symbol: 'NIFTY', exchange: 'NSE', token: '26000' },
-        { symbol: 'BANKNIFTY', exchange: 'NSE', token: '26009' },
-        { symbol: 'RELIANCE', exchange: 'NSE', token: '2885' },
-        { symbol: 'TCS', exchange: 'NSE', token: '11536' },
-        { symbol: 'HDFCBANK', exchange: 'NSE', token: '341' }
-      ];
+      // Start with empty watchlist
+      watchlistData = [];
       saveWatchlist();
     }
   } catch (e) {
@@ -1200,7 +1227,7 @@ function removeFromWatchlist(index) {
   }
 }
 
-// Update watchlist from strategy symbols LTP data
+// Update watchlist from strategy symbols LTP data (additional data source)
 function updateWatchlistFromSymbols() {
   const watchlistBody = document.getElementById('watchlistBody');
   if (!watchlistBody || watchlistData.length === 0) return;
@@ -1239,7 +1266,7 @@ function updateWatchlistFromSymbols() {
   }
 }
 
-// Update watchlist display from cache with delete buttons
+// Update watchlist display from cache with delete button at top-right of Change column
 function updateWatchlistDisplay() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
@@ -1275,15 +1302,15 @@ function updateWatchlistDisplay() {
           <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: center; font-weight: 600;">
             ${cached.ltp.toFixed(2)}
           </td>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: center; font-weight: 600; white-space: nowrap;">
-            ${changeDisplay}
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: center; font-weight: 600; white-space: nowrap; position: relative;">
+            <span style="display: block; text-align: center;">${changeDisplay}</span>
             <button 
               class="watchlist-remove-btn" 
               onclick="removeFromWatchlist(${index})" 
               title="Remove from watchlist"
-              style="margin-left: 8px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s;"
-              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.1)';"
-              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent';"
+              style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
+              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
+              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
             >
               ✕
             </button>
@@ -1291,7 +1318,7 @@ function updateWatchlistDisplay() {
         </tr>
       `;
     } else {
-      // Show loading state with delete button
+      // Show loading state with delete button at top-right of Change column
       html += `
         <tr>
           <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle;">
@@ -1301,15 +1328,15 @@ function updateWatchlistDisplay() {
           <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
             <span style="opacity: 0.5;">⌛</span>
           </td>
-          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center;">
-            --
+          <td style="padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: center; position: relative;">
+            <span style="display: block; text-align: center;">--</span>
             <button 
               class="watchlist-remove-btn" 
               onclick="removeFromWatchlist(${index})" 
               title="Remove from watchlist"
-              style="margin-left: 8px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s;"
-              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.1)';"
-              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent';"
+              style="position: absolute; top: 4px; right: 6px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
+              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
+              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
             >
               ✕
             </button>
@@ -1322,7 +1349,7 @@ function updateWatchlistDisplay() {
   tbody.innerHTML = html;
 }
 
-// Fetch LTP for watchlist items
+// Fetch LTP for all watchlist items independently (without relying on strategy symbols)
 async function refreshWatchlist() {
   const container = document.getElementById('watchlistBody');
   if (!container) return;
@@ -1340,6 +1367,7 @@ async function refreshWatchlist() {
     `;
   }
   
+  // Fetch LTP for each symbol in watchlist
   for (const item of watchlistData) {
     try {
       const response = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(item.exchange)}&token=${encodeURIComponent(item.token)}`, {
@@ -1362,9 +1390,28 @@ async function refreshWatchlist() {
           change: change,
           lastUpdated: new Date().toLocaleTimeString()
         };
+      } else {
+        // If fetch fails, keep existing cache or mark as error
+        if (!watchlistLTPCache[String(item.token)]) {
+          watchlistLTPCache[String(item.token)] = {
+            ltp: 0,
+            change: 0,
+            lastUpdated: new Date().toLocaleTimeString(),
+            error: true
+          };
+        }
       }
     } catch (e) {
       console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
+      // Keep existing cache if available
+      if (!watchlistLTPCache[String(item.token)]) {
+        watchlistLTPCache[String(item.token)] = {
+          ltp: 0,
+          change: 0,
+          lastUpdated: new Date().toLocaleTimeString(),
+          error: true
+        };
+      }
     }
   }
   
