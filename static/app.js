@@ -1224,7 +1224,7 @@ if (logoutBtn) {
     if (watchlistData.length > 0) {
       refreshWatchlist();
     }
-  }, 1000);
+  }, 15000);
 })();
 
 
@@ -1316,7 +1316,6 @@ function addToWatchlist(symbol, exchange, token) {
   saveWatchlist();
   renderWatchlist();
   subscribeWatchlistTokens();
-  refreshWatchlist();
   showAlert(`Added ${symbol} to watchlist`, 'success');
 }
 
