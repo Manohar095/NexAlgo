@@ -15,7 +15,7 @@ const symbolForm   = document.getElementById("symbolForm");
 
 let symbols = {};
 let knownSymbolNames = {};
-let watchlistSymbols = {};  // SAME PATTERN as symbols — keyed by token, O(1) lookup
+let watchlistSymbols = {};
 
 const FIELD_IDS = [
   "strategy_name", "exchange", "trading_symbol", "token", "quantity", "product_type",
@@ -597,178 +597,6 @@ function selectSearchResult(index) {
   console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
 }
 
-// ---------------- Add to Watchlist from Search ---------------- 
-function addToWatchlistFromSearch(index) {
-  const item = searchResultsData[index];
-  if (!item) {
-    console.error("No search result found at index:", index);
-    return;
-  }
-
-  // Extract symbol data from search result
-  const symbol = item.tsym || item.dname || item.cname || "";
-  const exchange = item.exch || "NSE";
-  const token = String(item.token || "");
-
-  if (!symbol || !token) {
-    showAlert("Invalid symbol data", "error");
-    return;
-  }
-
-  // Add to watchlist using the existing function
-  addToWatchlist(symbol, exchange, token);
-
-  // Visual feedback - change button temporarily
-  const resultItems = document.querySelectorAll('.result-item');
-  if (resultItems[index]) {
-    const starBtn = resultItems[index].querySelector('button[onclick*="addToWatchlistFromSearch"]');
-    if (starBtn) {
-      const originalText = starBtn.textContent;
-      starBtn.textContent = '✅';
-      starBtn.style.color = '#48bb78';
-      starBtn.style.borderColor = '#48bb78';
-      setTimeout(() => {
-        starBtn.textContent = originalText;
-        starBtn.style.color = '#fbbf24';
-        starBtn.style.borderColor = 'rgba(251, 191, 36, 0.3)';
-      }, 1500);
-    }
-  }
-
-  // Keep the search results open so user can add more symbols
-  console.log(`Added ${symbol} to watchlist from search`);
-}
-
-// ---------------- Alert System ----------------
-function showAlert(message, type = 'info') {
-  // Check if alert container exists, if not create one
-  let alertContainer = document.getElementById('alertContainer');
-  if (!alertContainer) {
-    alertContainer = document.createElement('div');
-    alertContainer.id = 'alertContainer';
-    alertContainer.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 350px;
-      width: 100%;
-      pointer-events: none;
-    `;
-    document.body.appendChild(alertContainer);
-  }
-
-  // Create alert element
-  const alert = document.createElement('div');
-  alert.style.cssText = `
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    animation: slideIn 0.3s ease-out;
-    pointer-events: auto;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-  `;
-
-  // Set colors based on type
-  const colors = {
-    success: {
-      bg: 'rgba(72, 187, 120, 0.2)',
-      border: 'rgba(72, 187, 120, 0.3)',
-      text: '#48bb78'
-    },
-    error: {
-      bg: 'rgba(252, 129, 129, 0.2)',
-      border: 'rgba(252, 129, 129, 0.3)',
-      text: '#fc8181'
-    },
-    info: {
-      bg: 'rgba(66, 153, 225, 0.2)',
-      border: 'rgba(66, 153, 225, 0.3)',
-      text: '#63b3ed'
-    },
-    warning: {
-      bg: 'rgba(237, 137, 54, 0.2)',
-      border: 'rgba(237, 137, 54, 0.3)',
-      text: '#ed8936'
-    }
-  };
-
-  const style = colors[type] || colors.info;
-  alert.style.background = style.bg;
-  alert.style.borderColor = style.border;
-  alert.style.color = style.text;
-
-  // Add icon
-  const icons = {
-    success: '✅',
-    error: '❌',
-    info: 'ℹ️',
-    warning: '⚠️'
-  };
-  const icon = icons[type] || icons.info;
-  alert.innerHTML = `${icon} ${escapeHTML(message)}`;
-
-  // Add close button
-  const closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '✕';
-  closeBtn.style.cssText = `
-    float: right;
-    background: transparent;
-    border: none;
-    color: ${style.text};
-    cursor: pointer;
-    font-size: 14px;
-    padding: 0 4px;
-    opacity: 0.6;
-    margin-left: 12px;
-  `;
-  closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
-  closeBtn.onmouseout = () => closeBtn.style.opacity = '0.6';
-  closeBtn.onclick = () => alert.remove();
-  alert.appendChild(closeBtn);
-
-  alertContainer.appendChild(alert);
-
-  // Auto-remove after 4 seconds
-  setTimeout(() => {
-    if (alert.parentNode) {
-      alert.style.opacity = '0';
-      alert.style.transform = 'translateX(20px)';
-      alert.style.transition = 'all 0.3s ease-out';
-      setTimeout(() => {
-        if (alert.parentNode) alert.remove();
-      }, 300);
-    }
-  }, 4000);
-}
-
-// Add animation keyframes if not already present
-(function addAlertStyles() {
-  if (!document.getElementById('alertStyles')) {
-    const style = document.createElement('style');
-    style.id = 'alertStyles';
-    style.textContent = `
-      @keyframes slideIn {
-        from {
-          opacity: 0;
-          transform: translateX(20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(0);
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-})();
-
 // Close search popup
 const searchModalClose = document.getElementById("searchModalClose");
 if (searchModalClose) {
@@ -1258,15 +1086,6 @@ function connectWS() {
           symbols[msg.instance_id].live_status = msg.status;
           renderBoard();
         }
-
-        const symbolRecord = symbols[msg.instance_id];
-        if (symbolRecord && symbolRecord.config && symbolRecord.config.token) {
-          const token = String(symbolRecord.config.token);
-          if (watchlistSymbols[token]) {
-            watchlistSymbols[token].live_status = msg.status;
-            renderWatchlist();
-          }
-        }
       }
 
       // --- LOG MESSAGES ---
@@ -1278,13 +1097,14 @@ function connectWS() {
       // --- QUOTE / LTP / TICK MESSAGES (Real-time Market Data) ---
       else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
         const data = msg.data || msg;
-        if (data && data.token !== undefined && data.token !== null) {
+        if (data && data.token) {
           const token = String(data.token);
-          const entry = watchlistSymbols[token];
-          if (entry) {
-            const ltp = parseFloat(data.lp ?? data.ltp ?? data.last_price ?? entry.live_status?.ltp ?? 0);
-            const prevClose = data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close ?? 0;
-            const open = data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open ?? 0;
+          const watchlistItem = watchlistData.find(item => String(item.token) === token);
+
+          if (watchlistItem) {
+            const ltp = parseFloat(data.lp || data.ltp || data.last_price || 0);
+            const prevClose = parseFloat(data.c || data.prev_close || 0);
+            const open = parseFloat(data.o || data.open || 0);
 
             let change = 0;
             let changePercent = 0;
@@ -1295,22 +1115,22 @@ function connectWS() {
             } else if (open > 0) {
               change = ltp - open;
               changePercent = (change / open) * 100;
-            } else if (entry.live_status?.ltp > 0) {
-              const prevLtp = entry.live_status.ltp || ltp;
+            } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
+              const prevLtp = watchlistLTPCache[token].ltp || ltp;
               change = ltp - prevLtp;
               changePercent = (change / prevLtp) * 100;
             }
 
-            entry.live_status = {
-              ...entry.live_status,
+            watchlistLTPCache[token] = {
               ltp: ltp,
-              prev_close: prevClose,
-              open: open,
               change: change,
               changePercent: changePercent,
-              last_updated: data.ft || new Date().toLocaleTimeString()
+              prevClose: prevClose,
+              open: open,
+              lastUpdated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
             };
-            renderWatchlist();
+
+            updateWatchlistDisplay();
           }
         }
       }
@@ -1318,16 +1138,17 @@ function connectWS() {
       // --- DEPTH MESSAGES (Market Depth / Level 2 Data) ---
       else if (msg.type === "depth" || msg.type === "df" || msg.type === "dk") {
         const data = msg.data || msg;
-        if (data && data.token !== undefined && data.token !== null) {
+        if (data && data.token) {
           const token = String(data.token);
-          const entry = watchlistSymbols[token];
-          if (entry) {
-            const ltp = data.lp !== undefined ? parseFloat(data.lp) : entry.live_status?.ltp ?? 0;
-            const prevClose = data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close ?? 0;
-            const open = data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open ?? 0;
-            const high = data.h !== undefined ? parseFloat(data.h) : entry.live_status?.high ?? 0;
-            const low = data.l !== undefined ? parseFloat(data.l) : entry.live_status?.low ?? 0;
-            const volume = data.v !== undefined ? parseFloat(data.v) : entry.live_status?.volume ?? 0;
+          const watchlistItem = watchlistData.find(item => String(item.token) === token);
+
+          if (watchlistItem) {
+            const ltp = parseFloat(data.lp || data.ltp || 0);
+            const prevClose = parseFloat(data.c || data.prev_close || 0);
+            const open = parseFloat(data.o || data.open || 0);
+            const high = parseFloat(data.h || data.high || 0);
+            const low = parseFloat(data.l || data.low || 0);
+            const volume = parseFloat(data.v || data.volume || 0);
 
             let change = 0;
             let changePercent = 0;
@@ -1338,29 +1159,30 @@ function connectWS() {
             } else if (open > 0) {
               change = ltp - open;
               changePercent = (change / open) * 100;
-            } else if (entry.live_status?.ltp > 0) {
-              const prevLtp = entry.live_status.ltp || ltp;
+            } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
+              const prevLtp = watchlistLTPCache[token].ltp || ltp;
               change = ltp - prevLtp;
               changePercent = (change / prevLtp) * 100;
             }
 
-            entry.live_status = {
-              ...entry.live_status,
+            watchlistLTPCache[token] = {
               ltp: ltp,
-              prev_close: prevClose,
+              change: change,
+              changePercent: changePercent,
+              prevClose: prevClose,
               open: open,
               high: high,
               low: low,
               volume: volume,
-              change: change,
-              changePercent: changePercent,
-              last_updated: data.ft || new Date().toLocaleTimeString()
+              lastUpdated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
             };
-            renderWatchlist();
+
+            updateWatchlistDisplay();
           }
         }
       }
 
+      // --- Any other message types (debug) ---
       else {
         // Uncomment for debugging
         // console.log('📨 Unknown WebSocket message type:', msg.type, msg);
@@ -1370,18 +1192,6 @@ function connectWS() {
       console.error('WebSocket message parse error:', error);
     }
   };
-}
-
-// Ask the backend WS feed to start streaming ticks for the watchlist tokens.
-function subscribeWatchlistTokens() {
-  if (!window._ws || window._ws.readyState !== WebSocket.OPEN) return;
-  const tokens = Object.values(watchlistSymbols).map(item => `${item.exchange}|${item.token}`);
-  if (tokens.length === 0) return;
-  try {
-    window._ws.send(JSON.stringify({ type: "subscribe", tokens }));
-  } catch (e) {
-    console.error("Failed to send watchlist subscribe message:", e);
-  }
 }
 
 // ---------------- Init ----------------
@@ -1406,7 +1216,7 @@ if (logoutBtn) {
 
   await loadSymbols();
   await loadInitialLogs();
-  await loadWatchlist();
+  loadWatchlist();
   connectWS();
   setInterval(loadSymbols, 15000);
 
@@ -1414,7 +1224,7 @@ if (logoutBtn) {
     if (watchlistData.length > 0) {
       refreshWatchlist();
     }
-  }, 15000);
+  }, 1000);
 })();
 
 
@@ -1422,8 +1232,22 @@ if (logoutBtn) {
 
 // Watchlist data stored in localStorage
 let watchlistData = [];
+// Watchlist LTP cache for real-time updates
+let watchlistLTPCache = {};
 
-async function loadWatchlist() {
+function subscribeWatchlistTokens() {
+  if (!window._ws || window._ws.readyState !== WebSocket.OPEN) return;
+  const tokens = watchlistData.map(item => `${item.exchange}|${item.token}`);
+  if (tokens.length === 0) return;
+  try {
+    window._ws.send(JSON.stringify({ type: "subscribe", tokens }));
+  } catch (e) {
+    console.error("Failed to send watchlist subscribe message:", e);
+  }
+}
+
+// Load watchlist from localStorage
+function loadWatchlist() {
   try {
     const saved = localStorage.getItem('cognix_watchlist');
     if (saved) {
@@ -1437,6 +1261,7 @@ async function loadWatchlist() {
     watchlistData = [];
   }
 
+  // Initialize watchlistSymbols
   watchlistSymbols = {};
   watchlistData.forEach(item => {
     watchlistSymbols[String(item.token)] = {
@@ -1450,15 +1275,11 @@ async function loadWatchlist() {
     countEl.textContent = watchlistData.length;
   }
 
-  if (watchlistData.length > 0) {
-    await refreshWatchlist();
-  } else {
-    renderWatchlist();
-  }
-
+  renderWatchlist();
   subscribeWatchlistTokens();
 }
 
+// Save watchlist to localStorage
 function saveWatchlist() {
   try {
     localStorage.setItem('cognix_watchlist', JSON.stringify(watchlistData));
@@ -1472,6 +1293,7 @@ function saveWatchlist() {
   }
 }
 
+// Add symbol to watchlist
 function addToWatchlist(symbol, exchange, token) {
   const exists = watchlistData.some(item =>
     String(item.token) === String(token) && item.exchange === exchange
@@ -1494,12 +1316,11 @@ function addToWatchlist(symbol, exchange, token) {
   saveWatchlist();
   renderWatchlist();
   subscribeWatchlistTokens();
-
   refreshWatchlist();
-
   showAlert(`Added ${symbol} to watchlist`, 'success');
 }
 
+// Remove symbol from watchlist with confirmation
 function removeFromWatchlist(index) {
   const removed = watchlistData[index];
   if (!removed) return;
@@ -1507,6 +1328,7 @@ function removeFromWatchlist(index) {
   if (confirm(`Remove "${removed.symbol}" from watchlist?`)) {
     watchlistData.splice(index, 1);
     delete watchlistSymbols[String(removed.token)];
+    delete watchlistLTPCache[String(removed.token)];
     saveWatchlist();
     renderWatchlist();
     subscribeWatchlistTokens();
@@ -1514,8 +1336,8 @@ function removeFromWatchlist(index) {
   }
 }
 
-// RENDER WATCHLIST - Uses stored change/percent from live_status
-function renderWatchlist() {
+// Update watchlist display from cache with percentage below change
+function updateWatchlistDisplay() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
 
@@ -1533,37 +1355,34 @@ function renderWatchlist() {
   let html = '';
 
   watchlistData.forEach((item, index) => {
-    const cached = watchlistSymbols[String(item.token)];
-    const live = cached?.live_status || {};
+    const cached = watchlistLTPCache[String(item.token)];
 
-    if (live.ltp && live.ltp > 0) {
-      const ltp = live.ltp;
-      // ✅ Use stored change/percent from WebSocket handler
-      const change = live.change || 0;
-      const changePercent = live.changePercent || 0;
-      const changeColor = change > 0 ? '#48bb78' : (change < 0 ? '#fc8181' : 'var(--text-muted)');
-      const changeArrow = change > 0 ? '▲' : (change < 0 ? '▼' : '');
+    if (cached && cached.ltp > 0) {
+      const changeColor = cached.change > 0 ? '#48bb78' : (cached.change < 0 ? '#fc8181' : 'var(--text-muted)');
+      const changeArrow = cached.change > 0 ? '▲' : (cached.change < 0 ? '▼' : '');
 
-      const changeDisplay = change !== 0 ?
+      const changeDisplay = cached.change !== 0 ?
         `<span style="display: inline-flex; align-items: center; gap: 2px;">
           <span style="font-size: 11px;">${changeArrow}</span>
-          <span>${change > 0 ? '+' : ''}${change.toFixed(2)}</span>
+          <span>${cached.change > 0 ? '+' : ''}${cached.change.toFixed(2)}</span>
         </span>` :
         '<span>--</span>';
 
-      const percentDisplay = (changePercent !== 0 && changePercent !== undefined) ?
-        `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%` :
+      const percentDisplay = (cached.changePercent !== undefined && cached.changePercent !== 0) ?
+        `${cached.changePercent > 0 ? '+' : ''}${cached.changePercent.toFixed(2)}%` :
         '';
+
+      const ltpDisplay = cached.ltp.toFixed(2);
 
       html += `
         <tr>
           <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
             <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
             <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
-            ${live.last_updated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${live.last_updated}</span>` : ''}
+            ${cached.lastUpdated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${cached.lastUpdated}</span>` : ''}
           </td>
           <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: right; font-weight: 600; vertical-align: middle;">
-            ${ltp.toFixed(2)}
+            ${ltpDisplay}
           </td>
           <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: right; font-weight: 600; position: relative; vertical-align: middle; padding-right: 32px;">
             <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3;">
@@ -1615,13 +1434,13 @@ function renderWatchlist() {
   tbody.innerHTML = html;
 }
 
-// Fetch LTP for all watchlist items in parallel
+// Fetch LTP for all watchlist items independently
 async function refreshWatchlist() {
   const container = document.getElementById('watchlistBody');
   if (!container) return;
 
-  const hasData = watchlistData.some(item => watchlistSymbols[String(item.token)]?.live_status?.ltp);
-  if (!hasData && watchlistData.length > 0) {
+  const hasCache = watchlistData.some(item => watchlistLTPCache[String(item.token)]);
+  if (!hasCache && watchlistData.length > 0) {
     container.innerHTML = `
       <tr>
         <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted);">
@@ -1632,7 +1451,7 @@ async function refreshWatchlist() {
     `;
   }
 
-  await Promise.all(watchlistData.map(async (item) => {
+  for (const item of watchlistData) {
     try {
       const response = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(item.exchange)}&token=${encodeURIComponent(item.token)}`, {
         method: 'POST',
@@ -1642,50 +1461,140 @@ async function refreshWatchlist() {
 
       if (data.success && data.data) {
         const quote = data.data;
-        const token = String(item.token);
+        const ltp = parseFloat(quote.lp) || 0;
+        const prevClose = parseFloat(quote.c) || 0;
+        const open = parseFloat(quote.o) || 0;
 
-        if (watchlistSymbols[token]) {
-          const ltp = parseFloat(quote.lp) || 0;
-          const prevClose = parseFloat(quote.c) || 0;
-          const open = parseFloat(quote.o) || 0;
+        let change = 0;
+        let changePercent = 0;
 
-          let change = 0;
-          let changePercent = 0;
-
-          if (prevClose > 0) {
-            change = ltp - prevClose;
-            changePercent = (change / prevClose) * 100;
-          } else if (open > 0) {
-            change = ltp - open;
-            changePercent = (change / open) * 100;
-          }
-
-          watchlistSymbols[token].live_status = {
-            ltp: ltp,
-            prev_close: prevClose,
-            open: open,
-            high: parseFloat(quote.h) || 0,
-            low: parseFloat(quote.l) || 0,
-            volume: parseFloat(quote.v) || 0,
-            change: change,
-            changePercent: changePercent,
-            last_updated: new Date().toLocaleTimeString()
-          };
+        if (prevClose > 0) {
+          change = ltp - prevClose;
+          changePercent = (change / prevClose) * 100;
+        } else if (open > 0) {
+          change = ltp - open;
+          changePercent = (change / open) * 100;
+        } else if (watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0) {
+          const prevLtp = watchlistLTPCache[String(item.token)].ltp || ltp;
+          change = ltp - prevLtp;
+          changePercent = (change / prevLtp) * 100;
         }
+
+        watchlistLTPCache[String(item.token)] = {
+          ltp: ltp,
+          change: change,
+          changePercent: changePercent,
+          prevClose: prevClose,
+          open: open,
+          lastUpdated: new Date().toLocaleTimeString()
+        };
       }
     } catch (e) {
       console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
     }
-  }));
+  }
 
-  renderWatchlist();
+  updateWatchlistDisplay();
 }
 
+// Render watchlist (initial)
+function renderWatchlist() {
+  const container = document.getElementById('watchlistBody');
+  if (!container) return;
+
+  const hasCache = watchlistData.some(item => watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0);
+
+  if (hasCache) {
+    updateWatchlistDisplay();
+  } else if (watchlistData.length > 0) {
+    container.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted);">
+          <div class="spinner" style="display: inline-block; width: 20px; height: 20px;"></div>
+          <p style="margin-top: 8px; font-size: 12px;">Loading watchlist...</p>
+        </td>
+      </tr>
+    `;
+    refreshWatchlist();
+  } else {
+    container.innerHTML = `
+      <tr>
+        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
+          No symbols in watchlist
+        </td>
+      </tr>
+    `;
+  }
+}
+
+// Remove by token helper
 function removeFromWatchlistFromToken(token) {
   const index = watchlistData.findIndex(item => String(item.token) === String(token));
   if (index !== -1) {
     removeFromWatchlist(index);
   }
+}
+
+// ---------------- Add to Watchlist from Search ----------------
+function addToWatchlistFromSearch(index) {
+  const item = searchResultsData[index];
+  if (!item) return;
+
+  const symbol = item.tsym || item.symbol || '';
+  const exchange = item.exch || item.exchange || '';
+  const token = item.token || '';
+
+  if (symbol && exchange && token) {
+    addToWatchlist(symbol, exchange, token);
+  } else {
+    showAlert('Invalid symbol data', 'error');
+  }
+}
+
+// ---------------- Alert System ----------------
+function showAlert(message, type = 'info') {
+  const alertDiv = document.createElement('div');
+  alertDiv.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    z-index: 1000;
+    font-size: 14px;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    animation: modalPop 0.3s ease forwards;
+  `;
+
+  if (type === 'success') {
+    alertDiv.style.borderColor = '#48bb78';
+    alertDiv.style.borderLeft = '4px solid #48bb78';
+  } else if (type === 'error') {
+    alertDiv.style.borderColor = '#fc8181';
+    alertDiv.style.borderLeft = '4px solid #fc8181';
+  } else if (type === 'info') {
+    alertDiv.style.borderColor = '#60a5fa';
+    alertDiv.style.borderLeft = '4px solid #60a5fa';
+  }
+
+  alertDiv.textContent = message;
+  document.body.appendChild(alertDiv);
+
+  setTimeout(() => {
+    alertDiv.style.opacity = '0';
+    alertDiv.style.transform = 'translateY(20px)';
+    alertDiv.style.transition = 'all 0.3s ease';
+    setTimeout(() => {
+      if (alertDiv.parentNode) {
+        alertDiv.remove();
+      }
+    }, 300);
+  }, 4000);
 }
 
 // Make functions globally accessible
