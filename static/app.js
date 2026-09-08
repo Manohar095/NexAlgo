@@ -1278,22 +1278,48 @@ function connectWS() {
       }
 
       // --- QUOTE / LTP / TICK MESSAGES (Real-time Market Data) ---
-      // Store the raw tick straight onto watchlistSymbols[token].live_status —
-      // exactly the same shape as symbols[id].live_status for the board.
-      // O(1) object-key lookup (no .find() scan); change/% math happens only
-      // at render time in renderWatchlist(), never in this handler.
+      // Merged: O(1) lookups from File 2 + change calculation from File 1
       else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
         const data = msg.data || msg;
         if (data && data.token !== undefined && data.token !== null) {
           const token = String(data.token);
           const entry = watchlistSymbols[token]; // O(1) — same as symbols[id]
           if (entry) {
+            // Extract price data (from File 1's logic)
+            const ltp = parseFloat(data.lp ?? data.ltp ?? data.last_price ?? entry.live_status?.ltp ?? 0);
+            const prevClose = parseFloat(data.c ?? data.prev_close ?? entry.live_status?.prev_close ?? 0);
+            const open = parseFloat(data.o ?? data.open ?? entry.live_status?.open ?? 0);
+
+            // Calculate change and percent (from File 1's logic)
+            let change = 0;
+            let changePercent = 0;
+
+            // Method 1: Use Previous Close (c) - Most accurate for daily change
+            if (prevClose > 0) {
+              change = ltp - prevClose;
+              changePercent = (change / prevClose) * 100;
+            }
+            // Method 2: Use Open Price (o) - Fallback
+            else if (open > 0) {
+              change = ltp - open;
+              changePercent = (change / open) * 100;
+            }
+            // Method 3: Use cached previous LTP - Last resort
+            else if (entry.live_status?.ltp > 0) {
+              const prevLtp = entry.live_status.ltp || ltp;
+              change = ltp - prevLtp;
+              changePercent = (change / prevLtp) * 100;
+            }
+
+            // Store everything in live_status (includes change/percent)
             entry.live_status = {
               ...entry.live_status,
-              ltp: parseFloat(data.lp ?? data.ltp ?? data.last_price ?? entry.live_status?.ltp ?? 0),
-              prev_close: data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close,
-              open: data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open,
-              last_updated: data.ft || new Date().toLocaleTimeString()
+              ltp: ltp,
+              prev_close: prevClose,
+              open: open,
+              change: change,
+              changePercent: changePercent,
+              last_updated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
             };
             renderWatchlist();
           }
@@ -1307,15 +1333,42 @@ function connectWS() {
           const token = String(data.token);
           const entry = watchlistSymbols[token]; // O(1) — same as symbols[id]
           if (entry) {
+            // Extract price data (from File 1's logic)
+            const ltp = parseFloat(data.lp ?? data.ltp ?? entry.live_status?.ltp ?? 0);
+            const prevClose = parseFloat(data.c ?? data.prev_close ?? entry.live_status?.prev_close ?? 0);
+            const open = parseFloat(data.o ?? data.open ?? entry.live_status?.open ?? 0);
+            const high = parseFloat(data.h ?? data.high ?? entry.live_status?.high ?? 0);
+            const low = parseFloat(data.l ?? data.low ?? entry.live_status?.low ?? 0);
+            const volume = parseFloat(data.v ?? data.volume ?? entry.live_status?.volume ?? 0);
+
+            // Calculate change and percent (from File 1's logic)
+            let change = 0;
+            let changePercent = 0;
+
+            if (prevClose > 0) {
+              change = ltp - prevClose;
+              changePercent = (change / prevClose) * 100;
+            } else if (open > 0) {
+              change = ltp - open;
+              changePercent = (change / open) * 100;
+            } else if (entry.live_status?.ltp > 0) {
+              const prevLtp = entry.live_status.ltp || ltp;
+              change = ltp - prevLtp;
+              changePercent = (change / prevLtp) * 100;
+            }
+
+            // Store everything in live_status (includes change/percent)
             entry.live_status = {
               ...entry.live_status,
-              ltp: data.lp !== undefined ? parseFloat(data.lp) : entry.live_status?.ltp,
-              prev_close: data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close,
-              open: data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open,
-              high: data.h !== undefined ? parseFloat(data.h) : entry.live_status?.high,
-              low: data.l !== undefined ? parseFloat(data.l) : entry.live_status?.low,
-              volume: data.v !== undefined ? parseFloat(data.v) : entry.live_status?.volume,
-              last_updated: data.ft || new Date().toLocaleTimeString()
+              ltp: ltp,
+              prev_close: prevClose,
+              open: open,
+              high: high,
+              low: low,
+              volume: volume,
+              change: change,
+              changePercent: changePercent,
+              last_updated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
             };
             renderWatchlist();
           }
@@ -1492,9 +1545,7 @@ function removeFromWatchlist(index) {
   }
 }
 
-// RENDER WATCHLIST — reads straight off watchlistSymbols[token].live_status,
-// same shape as rowHTML() reading straight off rec.live_status for the board.
-// Change/% is computed here, once per render, never inside the WS handler.
+// RENDER WATCHLIST - Uses stored change/percent from live_status
 function renderWatchlist() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
@@ -1518,9 +1569,9 @@ function renderWatchlist() {
 
     if (live.ltp && live.ltp > 0) {
       const ltp = live.ltp;
-      const prevClose = live.prev_close || 0;
-      const change = prevClose > 0 ? ltp - prevClose : 0;
-      const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
+      // Use stored change/percent from live_status (calculated in WS handler)
+      const change = live.change || 0;
+      const changePercent = live.changePercent || 0;
       const changeColor = change > 0 ? '#48bb78' : (change < 0 ? '#fc8181' : 'var(--text-muted)');
       const changeArrow = change > 0 ? '▲' : (change < 0 ? '▼' : '');
 
