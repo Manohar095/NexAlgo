@@ -1533,11 +1533,12 @@ function renderWatchlist() {
   let html = '';
 
   watchlistData.forEach((item, index) => {
-    const entry = watchlistSymbols[String(item.token)];
-    const live = entry?.live_status || {};
+    const cached = watchlistSymbols[String(item.token)];
+    const live = cached?.live_status || {};
 
     if (live.ltp && live.ltp > 0) {
       const ltp = live.ltp;
+      // ✅ Use stored change/percent from WebSocket handler
       const change = live.change || 0;
       const changePercent = live.changePercent || 0;
       const changeColor = change > 0 ? '#48bb78' : (change < 0 ? '#fc8181' : 'var(--text-muted)');
@@ -1583,6 +1584,7 @@ function renderWatchlist() {
         </tr>
       `;
     } else {
+      // Show loading state with delete button
       html += `
         <tr>
           <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
