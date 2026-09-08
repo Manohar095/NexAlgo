@@ -597,6 +597,178 @@ function selectSearchResult(index) {
   console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
 }
 
+// ---------------- Add to Watchlist from Search ---------------- 
+function addToWatchlistFromSearch(index) {
+  const item = searchResultsData[index];
+  if (!item) {
+    console.error("No search result found at index:", index);
+    return;
+  }
+
+  // Extract symbol data from search result
+  const symbol = item.tsym || item.dname || item.cname || "";
+  const exchange = item.exch || "NSE";
+  const token = String(item.token || "");
+
+  if (!symbol || !token) {
+    showAlert("Invalid symbol data", "error");
+    return;
+  }
+
+  // Add to watchlist using the existing function
+  addToWatchlist(symbol, exchange, token);
+
+  // Visual feedback - change button temporarily
+  const resultItems = document.querySelectorAll('.result-item');
+  if (resultItems[index]) {
+    const starBtn = resultItems[index].querySelector('button[onclick*="addToWatchlistFromSearch"]');
+    if (starBtn) {
+      const originalText = starBtn.textContent;
+      starBtn.textContent = '✅';
+      starBtn.style.color = '#48bb78';
+      starBtn.style.borderColor = '#48bb78';
+      setTimeout(() => {
+        starBtn.textContent = originalText;
+        starBtn.style.color = '#fbbf24';
+        starBtn.style.borderColor = 'rgba(251, 191, 36, 0.3)';
+      }, 1500);
+    }
+  }
+
+  // Keep the search results open so user can add more symbols
+  console.log(`Added ${symbol} to watchlist from search`);
+}
+
+// ---------------- Alert System ----------------
+function showAlert(message, type = 'info') {
+  // Check if alert container exists, if not create one
+  let alertContainer = document.getElementById('alertContainer');
+  if (!alertContainer) {
+    alertContainer = document.createElement('div');
+    alertContainer.id = 'alertContainer';
+    alertContainer.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 350px;
+      width: 100%;
+      pointer-events: none;
+    `;
+    document.body.appendChild(alertContainer);
+  }
+
+  // Create alert element
+  const alert = document.createElement('div');
+  alert.style.cssText = `
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    animation: slideIn 0.3s ease-out;
+    pointer-events: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+  `;
+
+  // Set colors based on type
+  const colors = {
+    success: {
+      bg: 'rgba(72, 187, 120, 0.2)',
+      border: 'rgba(72, 187, 120, 0.3)',
+      text: '#48bb78'
+    },
+    error: {
+      bg: 'rgba(252, 129, 129, 0.2)',
+      border: 'rgba(252, 129, 129, 0.3)',
+      text: '#fc8181'
+    },
+    info: {
+      bg: 'rgba(66, 153, 225, 0.2)',
+      border: 'rgba(66, 153, 225, 0.3)',
+      text: '#63b3ed'
+    },
+    warning: {
+      bg: 'rgba(237, 137, 54, 0.2)',
+      border: 'rgba(237, 137, 54, 0.3)',
+      text: '#ed8936'
+    }
+  };
+
+  const style = colors[type] || colors.info;
+  alert.style.background = style.bg;
+  alert.style.borderColor = style.border;
+  alert.style.color = style.text;
+
+  // Add icon
+  const icons = {
+    success: '✅',
+    error: '❌',
+    info: 'ℹ️',
+    warning: '⚠️'
+  };
+  const icon = icons[type] || icons.info;
+  alert.innerHTML = `${icon} ${escapeHTML(message)}`;
+
+  // Add close button
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '✕';
+  closeBtn.style.cssText = `
+    float: right;
+    background: transparent;
+    border: none;
+    color: ${style.text};
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+    opacity: 0.6;
+    margin-left: 12px;
+  `;
+  closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+  closeBtn.onmouseout = () => closeBtn.style.opacity = '0.6';
+  closeBtn.onclick = () => alert.remove();
+  alert.appendChild(closeBtn);
+
+  alertContainer.appendChild(alert);
+
+  // Auto-remove after 4 seconds
+  setTimeout(() => {
+    if (alert.parentNode) {
+      alert.style.opacity = '0';
+      alert.style.transform = 'translateX(20px)';
+      alert.style.transition = 'all 0.3s ease-out';
+      setTimeout(() => {
+        if (alert.parentNode) alert.remove();
+      }, 300);
+    }
+  }, 4000);
+}
+
+// Add animation keyframes if not already present
+(function addAlertStyles() {
+  if (!document.getElementById('alertStyles')) {
+    const style = document.createElement('style');
+    style.id = 'alertStyles';
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+})();
+
 // Close search popup
 const searchModalClose = document.getElementById("searchModalClose");
 if (searchModalClose) {
@@ -1106,39 +1278,21 @@ function connectWS() {
       }
 
       // --- QUOTE / LTP / TICK MESSAGES (Real-time Market Data) ---
-      // ✅ FIX: Calculate and store change/percent like strategy board
+      // Store the raw tick straight onto watchlistSymbols[token].live_status —
+      // exactly the same shape as symbols[id].live_status for the board.
+      // O(1) object-key lookup (no .find() scan); change/% math happens only
+      // at render time in renderWatchlist(), never in this handler.
       else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
         const data = msg.data || msg;
         if (data && data.token !== undefined && data.token !== null) {
           const token = String(data.token);
           const entry = watchlistSymbols[token]; // O(1) — same as symbols[id]
           if (entry) {
-            const ltp = parseFloat(data.lp ?? data.ltp ?? data.last_price ?? entry.live_status?.ltp ?? 0);
-            const prevClose = data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close ?? 0;
-            const open = data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open ?? 0;
-
-            let change = 0;
-            let changePercent = 0;
-
-            if (prevClose > 0) {
-              change = ltp - prevClose;
-              changePercent = (change / prevClose) * 100;
-            } else if (open > 0) {
-              change = ltp - open;
-              changePercent = (change / open) * 100;
-            } else if (entry.live_status?.ltp > 0) {
-              const prevLtp = entry.live_status.ltp || ltp;
-              change = ltp - prevLtp;
-              changePercent = (change / prevLtp) * 100;
-            }
-
             entry.live_status = {
               ...entry.live_status,
-              ltp: ltp,
-              prev_close: prevClose,
-              open: open,
-              change: change,
-              changePercent: changePercent,
+              ltp: parseFloat(data.lp ?? data.ltp ?? data.last_price ?? entry.live_status?.ltp ?? 0),
+              prev_close: data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close,
+              open: data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open,
               last_updated: data.ft || new Date().toLocaleTimeString()
             };
             renderWatchlist();
@@ -1147,45 +1301,20 @@ function connectWS() {
       }
 
       // --- DEPTH MESSAGES (Market Depth / Level 2 Data) ---
-      // ✅ FIX: Calculate and store change/percent like strategy board
       else if (msg.type === "depth" || msg.type === "df" || msg.type === "dk") {
         const data = msg.data || msg;
         if (data && data.token !== undefined && data.token !== null) {
           const token = String(data.token);
           const entry = watchlistSymbols[token]; // O(1) — same as symbols[id]
           if (entry) {
-            const ltp = data.lp !== undefined ? parseFloat(data.lp) : entry.live_status?.ltp ?? 0;
-            const prevClose = data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close ?? 0;
-            const open = data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open ?? 0;
-            const high = data.h !== undefined ? parseFloat(data.h) : entry.live_status?.high ?? 0;
-            const low = data.l !== undefined ? parseFloat(data.l) : entry.live_status?.low ?? 0;
-            const volume = data.v !== undefined ? parseFloat(data.v) : entry.live_status?.volume ?? 0;
-
-            let change = 0;
-            let changePercent = 0;
-
-            if (prevClose > 0) {
-              change = ltp - prevClose;
-              changePercent = (change / prevClose) * 100;
-            } else if (open > 0) {
-              change = ltp - open;
-              changePercent = (change / open) * 100;
-            } else if (entry.live_status?.ltp > 0) {
-              const prevLtp = entry.live_status.ltp || ltp;
-              change = ltp - prevLtp;
-              changePercent = (change / prevLtp) * 100;
-            }
-
             entry.live_status = {
               ...entry.live_status,
-              ltp: ltp,
-              prev_close: prevClose,
-              open: open,
-              high: high,
-              low: low,
-              volume: volume,
-              change: change,
-              changePercent: changePercent,
+              ltp: data.lp !== undefined ? parseFloat(data.lp) : entry.live_status?.ltp,
+              prev_close: data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close,
+              open: data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open,
+              high: data.h !== undefined ? parseFloat(data.h) : entry.live_status?.high,
+              low: data.l !== undefined ? parseFloat(data.l) : entry.live_status?.low,
+              volume: data.v !== undefined ? parseFloat(data.v) : entry.live_status?.volume,
               last_updated: data.ft || new Date().toLocaleTimeString()
             };
             renderWatchlist();
@@ -1250,7 +1379,7 @@ if (logoutBtn) {
     if (watchlistData.length > 0) {
       refreshWatchlist();
     }
-  }, 1000);
+  }, 15000);
 })();
 
 
@@ -1365,7 +1494,7 @@ function removeFromWatchlist(index) {
 
 // RENDER WATCHLIST — reads straight off watchlistSymbols[token].live_status,
 // same shape as rowHTML() reading straight off rec.live_status for the board.
-// ✅ FIX: Use stored change/percent from WebSocket
+// Change/% is computed here, once per render, never inside the WS handler.
 function renderWatchlist() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
@@ -1389,9 +1518,9 @@ function renderWatchlist() {
 
     if (live.ltp && live.ltp > 0) {
       const ltp = live.ltp;
-      // ✅ Use stored change and changePercent from WebSocket
-      const change = live.change || 0;
-      const changePercent = live.changePercent || 0;
+      const prevClose = live.prev_close || 0;
+      const change = prevClose > 0 ? ltp - prevClose : 0;
+      const changePercent = prevClose > 0 ? (change / prevClose) * 100 : 0;
       const changeColor = change > 0 ? '#48bb78' : (change < 0 ? '#fc8181' : 'var(--text-muted)');
       const changeArrow = change > 0 ? '▲' : (change < 0 ? '▼' : '');
 
@@ -1468,7 +1597,6 @@ function renderWatchlist() {
 
 // Fetch LTP for all watchlist items in parallel — used both as the immediate
 // startup seed (awaited from loadWatchlist()) and as the periodic fallback.
-// ✅ FIX: Calculate and store change/percent
 async function refreshWatchlist() {
   const container = document.getElementById('watchlistBody');
   if (!container) return;
@@ -1498,30 +1626,13 @@ async function refreshWatchlist() {
         const token = String(item.token);
 
         if (watchlistSymbols[token]) {
-          const ltp = parseFloat(quote.lp) || 0;
-          const prevClose = parseFloat(quote.c) || 0;
-          const open = parseFloat(quote.o) || 0;
-
-          let change = 0;
-          let changePercent = 0;
-
-          if (prevClose > 0) {
-            change = ltp - prevClose;
-            changePercent = (change / prevClose) * 100;
-          } else if (open > 0) {
-            change = ltp - open;
-            changePercent = (change / open) * 100;
-          }
-
           watchlistSymbols[token].live_status = {
-            ltp: ltp,
-            prev_close: prevClose,
-            open: open,
+            ltp: parseFloat(quote.lp) || 0,
+            prev_close: parseFloat(quote.c) || 0,
+            open: parseFloat(quote.o) || 0,
             high: parseFloat(quote.h) || 0,
             low: parseFloat(quote.l) || 0,
             volume: parseFloat(quote.v) || 0,
-            change: change,
-            changePercent: changePercent,
             last_updated: new Date().toLocaleTimeString()
           };
         }
@@ -1540,70 +1651,6 @@ function removeFromWatchlistFromToken(token) {
   if (index !== -1) {
     removeFromWatchlist(index);
   }
-}
-
-// ---------------- Add to Watchlist from Search ----------------
-function addToWatchlistFromSearch(index) {
-  const item = searchResultsData[index];
-  if (!item) return;
-  
-  const symbol = item.tsym || item.symbol || '';
-  const exchange = item.exch || item.exchange || '';
-  const token = item.token || '';
-  
-  if (symbol && exchange && token) {
-    addToWatchlist(symbol, exchange, token);
-  } else {
-    showAlert('Invalid symbol data', 'error');
-  }
-}
-
-// ---------------- Alert System ----------------
-function showAlert(message, type = 'info') {
-  // Create a simple alert popup
-  const alertDiv = document.createElement('div');
-  alertDiv.style.cssText = `
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    padding: 12px 24px;
-    border-radius: 10px;
-    background: var(--bg-card);
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-    z-index: 1000;
-    font-size: 14px;
-    font-weight: 500;
-    backdrop-filter: blur(10px);
-    animation: modalPop 0.3s ease forwards;
-  `;
-  
-  // Set color based on type
-  if (type === 'success') {
-    alertDiv.style.borderColor = '#48bb78';
-    alertDiv.style.borderLeft = '4px solid #48bb78';
-  } else if (type === 'error') {
-    alertDiv.style.borderColor = '#fc8181';
-    alertDiv.style.borderLeft = '4px solid #fc8181';
-  } else if (type === 'info') {
-    alertDiv.style.borderColor = '#60a5fa';
-    alertDiv.style.borderLeft = '4px solid #60a5fa';
-  }
-  
-  alertDiv.textContent = message;
-  document.body.appendChild(alertDiv);
-  
-  setTimeout(() => {
-    alertDiv.style.opacity = '0';
-    alertDiv.style.transform = 'translateY(20px)';
-    alertDiv.style.transition = 'all 0.3s ease';
-    setTimeout(() => {
-      if (alertDiv.parentNode) {
-        alertDiv.remove();
-      }
-    }, 300);
-  }, 4000);
 }
 
 // Make functions globally accessible
