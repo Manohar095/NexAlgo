@@ -1232,12 +1232,12 @@ if (logFilter) {
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   const ws = new WebSocket(`${proto}//${location.host}/ws`);
-  window._ws = ws; // store globally so watchlist subscribe calls can reach it
+  window._ws = ws;
 
   ws.onopen = () => {
     connDot.className = "conn-dot live";
     connLabel.textContent = "live";
-    subscribeWatchlistTokens(); // push watchlist tokens to the feed as soon as we connect
+    subscribeWatchlistTokens();
   };
 
   ws.onclose = () => {
@@ -1259,8 +1259,6 @@ function connectWS() {
           renderBoard();
         }
 
-        // Update Watchlist too, if this same token happens to be watched —
-        // O(1) lookup, same shape as the board's own update just above.
         const symbolRecord = symbols[msg.instance_id];
         if (symbolRecord && symbolRecord.config && symbolRecord.config.token) {
           const token = String(symbolRecord.config.token);
@@ -1278,70 +1276,16 @@ function connectWS() {
       }
 
       // --- QUOTE / LTP / TICK MESSAGES (Real-time Market Data) ---
-      // Merged: O(1) lookups from File 2 + change calculation from File 1
       else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
         const data = msg.data || msg;
         if (data && data.token !== undefined && data.token !== null) {
           const token = String(data.token);
-          const entry = watchlistSymbols[token]; // O(1) — same as symbols[id]
+          const entry = watchlistSymbols[token];
           if (entry) {
-            // Extract price data (from File 1's logic)
             const ltp = parseFloat(data.lp ?? data.ltp ?? data.last_price ?? entry.live_status?.ltp ?? 0);
-            const prevClose = parseFloat(data.c ?? data.prev_close ?? entry.live_status?.prev_close ?? 0);
-            const open = parseFloat(data.o ?? data.open ?? entry.live_status?.open ?? 0);
+            const prevClose = data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close ?? 0;
+            const open = data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open ?? 0;
 
-            // Calculate change and percent (from File 1's logic)
-            let change = 0;
-            let changePercent = 0;
-
-            // Method 1: Use Previous Close (c) - Most accurate for daily change
-            if (prevClose > 0) {
-              change = ltp - prevClose;
-              changePercent = (change / prevClose) * 100;
-            }
-            // Method 2: Use Open Price (o) - Fallback
-            else if (open > 0) {
-              change = ltp - open;
-              changePercent = (change / open) * 100;
-            }
-            // Method 3: Use cached previous LTP - Last resort
-            else if (entry.live_status?.ltp > 0) {
-              const prevLtp = entry.live_status.ltp || ltp;
-              change = ltp - prevLtp;
-              changePercent = (change / prevLtp) * 100;
-            }
-
-            // Store everything in live_status (includes change/percent)
-            entry.live_status = {
-              ...entry.live_status,
-              ltp: ltp,
-              prev_close: prevClose,
-              open: open,
-              change: change,
-              changePercent: changePercent,
-              last_updated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
-            };
-            renderWatchlist();
-          }
-        }
-      }
-
-      // --- DEPTH MESSAGES (Market Depth / Level 2 Data) ---
-      else if (msg.type === "depth" || msg.type === "df" || msg.type === "dk") {
-        const data = msg.data || msg;
-        if (data && data.token !== undefined && data.token !== null) {
-          const token = String(data.token);
-          const entry = watchlistSymbols[token]; // O(1) — same as symbols[id]
-          if (entry) {
-            // Extract price data (from File 1's logic)
-            const ltp = parseFloat(data.lp ?? data.ltp ?? entry.live_status?.ltp ?? 0);
-            const prevClose = parseFloat(data.c ?? data.prev_close ?? entry.live_status?.prev_close ?? 0);
-            const open = parseFloat(data.o ?? data.open ?? entry.live_status?.open ?? 0);
-            const high = parseFloat(data.h ?? data.high ?? entry.live_status?.high ?? 0);
-            const low = parseFloat(data.l ?? data.low ?? entry.live_status?.low ?? 0);
-            const volume = parseFloat(data.v ?? data.volume ?? entry.live_status?.volume ?? 0);
-
-            // Calculate change and percent (from File 1's logic)
             let change = 0;
             let changePercent = 0;
 
@@ -1357,7 +1301,49 @@ function connectWS() {
               changePercent = (change / prevLtp) * 100;
             }
 
-            // Store everything in live_status (includes change/percent)
+            entry.live_status = {
+              ...entry.live_status,
+              ltp: ltp,
+              prev_close: prevClose,
+              open: open,
+              change: change,
+              changePercent: changePercent,
+              last_updated: data.ft || new Date().toLocaleTimeString()
+            };
+            renderWatchlist();
+          }
+        }
+      }
+
+      // --- DEPTH MESSAGES (Market Depth / Level 2 Data) ---
+      else if (msg.type === "depth" || msg.type === "df" || msg.type === "dk") {
+        const data = msg.data || msg;
+        if (data && data.token !== undefined && data.token !== null) {
+          const token = String(data.token);
+          const entry = watchlistSymbols[token];
+          if (entry) {
+            const ltp = data.lp !== undefined ? parseFloat(data.lp) : entry.live_status?.ltp ?? 0;
+            const prevClose = data.c !== undefined ? parseFloat(data.c) : entry.live_status?.prev_close ?? 0;
+            const open = data.o !== undefined ? parseFloat(data.o) : entry.live_status?.open ?? 0;
+            const high = data.h !== undefined ? parseFloat(data.h) : entry.live_status?.high ?? 0;
+            const low = data.l !== undefined ? parseFloat(data.l) : entry.live_status?.low ?? 0;
+            const volume = data.v !== undefined ? parseFloat(data.v) : entry.live_status?.volume ?? 0;
+
+            let change = 0;
+            let changePercent = 0;
+
+            if (prevClose > 0) {
+              change = ltp - prevClose;
+              changePercent = (change / prevClose) * 100;
+            } else if (open > 0) {
+              change = ltp - open;
+              changePercent = (change / open) * 100;
+            } else if (entry.live_status?.ltp > 0) {
+              const prevLtp = entry.live_status.ltp || ltp;
+              change = ltp - prevLtp;
+              changePercent = (change / prevLtp) * 100;
+            }
+
             entry.live_status = {
               ...entry.live_status,
               ltp: ltp,
@@ -1368,14 +1354,13 @@ function connectWS() {
               volume: volume,
               change: change,
               changePercent: changePercent,
-              last_updated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
+              last_updated: data.ft || new Date().toLocaleTimeString()
             };
             renderWatchlist();
           }
         }
       }
 
-      // --- Any other message types (debug) ---
       else {
         // Uncomment for debugging
         // console.log('📨 Unknown WebSocket message type:', msg.type, msg);
@@ -1421,13 +1406,10 @@ if (logoutBtn) {
 
   await loadSymbols();
   await loadInitialLogs();
-  await loadWatchlist(); // now awaited: seeds real LTP before first paint, same as loadSymbols()
+  await loadWatchlist();
   connectWS();
   setInterval(loadSymbols, 15000);
 
-  // Fallback safety-net poll for watchlist — real-time updates now come from
-  // the WebSocket (same mechanism the strategy board uses), so this only
-  // needs to run occasionally to catch anything the feed missed.
   setInterval(() => {
     if (watchlistData.length > 0) {
       refreshWatchlist();
@@ -1441,9 +1423,6 @@ if (logoutBtn) {
 // Watchlist data stored in localStorage
 let watchlistData = [];
 
-// Load watchlist from localStorage, then seed real LTP immediately via REST
-// (same as the board's first paint via loadSymbols() — no waiting on a WS tick,
-// no waiting on the 15s fallback interval).
 async function loadWatchlist() {
   try {
     const saved = localStorage.getItem('cognix_watchlist');
@@ -1458,7 +1437,6 @@ async function loadWatchlist() {
     watchlistData = [];
   }
 
-  // Initialize watchlistSymbols — SAME PATTERN as symbols, keyed by token
   watchlistSymbols = {};
   watchlistData.forEach(item => {
     watchlistSymbols[String(item.token)] = {
@@ -1467,14 +1445,11 @@ async function loadWatchlist() {
     };
   });
 
-  // Update count
   const countEl = document.getElementById('watchlistCount');
   if (countEl) {
     countEl.textContent = watchlistData.length;
   }
 
-  // Seed immediately via REST — removes the "waits up to 15s" startup delay
-  // entirely. renderWatchlist() is called inside refreshWatchlist().
   if (watchlistData.length > 0) {
     await refreshWatchlist();
   } else {
@@ -1484,7 +1459,6 @@ async function loadWatchlist() {
   subscribeWatchlistTokens();
 }
 
-// Save watchlist to localStorage
 function saveWatchlist() {
   try {
     localStorage.setItem('cognix_watchlist', JSON.stringify(watchlistData));
@@ -1498,9 +1472,7 @@ function saveWatchlist() {
   }
 }
 
-// Add symbol to watchlist
 function addToWatchlist(symbol, exchange, token) {
-  // Check if already exists
   const exists = watchlistData.some(item =>
     String(item.token) === String(token) && item.exchange === exchange
   );
@@ -1512,7 +1484,6 @@ function addToWatchlist(symbol, exchange, token) {
 
   watchlistData.push({ symbol, exchange, token });
 
-  // Add to watchlistSymbols — SAME PATTERN as symbols
   watchlistSymbols[String(token)] = {
     symbol: symbol,
     exchange: exchange,
@@ -1524,13 +1495,11 @@ function addToWatchlist(symbol, exchange, token) {
   renderWatchlist();
   subscribeWatchlistTokens();
 
-  // Seed this symbol's LTP immediately via REST instead of waiting for a tick
   refreshWatchlist();
 
   showAlert(`Added ${symbol} to watchlist`, 'success');
 }
 
-// Remove symbol from watchlist with confirmation
 function removeFromWatchlist(index) {
   const removed = watchlistData[index];
   if (!removed) return;
@@ -1569,7 +1538,6 @@ function renderWatchlist() {
 
     if (live.ltp && live.ltp > 0) {
       const ltp = live.ltp;
-      // Use stored change/percent from live_status (calculated in WS handler)
       const change = live.change || 0;
       const changePercent = live.changePercent || 0;
       const changeColor = change > 0 ? '#48bb78' : (change < 0 ? '#fc8181' : 'var(--text-muted)');
@@ -1615,7 +1583,6 @@ function renderWatchlist() {
         </tr>
       `;
     } else {
-      // Show loading state with delete button
       html += `
         <tr>
           <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
@@ -1646,8 +1613,7 @@ function renderWatchlist() {
   tbody.innerHTML = html;
 }
 
-// Fetch LTP for all watchlist items in parallel — used both as the immediate
-// startup seed (awaited from loadWatchlist()) and as the periodic fallback.
+// Fetch LTP for all watchlist items in parallel
 async function refreshWatchlist() {
   const container = document.getElementById('watchlistBody');
   if (!container) return;
@@ -1677,13 +1643,30 @@ async function refreshWatchlist() {
         const token = String(item.token);
 
         if (watchlistSymbols[token]) {
+          const ltp = parseFloat(quote.lp) || 0;
+          const prevClose = parseFloat(quote.c) || 0;
+          const open = parseFloat(quote.o) || 0;
+
+          let change = 0;
+          let changePercent = 0;
+
+          if (prevClose > 0) {
+            change = ltp - prevClose;
+            changePercent = (change / prevClose) * 100;
+          } else if (open > 0) {
+            change = ltp - open;
+            changePercent = (change / open) * 100;
+          }
+
           watchlistSymbols[token].live_status = {
-            ltp: parseFloat(quote.lp) || 0,
-            prev_close: parseFloat(quote.c) || 0,
-            open: parseFloat(quote.o) || 0,
+            ltp: ltp,
+            prev_close: prevClose,
+            open: open,
             high: parseFloat(quote.h) || 0,
             low: parseFloat(quote.l) || 0,
             volume: parseFloat(quote.v) || 0,
+            change: change,
+            changePercent: changePercent,
             last_updated: new Date().toLocaleTimeString()
           };
         }
@@ -1696,7 +1679,6 @@ async function refreshWatchlist() {
   renderWatchlist();
 }
 
-// Remove by token helper
 function removeFromWatchlistFromToken(token) {
   const index = watchlistData.findIndex(item => String(item.token) === String(token));
   if (index !== -1) {
