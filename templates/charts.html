@@ -20,6 +20,8 @@
       --input-border: rgba(180, 80, 255, 0.4);
       --brand-gradient: linear-gradient(135deg, #00f0ff 0%, #7b2ffc 40%, #ff2d95 70%, #ffb300 100%);
       --btn-add-grad: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%);
+      --up-color: #26a69a;
+      --down-color: #ef5350;
     }
 
     [data-theme="light"] {
@@ -33,6 +35,8 @@
       --input-border: #ad9eb4;
       --brand-gradient: linear-gradient(135deg, #0066ff 0%, #a855f7 50%, #ec4899 100%);
       --btn-add-grad: linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%);
+      --up-color: #089981;
+      --down-color: #f23645;
     }
 
     /* ==========================================================================
@@ -215,8 +219,7 @@
     /* ==========================================================================
        SELECTS
        ========================================================================== */
-    .theme-select,
-    .symbol-select {
+    .theme-select {
       background: var(--input-bg);
       color: var(--text-main);
       border: 1px solid var(--input-border);
@@ -234,15 +237,13 @@
       transition: all 0.25s ease;
     }
 
-    .theme-select:hover,
-    .symbol-select:hover {
+    .theme-select:hover {
       border-color: var(--border-glow);
       transform: translateY(-1px);
       box-shadow: 0 4px 20px rgba(123,47,252,0.1);
     }
 
-    .theme-select:focus,
-    .symbol-select:focus {
+    .theme-select:focus {
       border-color: var(--border-glow);
       box-shadow: 0 0 0 3px rgba(123,47,252,0.15);
     }
@@ -266,65 +267,26 @@
       box-shadow: 0 8px 40px rgba(255,0,200,0.05);
     }
 
-    .panel-header {
+    /* ==========================================================================
+       BROKER TERMINAL (openalgo-charts)
+       ========================================================================== */
+    #brokerView .terminal-host {
+      height: calc(100vh - 150px);
+      min-height: 480px;
+      width: 100%;
+    }
+
+    .chart-error {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border-color);
-      flex-wrap: wrap;
+      flex-direction: column;
       gap: 10px;
-    }
-
-    .panel-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* ==========================================================================
-       TICKER TAPE - MODERN WEB COMPONENT
-       ========================================================================== */
-    .ticker-panel {
-      padding: 4px 8px;
-      min-height: 48px;
-      overflow: hidden;
-    }
-
-    tv-ticker-tape {
-      --tv-ticker-tape-color: var(--text-main);
-      --tv-ticker-tape-background: transparent;
-      --tv-ticker-tape-border: var(--border-color);
-      display: block;
-      width: 100%;
-    }
-
-    /* ==========================================================================
-       CHART
-       ========================================================================== */
-    #tv_chart_main {
-      height: 620px;
-      width: 100%;
-      min-height: 400px;
-    }
-
-    .chart-toolbar {
-      display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border-color);
-      flex-wrap: wrap;
-    }
-
-    .chart-toolbar label {
-      font-size: 12px;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      padding: 20px;
       color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      font-size: 13px;
     }
 
     /* ==========================================================================
@@ -335,7 +297,7 @@
       display: flex;
       flex-direction: column;
       min-height: 400px;
-      max-height: 700px;
+      max-height: 720px;
     }
 
     .watchlist-header {
@@ -360,9 +322,7 @@
       padding: 8px;
     }
 
-    .watchlist-body::-webkit-scrollbar {
-      width: 4px;
-    }
+    .watchlist-body::-webkit-scrollbar { width: 4px; }
 
     .watchlist-body::-webkit-scrollbar-thumb {
       background: var(--input-border);
@@ -381,9 +341,7 @@
       border: 1px solid transparent;
     }
 
-    .watchlist-item:hover {
-      background: rgba(123, 47, 252, 0.08);
-    }
+    .watchlist-item:hover { background: rgba(123, 47, 252, 0.08); }
 
     .watchlist-item.active {
       background: rgba(123, 47, 252, 0.15);
@@ -393,6 +351,10 @@
 
     .watchlist-item .name {
       font-weight: 600;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .watchlist-item .exch {
@@ -401,31 +363,1211 @@
       background: var(--input-bg);
       padding: 2px 10px;
       border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    .watchlist-item .ltp {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      min-width: 86px;
+      flex-shrink: 0;
+    }
+
+    .watchlist-item .ltp .value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+
+    .watchlist-item .ltp .chg {
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ltp .chg.up { color: var(--up-color); }
+    .ltp .chg.down { color: var(--down-color); }
+    .ltp .value.up { color: var(--up-color); }
+    .ltp .value.down { color: var(--down-color); }
+
+    .watchlist-empty {
+      padding: 24px 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
     }
 
     /* ==========================================================================
-       GRID LAYOUT
+       RIGHT EDGE — OpenAlgo trading-page panel system (rail + PanelShell)
+       Scoped tokens replicate OpenAlgo's dark oklch(280) theme:
+       background 0.16, card 0.20, muted 0.28, border 0.35,
+       primary = violet-400, up = emerald, down = rose, otm = amber.
        ========================================================================== */
-    .grid-layout {
+    #workArea {
+      --oa-bg: #17171c;
+      --oa-card: #1f1f28;
+      --oa-popover: #20202a;
+      --oa-fg: #edeaf4;
+      --oa-muted: #2a2a34;
+      --oa-muted-fg: #a9a5b8;
+      --oa-accent: #2c2c38;
+      --oa-border: #3b3b4a;
+      --oa-border40: rgba(89, 89, 112, 0.4);
+      --oa-primary: #a78bfa;
+      --oa-emerald: #34d399;
+      --oa-rose: #fb7185;
+      --oa-amber: #f59e0b;
+      --oa-green-badge: #16a34a;
+      --oa-red-badge: #ef4444;
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+      min-height: 0;
+    }
+
+    #chartColumn {
+      flex: 1;
+      min-width: 0;
+    }
+
+    /* Author display rules override the UA [hidden] rule — keep the closed
+       states genuinely closed (shell, tabs, menus, search strip). */
+    .panel-shell[hidden],
+    .rp-tab[hidden],
+    .oa-menu[hidden],
+    #wlSearchbar[hidden],
+    #ocSpot[hidden],
+    #ocPinbar[hidden],
+    .wl-foot[hidden],
+    .algo-byline[hidden],
+    .wl-head[hidden] { display: none !important; }
+
+    /* ---------- Rail (RightRail.tsx: w-10, buttons h-8 w-8, tooltip left) --- */
+    #rightRail {
+      width: 40px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 0;
+      overflow-y: auto;
+      scrollbar-width: none;
+      background: rgba(23, 23, 28, 0.45);
+      border-left: 1px solid var(--oa-border);
+    }
+
+    #rightRail::-webkit-scrollbar { display: none; }
+
+    .rail-item { position: relative; }
+
+    .rail-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--oa-muted-fg);
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .rail-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .rail-btn:hover {
+      background: var(--oa-accent);
+      color: var(--oa-fg);
+    }
+
+    .rail-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 1px var(--oa-primary);
+    }
+
+    .rail-btn.active {
+      border-color: rgba(167, 139, 250, 0.7);
+      background: rgba(167, 139, 250, 0.25);
+      color: var(--oa-primary);
+    }
+
+    /* Hover label: opens LEFT (against the viewport edge). No transition delay. */
+    .rail-tip {
+      position: absolute;
+      top: 50%;
+      right: 100%;
+      margin-right: 8px;
+      transform: translateY(-50%);
+      z-index: 60;
+      white-space: nowrap;
+      background: var(--oa-popover);
+      border: 1px solid var(--oa-border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--oa-fg);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.075s ease;
+    }
+
+    .rail-tip em {
+      font-style: normal;
+      margin-left: 8px;
+      color: var(--oa-muted-fg);
+    }
+
+    .rail-item:hover .rail-tip { opacity: 1; }
+
+    /* ---------- Panel shell (PanelShell.tsx: border-l, hairline drag edge) -- */
+    .panel-shell {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+      min-width: 260px;
+      background: var(--oa-bg);
+      color: var(--oa-fg);
+      border-left: 1px solid var(--oa-border);
+    }
+
+    .panel-drag {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 4px;
+      z-index: 30;
+      cursor: col-resize;
+      transition: background-color 0.15s ease;
+    }
+
+    .panel-drag:hover,
+    .panel-drag.active { background: rgba(167, 139, 250, 0.4); }
+
+    body.oa-resizing {
+      cursor: col-resize;
+      user-select: none;
+    }
+
+    /* ---------- Shared panel vocabulary ---------------------------------- */
+    .rp-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Header: the rule lands 46px below the card top, like every OA panel */
+    .panel-header {
+      display: flex;
+      height: 46px;
+      flex-shrink: 0;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid var(--oa-border);
+      padding: 0 8px;
+      position: relative;
+    }
+
+    .panel-header svg.oc-spin { animation: oaSpin 1s linear infinite; }
+
+    @keyframes oaSpin { to { transform: rotate(360deg); } }
+
+    .ph-listname {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      height: 32px;
+      min-width: 0;
+      flex: 1;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--oa-fg);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 0 6px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .ph-listname:hover { background: var(--oa-accent); }
+
+    .ph-listname .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .ph-listname svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      color: var(--oa-muted-fg);
+    }
+
+    .oa-icon-btn {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--oa-muted-fg);
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .oa-icon-btn:hover { background: var(--oa-accent); color: var(--oa-fg); }
+    .oa-icon-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    .oa-icon-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .oa-btn {
+      height: 28px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 0 8px;
+      cursor: pointer;
+      border: 1px solid var(--oa-border);
+      background: transparent;
+      color: var(--oa-fg);
+      transition: background-color 0.15s ease;
+    }
+
+    .oa-btn:hover { background: var(--oa-accent); }
+
+    .oa-btn.primary {
+      background: var(--oa-primary);
+      border-color: var(--oa-primary);
+      color: #131017;
+    }
+
+    .oa-btn.primary:hover { background: #b9a3fb; }
+
+    .oa-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .oa-select {
+      height: 32px;
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid var(--oa-border);
+      border-radius: 6px;
+      color: var(--oa-fg);
+      font-size: 12px;
+      padding: 0 6px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .oa-select:focus { border-color: var(--oa-primary); }
+
+    .oa-select option { background: var(--oa-card); color: var(--oa-fg); }
+
+    .oa-combo {
+      height: 32px;
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      border: 1px solid var(--oa-border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--oa-fg);
+      font-size: 12px;
+      font-weight: 500;
+      padding: 0 8px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .oa-combo:hover { background: rgba(44, 44, 56, 0.6); }
+
+    .oa-combo .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .oa-combo svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      opacity: 0.5;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .oa-input {
+      width: 100%;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--oa-border);
+      color: var(--oa-fg);
+      font-size: 12px;
+      padding: 4px 10px 8px;
+      outline: none;
+    }
+
+    .oa-input::placeholder { color: var(--oa-muted-fg); }
+
+    /* ---------- Popover menus (DropdownMenu.tsx) --------------------------- */
+    .oa-menu {
+      position: absolute;
+      z-index: 60;
+      min-width: 200px;
+      max-height: 320px;
+      overflow-y: auto;
+      background: var(--oa-popover);
+      border: 1px solid var(--oa-border);
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    .oa-menu.align-end { right: -4px; }
+    .oa-menu.align-start { left: -4px; }
+
+    /* Menus anchored to a band header open under it */
+    .panel-header > .oa-menu,
+    .oc-band2 > .oa-menu { top: 44px; }
+
+    .oa-menu-label {
+      padding: 4px 8px 4px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(169, 165, 184, 0.7);
+    }
+
+    .oa-menu-sep { height: 1px; background: var(--oa-border); margin: 4px 0; }
+
+    .oa-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 5px 8px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--oa-fg);
+      font-size: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .oa-menu-item:hover { background: var(--oa-accent); }
+    .oa-menu-item .mi-hint { margin-left: auto; color: var(--oa-muted-fg); font-size: 11px; }
+    .oa-menu-item svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+    .oa-menu-item.destructive { color: var(--oa-rose); }
+
+    /* ---------- Watchlist (WatchlistPanel.tsx) ----------------------------- */
+    #wlSearchbar {
+      position: relative;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--oa-border);
+    }
+
+    #wlResults { top: 100%; left: 8px; right: 8px; max-height: 240px; }
+
+    .wl-head {
       display: grid;
-      grid-template-columns: 1fr 280px;
-      gap: 20px;
-      align-items: start;
+      gap: 6px;
+      flex-shrink: 0;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(169, 165, 184, 0.7);
+      border-bottom: 1px solid var(--oa-border);
+    }
+
+    .wl-head .wr { text-align: right; }
+
+    .wl-body {
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--oa-border) transparent;
+    }
+
+    .wl-body::-webkit-scrollbar { width: 6px; }
+    .wl-body::-webkit-scrollbar-thumb { background: var(--oa-border); border-radius: 999px; }
+
+    .wl-row {
+      display: grid;
+      gap: 6px;
+      align-items: center;
+      padding: 4px 8px;
+      font-size: 12px;
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.1s ease;
+    }
+
+    .wl-row:hover { background: rgba(44, 44, 56, 0.5); }
+
+    .wl-row.active {
+      background: var(--oa-accent) !important;
+      font-weight: 500;
+      box-shadow: inset 2px 0 0 var(--oa-primary);
+    }
+
+    .wl-grip {
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      color: transparent;
+      pointer-events: none;
+    }
+
+    .wl-row:hover .wl-grip { color: rgba(169, 165, 184, 0.5); }
+
+    .wl-sym {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      gap: 6px;
+      pointer-events: none;
+    }
+
+    .wl-avatar {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .wl-name {
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .wl-exch {
+      flex-shrink: 0;
+      font-size: 10px;
+      color: var(--oa-muted-fg);
+    }
+
+    .wl-cell {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--oa-fg);
+      pointer-events: none;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .wl-cell.muted { color: var(--oa-muted-fg); }
+    .wl-cell.tone-up { color: var(--oa-emerald); }
+    .wl-cell.tone-down { color: var(--oa-rose); }
+
+    .wl-remove {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--oa-muted-fg);
+      opacity: 0;
+      cursor: pointer;
+      transition: opacity 0.15s ease, color 0.15s ease;
+      padding: 0;
+    }
+
+    .wl-row:hover .wl-remove { opacity: 1; }
+    .wl-remove:hover { color: var(--oa-rose); }
+
+    .wl-remove svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .wl-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--oa-muted-fg);
+    }
+
+    .wl-empty svg { width: 20px; height: 20px; opacity: 0.5; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .wl-foot {
+      flex-shrink: 0;
+      border-top: 1px solid var(--oa-border);
+      padding: 4px 8px;
+      font-size: 10px;
+      color: var(--oa-muted-fg);
+    }
+
+    /* ---------- Option Chain (OptionChainPanel.tsx) ------------------------- */
+    .oc-band2 {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--oa-border);
+      padding: 4px 8px;
+      position: relative;
+    }
+
+    #ocUnderlyingMenu { top: 42px; left: 8px; right: 8px; width: auto; min-width: 0; }
+
+    .oc-spotline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--oa-border);
+      padding: 4px 8px;
+      font-size: 11px;
+    }
+
+    .oc-spotline .oc-k { color: var(--oa-muted-fg); margin-right: 4px; }
+    .oc-spotline b { font-weight: 500; font-variant-numeric: tabular-nums; }
+    .oc-spotline b.spot-up { color: var(--oa-emerald); }
+    .oc-spotline b.spot-down { color: var(--oa-rose); }
+
+    .oc3 { min-height: 0; flex: 1; display: flex; flex-direction: column; }
+
+    .oc3-head {
+      display: flex;
+      align-items: stretch;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--oa-border);
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: rgba(169, 165, 184, 0.7);
+    }
+
+    .oc3-side { min-width: 0; flex: 1 1 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+
+    .oc3-side::-webkit-scrollbar { display: none; }
+
+    .oc3-head .oc3-side { overflow-x: hidden; }
+
+    .oc3-body {
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--oa-border) transparent;
+    }
+
+    .oc3-body::-webkit-scrollbar { width: 6px; }
+    .oc3-body::-webkit-scrollbar-thumb { background: var(--oa-border); border-radius: 999px; }
+
+    .oc3-rowwrap { display: flex; align-items: stretch; font-size: 12px; }
+
+    /* One content-width stack per side inside its scroller (OpenAlgo's
+       `flex flex-col` width wrapper) — keeps every row the same px width. */
+    .oc-sideInner { display: flex; flex-direction: column; }
+
+    .oc-loadmsg { padding: 12px; font-size: 12px; color: var(--oa-muted-fg); }
+
+    .oc-retry {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--oa-border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: var(--oa-fg);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .oc-retry:hover { background: var(--oa-accent); }
+
+    #ocStatus.amber { color: var(--oa-amber); }
+
+    .oc3-pinbar {
+      display: flex;
+      align-items: stretch;
+      flex-shrink: 0;
+      border-top: 1px solid var(--oa-border);
+    }
+
+    .oc3-pin {
+      min-width: 0;
+      flex: 1 1 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--oa-border) var(--oa-muted);
+      height: 8px;
+    }
+
+    .oc3-pin::-webkit-scrollbar { height: 8px; }
+    .oc3-pin::-webkit-scrollbar-thumb { background: var(--oa-border); border-radius: 999px; }
+    .oc3-pin::-webkit-scrollbar-thumb:hover { background: rgba(169, 165, 184, 0.6); }
+    .oc3-pin::-webkit-scrollbar-track { background: var(--oa-muted); }
+    .oc3-pin-pin {
+      width: 64px;
+      flex-shrink: 0;
+      border-left: 1px solid var(--oa-border40);
+      border-right: 1px solid var(--oa-border40);
+      box-sizing: border-box;
+    }
+
+    .oc-headgrid {
+      display: grid;
+      gap: 6px;
+      padding: 4px 8px;
+      align-items: center;
+    }
+
+    .oc-hcell { overflow: hidden; white-space: nowrap; text-align: center; }
+    .oc-hcell .hchip { display: inline-block; font-size: 9px; letter-spacing: 0; text-transform: none; opacity: 0.8; }
+
+    .oc-leg { display: grid; gap: 6px; position: relative; border-bottom: 1px solid var(--oa-border40); }
+
+    .oc-cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 35px;
+      min-width: 0;
+      overflow: hidden;
+      padding: 0 8px;
+      transition: background-color 0.1s ease;
+      cursor: pointer;
+    }
+
+    .oc-cell:hover { background: var(--oa-accent); }
+
+    .oc-cell.otm { background: rgba(245, 158, 11, 0.05); }
+    .oc-cell.otm:hover { background: rgba(245, 158, 11, 0.15); }
+
+    .oc-cell.legActive {
+      font-weight: 500;
+      box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.6);
+    }
+
+    .oc-cell.ce { justify-content: flex-end; }
+    .oc-cell.pe { justify-content: flex-start; }
+
+    .oc-oi-bar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    .oc-cell.ce .oc-oi-bar {
+      right: 0;
+      background: linear-gradient(to left, rgba(52, 211, 153, 0.25), transparent);
+    }
+
+    .oc-cell.pe .oc-oi-bar {
+      left: 0;
+      background: linear-gradient(to right, rgba(251, 113, 133, 0.25), transparent);
+    }
+
+    .oc-value {
+      position: relative;
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      pointer-events: none;
+    }
+
+    .oc-cell.pe .oc-value { align-items: flex-start; }
+
+    .oc-ltp-chg {
+      margin-top: 2px;
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .oc-ltp-chg.up { color: var(--oa-emerald); }
+    .oc-ltp-chg.down { color: var(--oa-rose); }
+
+    .oc-dim { color: var(--oa-muted-fg); }
+
+    .oc-strike {
+      width: 64px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-left: 1px solid var(--oa-border40);
+      border-right: 1px solid var(--oa-border40);
+      padding: 0 8px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: var(--oa-muted-fg);
+      box-sizing: border-box;
+    }
+
+    /* 36px incl. its own 1px border = the 35px leg cell + 1px row border,
+       so strike separators and body separators sit on one horizontal line. */
+    .oc-strike.rowcell { height: 36px; border-bottom: 1px solid var(--oa-border40); }
+
+    .oc-strike.head {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--oa-border);
+    }
+
+    .oc-strike.atm {
+      background: rgba(167, 139, 250, 0.1);
+      font-weight: 600;
+      color: var(--oa-fg);
+      box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.5);
+    }
+
+    .oc-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--oa-muted-fg);
+    }
+
+    /* ---------- Algo Symbols (algo-hub/AlgoSymbolsPanel.tsx) --------------- */
+    .algo-headblock {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--oa-border);
+      padding: 8px 12px;
+    }
+
+    .algo-title-row { display: flex; align-items: center; gap: 8px; }
+
+    .algo-title-row > svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      color: var(--oa-muted-fg);
+      flex-shrink: 0;
+    }
+
+    .algo-title-row h2 {
+      font-size: 13px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .algo-title-row .oa-icon-btn { margin-left: auto; width: 28px; height: 28px; }
+    .algo-title-row .oa-icon-btn svg { width: 14px; height: 14px; }
+
+    .algo-actions-row { display: flex; gap: 8px; }
+
+    .oa-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .oa-badge.run { background: var(--oa-green-badge); color: #fff; }
+    .oa-badge.off { background: var(--oa-muted); color: var(--oa-muted-fg); }
+    .oa-badge.warn { color: var(--oa-amber); border: 1px solid var(--oa-amber); background: transparent; }
+    .oa-badge.err { background: var(--oa-red-badge); color: #fff; }
+
+    .algo-body {
+      min-height: 0;
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--oa-border) transparent;
+    }
+
+    .algo-body::-webkit-scrollbar { width: 6px; }
+    .algo-body::-webkit-scrollbar-thumb { background: var(--oa-border); border-radius: 999px; }
+
+    .algo-load { font-size: 12px; color: var(--oa-muted-fg); padding: 8px; }
+    .algo-byline { font-size: 11px; color: var(--oa-rose); padding: 0 4px; }
+
+    .algo-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border: 1px solid var(--oa-border);
+      border-radius: 6px;
+      padding: 8px;
+      position: relative;
+    }
+
+    .algo-l1 { display: flex; align-items: center; gap: 8px; }
+
+    .algo-sym {
+      min-width: 0;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .algo-l1 .kekku { position: relative; }
+
+    .kekku .oa-menu { top: 100%; right: 0; min-width: 170px; }
+
+    .oa-switch {
+      width: 32px;
+      height: 18px;
+      flex-shrink: 0;
+      border-radius: 999px;
+      background: var(--oa-border);
+      position: relative;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+      border: none;
+      padding: 0;
+    }
+
+    .oa-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: #fff;
+      transition: left 0.15s ease;
+    }
+
+    .oa-switch.on { background: var(--oa-green-badge); }
+    .oa-switch.on::after { left: 16px; }
+    .oa-switch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .algo-grid {
+      display: grid;
+      gap-x: 8px;
+      border-top: 1px solid var(--oa-border40);
+      padding-top: 8px;
+      min-width: 0;
+    }
+
+    .algo-field { min-width: 0; }
+
+    .algo-field .k {
+      font-size: 10px;
+      line-height: 16px;
+      color: var(--oa-muted-fg);
+    }
+
+    .algo-field .v {
+      font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      font-size: 11px;
+      line-height: 20px;
+      overflow-wrap: break-word;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .algo-field .v.up { color: var(--oa-emerald); }
+    .algo-field .v.down { color: var(--oa-rose); }
+
+    .algo-note { font-size: 11px; color: var(--oa-muted-fg); }
+
+    .algo-empty {
+      border: 1px dashed var(--oa-border);
+      border-radius: 6px;
+      padding: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--oa-muted-fg);
+    }
+
+    /* ---------- SYMBOL SETTINGS DIALOG (algo-hub/SymbolSettingsDialog.tsx) ---- */
+    .oa-dlg-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(9, 9, 10, 0.62);
+      backdrop-filter: blur(2px);
+      padding: 18px;
+    }
+
+    .oa-dlg-overlay:not([hidden]) { display: flex; }
+
+    .oa-dlg {
+      width: 640px;
+      max-width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: var(--oa-card);
+      border: 1px solid var(--oa-border);
+      border-radius: 10px;
+      padding: 20px;
+      font-size: 13px;
+      color: var(--oa-fg);
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+    }
+
+    .oa-dlg-head h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0 0 4px;
+    }
+
+    .oa-dlg-head p {
+      margin: 0 0 14px;
+      font-size: 12px;
+      color: var(--oa-muted-fg);
+    }
+
+    .oa-dlg-head { position: relative; padding-right: 24px; }
+    .oa-dlg-head .oa-dlg-close {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+    }
+
+    .oa-dlg-symbol-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .oa-dlg-symbol-row select {
+      height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--oa-border);
+      background: var(--oa-accent);
+      color: var(--oa-fg);
+      font-size: 12px;
+      padding: 0 6px;
+      outline: none;
+    }
+
+    .oa-dlg-search { position: relative; flex: 1; }
+    .oa-dlg-search svg {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      width: 14px;
+      height: 14px;
+      color: var(--oa-muted-fg);
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+    .oa-dlg-search .oa-input { padding-left: 28px; }
+
+    .oa-dlg-selected { font-size: 12px; margin-top: 6px; }
+    .oa-dlg-selected .mono { font-family: ui-monospace, monospace; font-weight: 600; }
+
+    .oa-dlg-results {
+      margin-top: 6px;
+      border: 1px solid var(--oa-border);
+      border-radius: 6px;
+      max-height: 192px;
+      overflow-y: auto;
+    }
+
+    .oa-dlg-result {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 7px 9px;
+      font-size: 12px;
+      color: var(--oa-fg);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--oa-border);
+      cursor: pointer;
+    }
+    .oa-dlg-result:last-child { border-bottom: none; }
+    .oa-dlg-result:hover { background: var(--oa-accent); }
+    .oa-dlg-result .mono { font-family: ui-monospace, monospace; }
+    .oa-dlg-result small { color: var(--oa-muted-fg); margin-left: 8px; font-size: 10px; }
+
+    .oa-dlg-section-title {
+      margin: 16px 0 6px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--oa-muted-fg);
+    }
+
+    .oa-dlg-fields {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px 12px;
+    }
+    @media (max-width: 560px) { .oa-dlg-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .oa-dlg-field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--oa-muted-fg);
+      margin-bottom: 3px;
+    }
+
+    .oa-dlg-field input[type="number"],
+    .oa-dlg-field input[type="text"],
+    .oa-dlg-field input[type="time"],
+    .oa-dlg-field select {
+      height: 30px;
+      width: 100%;
+      border-radius: 5px;
+      border: 1px solid var(--oa-border);
+      background: var(--oa-accent);
+      color: var(--oa-fg);
+      font-size: 12px;
+      padding: 0 7px;
+      outline: none;
+    }
+    .oa-dlg-field input:focus, .oa-dlg-field select:focus { border-color: var(--oa-primary); }
+
+    .oa-dlg-field .hint {
+      font-size: 9.5px;
+      color: var(--oa-muted-fg);
+      margin-top: 2px;
+    }
+    .oa-dlg-field.no-num::-webkit-outer-spin-button,
+    .oa-dlg-field.no-num::-webkit-inner-spin-button { -webkit-appearance: none; }
+    .oa-dlg-field.no-num input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+    .oa-dlg-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 4px;
+      font-size: 12px;
+      color: var(--oa-fg);
+      cursor: pointer;
+    }
+    .oa-dlg-check input {
+      width: 13px;
+      height: 13px;
+      accent-color: var(--oa-primary);
+      cursor: pointer;
+    }
+
+    .oa-dlg-foot { margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; }
+    .oa-dlg-foot .oa-btn { flex: 0 0 auto; height: 32px; padding: 0 14px; }
+
+    .oa-dlg-fixed-row {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      font-family: ui-monospace, monospace;
+    }
+    .oa-dlg-fixed-row span { color: var(--oa-muted-fg); font-family: inherit; }
+
+    .oa-dlg-error {
+      margin-top: 12px;
+      font-size: 12px;
+      color: var(--oa-rose);
     }
 
     /* ==========================================================================
        RESPONSIVE
        ========================================================================== */
     @media (max-width: 1024px) {
-      .grid-layout {
-        grid-template-columns: 1fr;
-      }
-      .watchlist-panel {
-        max-height: 400px;
-        min-height: 200px;
-      }
+      #workArea { flex-direction: column; }
+      .panel-shell { width: 100% !important; min-width: 0; min-height: 320px; max-width: none; border-left: none; border-top: 1px solid var(--oa-border); }
+      .panel-drag { display: none; }
+      #rightRail { flex-direction: row; width: auto; padding: 4px 8px; }
     }
-
     @media (max-width: 768px) {
       #app {
         padding: 16px;
@@ -442,14 +1584,9 @@
         justify-content: flex-start;
       }
 
-      #tv_chart_main {
-        height: 380px;
-        min-height: 300px;
-      }
-
-      .chart-toolbar {
-        padding: 10px 14px;
-        gap: 8px;
+      #brokerView .terminal-host {
+        height: 65vh;
+        min-height: 360px;
       }
 
       .brand-title {
@@ -463,24 +1600,6 @@
       .watchlist-panel {
         max-height: 300px;
         min-height: 150px;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .topbar-actions .btn {
-        font-size: 11px;
-        padding: 6px 12px;
-      }
-
-      .theme-select,
-      .symbol-select {
-        font-size: 11px;
-        padding: 6px 30px 6px 12px;
-      }
-
-      #tv_chart_main {
-        height: 280px;
-        min-height: 200px;
       }
     }
   </style>
@@ -509,178 +1628,2152 @@
     </header>
 
     <!-- ============================================================
-    TICKER TAPE - MODERN WEB COMPONENT
+    WORK AREA: CHART VIEWS + RIGHT PANEL + RAIL
     ============================================================ -->
-    <div class="panel ticker-panel">
-      <script type="module" src="https://widgets.tradingview-widget.com/w/en/tv-ticker-tape.js"></script>
-      <tv-ticker-tape 
-        symbols="NSE:NIFTY,BSE:SENSEX,NSE:BANKNIFTY,NSE:RELIANCE,NSE:TCS"
-        color-theme="dark"
-        transparent="true"
-        locale="en"
-      ></tv-ticker-tape>
-    </div>
+    <div id="workArea">
+      <div id="chartColumn">
+        <!-- ============================================================
+        BROKER VIEW — openalgo-charts terminal (your live feed)
+        ============================================================ -->
+        <section id="brokerView">
+          <div class="panel">
+            <div id="terminal" class="terminal-host">
+              <div class="chart-error">⏳ Loading broker terminal…</div>
+            </div>
+          </div>
+        </section>
+      </div>
 
-    <!-- ============================================================
-    GRID: CHART + WATCHLIST
-    ============================================================ -->
-    <div class="grid-layout">
-      <!-- CHART PANEL -->
-      <div class="panel">
-        <div class="chart-toolbar">
-          <label>Symbol</label>
-          <select id="symbolSelect" class="symbol-select">
-            <option value="NSE:NIFTY">NIFTY 50</option>
-            <option value="NSE:BANKNIFTY">BANK NIFTY</option>
-            <option value="BSE:SENSEX">SENSEX</option>
-            <option value="NSE:RELIANCE">RELIANCE</option>
-            <option value="NSE:TCS">TCS</option>
-            <option value="NSE:HDFCBANK">HDFC BANK</option>
-            <option value="NSE:INFY">INFOSYS</option>
-            <option value="NSE:SBIN">SBI</option>
-          </select>
+      <!-- ============================================================
+      RIGHT EDGE — OpenAlgo panel rail (Watchlist / Option Chain / Algo Symbols)
+      Header of every panel IS its controls, like openalgo trading page.
+      ============================================================ -->
+      <aside class="panel-shell" id="rightPanel" hidden aria-label="Symbols panel">
+        <div class="panel-drag" id="rpDrag" role="separator" aria-orientation="vertical" aria-label="Resize panel"></div>
 
-          <label style="margin-left: 8px;">Interval</label>
-          <select id="intervalSelect" class="symbol-select">
-            <option value="1">1m</option>
-            <option value="5" selected>5m</option>
-            <option value="15">15m</option>
-            <option value="60">1h</option>
-            <option value="D">1D</option>
-            <option value="W">1W</option>
-          </select>
+        <!-- TAB: WATCHLIST -->
+        <div class="rp-tab" id="tabWatchlist">
+          <div class="panel-header" id="wlHeader">
+            <button class="ph-listname" id="wlListName" title="List lives here — manage in Dashboard">
+              <span class="truncate" id="wlListNameText">Watchlist</span>
+              <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <button class="oa-icon-btn" id="wlAddBtn" title="Add instrument" aria-label="Add instrument" aria-expanded="false">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>
+            </button>
+            <button class="oa-icon-btn" id="wlColsBtn" title="Customise columns" aria-label="Customise columns" aria-expanded="false">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+            <div class="oa-menu align-end" id="wlColsMenu" hidden></div>
+            <div class="oa-menu align-start" id="wlListMenu" hidden>
+              <div class="oa-menu-label">Instrument list</div>
+              <button class="oa-menu-item" id="wlSeedMenu">
+                Seed from platform symbols <span class="mi-hint">once</span>
+              </button>
+              <button class="oa-menu-item" id="wlClear">
+                Clear list
+              </button>
+            </div>
+          </div>
+
+          <div id="wlSearchbar" hidden>
+            <input class="oa-input" id="wlSearch" placeholder="Search a broker symbol to add…" autocomplete="off" />
+            <div class="oa-menu" id="wlResults" hidden></div>
+          </div>
+
+          <div class="wl-head" id="wlHead" hidden></div>
+          <div class="wl-body" id="wlList"></div>
+          <p class="wl-foot" id="wlFoot" hidden></p>
         </div>
 
-        <div class="tradingview-widget-container" style="height:620px; width:100%;">
-          <div id="tv_chart_main" class="tradingview-widget-container__widget"></div>
+        <!-- TAB: OPTION CHAIN -->
+        <div class="rp-tab" id="tabOptionchain" hidden>
+          <div class="panel-header" style="position:relative;">
+            <select class="oa-select" id="ocExchange" style="width:76px;" aria-label="Exchange segment">
+              <option value="NFO">NFO</option>
+              <option value="BFO">BFO</option>
+              <option value="MCX">MCX</option>
+              <option value="CDS">CDS</option>
+            </select>
+            <button class="oa-combo" id="ocUnderlyingBtn" aria-label="Underlying" aria-expanded="false">
+              <span class="truncate" id="ocUnderlyingLabel">Select</span>
+              <svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg>
+            </button>
+            <button class="oa-icon-btn" id="ocRefreshBtn" title="Refresh" aria-label="Refresh option chain">
+              <svg viewBox="0 0 24 24" id="ocRefreshIcon"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            </button>
+            <div class="oa-menu align-start" id="ocUnderlyingMenu" hidden>
+              <input class="oa-input" id="ocUnderlyingSearch" placeholder="Search underlying…" autocomplete="off" />
+              <div id="ocUnderlyingResults"></div>
+            </div>
+          </div>
+
+          <div class="oc-band2">
+            <select class="oa-select" id="ocExpiry" style="flex:1;min-width:0;" aria-label="Expiry" disabled>
+              <option value="">Expiry</option>
+            </select>
+            <button class="oa-icon-btn" id="ocColsBtn" title="Customise columns" aria-label="Customise columns" aria-expanded="false">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+            </button>
+            <div class="oa-menu align-end" id="ocColsMenu" hidden></div>
+          </div>
+
+          <div class="oc-spotline" id="ocSpot" hidden>
+            <span><span class="oc-k">Spot</span> <b id="ocSpotValue">—</b></span>
+            <span><span class="oc-k">ATM</span> <b id="ocAtmValue">—</b></span>
+            <span id="ocPcrWrap" title="Across 0 strikes on screen"><span class="oc-k" id="ocPcrLabel">PCR(0)</span> <b id="ocPcrValue">—</b></span>
+          </div>
+
+          <div class="oc3" id="ocTable">
+            <div class="oc3-head">
+              <div class="oc3-side" id="ocCallHeadPane"><div class="oc-headgrid" id="ocCallHead"></div></div>
+              <div class="oc-strike head">Strike</div>
+              <div class="oc3-side" id="ocPutHeadPane"><div class="oc-headgrid" id="ocPutHead"></div></div>
+            </div>
+            <div class="oc3-body" id="ocBody"></div>
+            <div class="oc3-pinbar" id="ocPinbar" hidden>
+              <div class="oc3-pin" id="ocCallPin"><div id="ocCallPinInner" style="height:1px;"></div></div>
+              <div class="oc3-pin-pin"></div>
+              <div class="oc3-pin" id="ocPutPin"><div id="ocPutPinInner" style="height:1px;"></div></div>
+            </div>
+          </div>
+          <p class="wl-foot" id="ocStatus" hidden></p>
+        </div>
+
+        <!-- TAB: ALGO SYMBOLS -->
+        <div class="rp-tab" id="tabAlgo" hidden>
+          <div class="algo-headblock">
+            <div class="algo-title-row">
+              <svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>
+              <h2>Algo symbols</h2>
+              <span class="oa-badge off" id="algoModeBadge" title="Trade mode of your configured symbols">Mode —</span>
+              <button class="oa-icon-btn" id="algoRefreshBtn" title="Refresh" aria-label="Refresh algo symbols">
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              </button>
+            </div>
+            <div class="algo-actions-row">
+              <button class="oa-btn primary" id="algoAddBtn" title="Search the symbol master and configure a new algo symbol">
+                <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>
+                <span>Add symbol</span>
+              </button>
+              <button class="oa-btn" id="algoChartFocusBtn" title="Refresh the list">
+                <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                <span>Reload</span>
+              </button>
+              <button class="oa-btn" id="algoDashBtn" title="Open the full Dashboard">
+                <svg viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M21 3l-9 9"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                <span>Dashboard</span>
+              </button>
+            </div>
+          </div>
+          <p class="algo-byline" id="algoError" hidden></p>
+          <div class="algo-body" id="algoList">
+            <p class="algo-load">Loading…</p>
+          </div>
+        </div>
+      </aside>
+
+      <!-- SYMBOL SETTINGS DIALOG (algo-hub/SymbolSettingsDialog.tsx) -->
+      <div class="oa-dlg-overlay" id="algoDlgOverlay" hidden>
+        <div class="oa-dlg" role="dialog" aria-modal="true" aria-labelledby="algoDlgTitle">
+          <div class="oa-dlg-head">
+            <h3 id="algoDlgTitle">Add symbol for trade</h3>
+            <p id="algoDlgDesc">Search the symbol master, then set this symbol's own configuration.</p>
+            <button class="oa-icon-btn oa-dlg-close" id="algoDlgClose" aria-label="Close">
+              <svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+
+          <div id="algoDlgSymbolBlock">
+            <label style="font-size:10px;font-weight:600;color:var(--oa-muted-fg);display:block;margin-bottom:3px;">Symbol</label>
+            <div class="oa-dlg-symbol-row">
+              <select id="algoDlgExchange" aria-label="Exchange"></select>
+              <div class="oa-dlg-search">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input class="oa-input" id="algoDlgSearch" placeholder="Search e.g. SENSEX 72600 CE or CRUDEOILM FUT" autocomplete="off" />
+              </div>
+            </div>
+            <div class="oa-dlg-selected" id="algoDlgSelected" hidden></div>
+            <div class="oa-dlg-results" id="algoDlgResults" hidden></div>
+          </div>
+
+          <div id="algoDlgGroups"></div>
+
+          <p class="oa-dlg-error" id="algoDlgError" hidden></p>
+
+          <div class="oa-dlg-foot">
+            <button class="oa-btn" id="algoDlgCancel">Cancel</button>
+            <button class="oa-btn primary" id="algoDlgSave">Add symbol</button>
+          </div>
         </div>
       </div>
 
-      <!-- WATCHLIST PANEL -->
-      <div class="panel watchlist-panel">
-        <div class="watchlist-header">
-          <span class="watchlist-title">📋 Watchlist</span>
-          <span style="font-size: 11px; color: var(--text-muted);">Click to view</span>
+      <!-- RIGHT RAIL (OpenAlgo RightRail.tsx) -->
+      <div id="rightRail">
+        <div class="rail-item">
+          <button class="rail-btn" data-panel="watchlist" id="railWatchlist" aria-label="Watchlist" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
+          </button>
+          <span class="rail-tip">Watchlist <em>Esc</em></span>
         </div>
-        <div id="watchlistBody" class="watchlist-body"></div>
-      </div>
-    </div>
+        <div class="rail-item">
+          <button class="rail-btn" data-panel="optionchain" id="railOptionchain" aria-label="Option chain" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+          </button>
+          <span class="rail-tip">Option chain <em>Esc</em></span>
+        </div>
+        <div class="rail-item">
+          <button class="rail-btn" data-panel="algo" id="railAlgo" aria-label="Algo symbols" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/></svg>
+          </button>
+          <span class="rail-tip">Algo symbols <em>Esc</em></span>
+        </div>
+      </div>    </div>
   </div>
-
-  <!-- ============================================================
-  TRADINGVIEW LIBRARY
-  ============================================================ -->
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 
   <script>
     // ============================================================
-    // CONFIGURATION
+    // SHARED PAGE STATE
     // ============================================================
-    const WATCHLIST = [
-      { symbol: "NSE:NIFTY",     name: "NIFTY 50",    exch: "NSE" },
-      { symbol: "NSE:BANKNIFTY", name: "BANK NIFTY",  exch: "NSE" },
-      { symbol: "BSE:SENSEX",    name: "SENSEX",      exch: "BSE" },
-      { symbol: "NSE:RELIANCE",  name: "RELIANCE",    exch: "NSE" },
-      { symbol: "NSE:TCS",       name: "TCS",         exch: "NSE" },
-      { symbol: "NSE:HDFCBANK",  name: "HDFC BANK",   exch: "NSE" },
-      { symbol: "NSE:INFY",      name: "INFOSYS",     exch: "NSE" },
-      { symbol: "NSE:SBIN",      name: "SBI",         exch: "NSE" }
-    ];
+    const CLIENT_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-    let currentSymbol = "NSE:NIFTY";
-    let currentInterval = "5";
-    let chartWidget = null;
-
-    // ============================================================
-    // THEME
-    // ============================================================
     function currentTheme() {
       return document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
     }
 
     // ============================================================
-    // UPDATE TICKER TAPE THEME
+    // RIGHT EDGE — OpenAlgo panel port (rail + PanelShell + 3 tabs)
+    // Visual parity with openalgo frontend/src/components/trading:
+    //   RightRail.tsx, railStyles.tsx, panelShell.tsx,
+    //   WatchlistPanel.tsx, OptionChainPanel.tsx, algo-hub/AlgoSymbolsPanel.tsx
     // ============================================================
-    function updateTickerTheme() {
-      const ticker = document.querySelector('tv-ticker-tape');
-      if (ticker) {
-        const theme = currentTheme();
-        ticker.setAttribute('color-theme', theme);
+    const RAIL_PANELS = [
+      { id: "watchlist",   label: "Watchlist",    tab: "tabWatchlist",     btn: "railWatchlist",   widthKey: "cognix_wl_width",   fallback: 340, minW: 260, maxW: 520 },
+      { id: "optionchain", label: "Option chain", tab: "tabOptionchain",   btn: "railOptionchain", widthKey: "cognix_oc_width",   fallback: 340, minW: 260, maxW: 520 },
+      { id: "algo",        label: "Algo symbols", tab: "tabAlgo",          btn: "railAlgo",        widthKey: "cognix_algo_width", fallback: 380, minW: 280, maxW: 760 },
+    ];
+    const rightPanel = document.getElementById("rightPanel");
+    let activePanel = (function () {
+      // Storage outlives a release: a remembered id must still name a panel.
+      const saved = localStorage.getItem("cognix_panel");
+      return RAIL_PANELS.some(p => p.id === saved) ? saved : null;
+    })();
+
+    function clampPanelWidth(p, w) {
+      return Math.max(p.minW, Math.min(p.maxW, w, Math.floor(window.innerWidth * 0.7)));
+    }
+
+    function readPanelWidth(p) {
+      const saved = Number(localStorage.getItem(p.widthKey));
+      return Number.isFinite(saved) && saved >= p.minW ? clampPanelWidth(p, saved) : p.fallback;
+    }
+
+    function applyPanelWidth() {
+      const spec = RAIL_PANELS.find(p => p.id === activePanel);
+      if (spec) {
+        rightPanel.style.width = readPanelWidth(spec) + "px";
+        rightPanel.style.maxWidth = Math.floor(window.innerWidth * 0.7) + "px";
       }
     }
 
-    // ============================================================
-    // CHART
-    // ============================================================
-    function renderChart() {
-      const container = document.getElementById("tv_chart_main");
-      container.innerHTML = "";
-
-      if (chartWidget) {
-        try { chartWidget.remove(); } catch (e) {}
-        chartWidget = null;
-      }
-
-      chartWidget = new TradingView.widget({
-        container_id: "tv_chart_main",
-        autosize: true,
-        symbol: currentSymbol,
-        interval: currentInterval,
-        timezone: "Asia/Kolkata",
-        theme: currentTheme(),
-        style: "1",
-        locale: "en",
-        toolbar_bg: "rgba(0,0,0,0)",
-        enable_publishing: false,
-        hide_legend: false,
-        save_image: false,
-        studies: ["STD;MACD"],
-        backgroundColor: "rgba(0,0,0,0)",
-        gridColor: "rgba(150,150,150,0.08)",
-        allow_symbol_change: true,
-        details: true,
-        hotlist: true,
-        calendar: true,
-        withdateranges: true
+    function setRailState() {
+      RAIL_PANELS.forEach(p => {
+        const btn = document.getElementById(p.btn);
+        btn.classList.toggle("active", activePanel === p.id);
+        btn.setAttribute("aria-expanded", String(activePanel === p.id));
       });
     }
 
-    // ============================================================
-    // WATCHLIST
-    // ============================================================
-    function renderWatchlist() {
-      const body = document.getElementById("watchlistBody");
-      body.innerHTML = WATCHLIST.map(item => `
-        <div class="watchlist-item ${item.symbol === currentSymbol ? 'active' : ''}" data-symbol="${item.symbol}">
-          <span class="name">${item.name}</span>
-          <span class="exch">${item.exch}</span>
-        </div>
-      `).join("");
+    // Clicking the open panel's own button closes it — the rail is the only
+    // way back to a full-width chart, exactly like OpenAlgo.
+    function openPanel(id) {
+      if (activePanel === id) { closePanel(); return; }
+      const spec = RAIL_PANELS.find(p => p.id === id);
+      if (!spec) { closePanel(); return; }
+      activePanel = id;
+      rightPanel.hidden = false;
+      RAIL_PANELS.forEach(p => { document.getElementById(p.tab).hidden = p.id !== id; });
+      setRailState();
+      applyPanelWidth();
+      localStorage.setItem("cognix_panel", id);
+      if (id === "algo") { refreshAlgoSymbols(); startAlgoPolling(); }
+      if (id === "optionchain") {
+        // The pane width was measured while the panel may have been closed
+        // (display:none measures 0) — refresh it now that the tab is live.
+        ocMeasurePanes();
+        if (ocPrefs.underlying && ocPrefs.token) {
+          startOcLive();
+          fetchOptionChain();
+          ocHydrateExpiry();  // expiry select fills from the saved universe
+        }
+      }
+    }
 
-      body.querySelectorAll(".watchlist-item").forEach(el => {
-        el.addEventListener("click", () => {
-          currentSymbol = el.dataset.symbol;
-          document.getElementById("symbolSelect").value = currentSymbol;
-          renderChart();
+    function closePanel() {
+      activePanel = null;
+      rightPanel.hidden = true;
+      setRailState();
+      localStorage.removeItem("cognix_panel");
+      stopAlgoPolling();
+    }
+
+    RAIL_PANELS.forEach(p => {
+      document.getElementById(p.btn).addEventListener("click", () => openPanel(p.id));
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && activePanel) closePanel();
+    });
+
+    // ---------- drag-to-resize: the hairline that only announces itself ----
+    const rpDrag = document.getElementById("rpDrag");
+    let panelDrag = null; // { spec, startX, startW }
+
+    function onPanelDragMove(e) {
+      if (!panelDrag) return;
+      const w = clampPanelWidth(panelDrag.spec, panelDrag.startW + (panelDrag.startX - e.clientX));
+      rightPanel.style.width = w + "px";
+    }
+
+    function onPanelDragEnd() {
+      if (!panelDrag) return;
+      document.body.classList.remove("oa-resizing");
+      window.removeEventListener("pointermove", onPanelDragMove);
+      window.removeEventListener("pointerup", onPanelDragEnd);
+      window.removeEventListener("pointercancel", onPanelDragEnd);
+      localStorage.setItem(panelDrag.spec.widthKey, String(parseInt(rightPanel.style.width, 10)));
+      panelDrag = null;
+      rpDrag.classList.remove("active");
+    }
+
+    rpDrag.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || !activePanel) return;
+      e.preventDefault();
+      const spec = RAIL_PANELS.find(p => p.id === activePanel);
+      panelDrag = { spec, startX: e.clientX, startW: rightPanel.getBoundingClientRect().width };
+      rpDrag.classList.add("active");
+      document.body.classList.add("oa-resizing");
+      window.addEventListener("pointermove", onPanelDragMove);
+      window.addEventListener("pointerup", onPanelDragEnd);
+      window.addEventListener("pointercancel", onPanelDragEnd);
+    });
+
+    // ---------- popovers (DropdownMenu.tsx) --------------------------------
+    const allMenus = ["wlColsMenu", "wlListMenu", "wlResults", "ocUnderlyingMenu", "ocColsMenu"];
+
+    function closeAllMenus(except) {
+      allMenus.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el !== except) el.hidden = true;
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".oa-menu") || e.target.closest('[aria-controls]') ||
+          e.target === document.getElementById("wlAddBtn") ||
+          e.target === document.getElementById("wlColsBtn") ||
+          e.target === document.getElementById("wlListName") ||
+          e.target === document.getElementById("ocColsBtn") ||
+          e.target === document.getElementById("ocUnderlyingBtn")) return;
+      closeAllMenus();
+    });
+
+    function buildCheckItem(label, checked, onToggle) {
+      const b = document.createElement("button");
+      b.className = "oa-menu-item";
+      const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      check.setAttribute("viewBox", "0 0 24 24");
+      check.style.opacity = checked ? "1" : "0";
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", "M20 6 9 17l-5-5");
+      check.appendChild(path);
+      const span = document.createElement("span");
+      span.textContent = label;
+      b.appendChild(check);
+      b.appendChild(span);
+      b.addEventListener("click", (e) => { e.stopPropagation(); onToggle(); });
+      return b;
+    }
+
+    const CHECK_SVG = '<svg viewBox="0 0 24 24" path="-d"><path d="M20 6 9 17l-5-5"/></svg>';
+
+    // Icons (lucide, stroke 1.5)
+    const ICONS = {
+      search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+      trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6M14 11v6"/>',
+      grip: '<circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/>',
+      plus: '<path d="M5 12h14M12 5v14"/>',
+      kebab: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+      layers: '<path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 12 10 5 10-5"/><path d="m2 17 10 5 10-5"/>',
+      refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+      chevdn: '<path d="m6 9 6 6 6-6"/>',
+      dots: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    };
+
+    function svg(icon, cls) {
+      return `<svg viewBox="0 0 24 24" ${cls ? `class="${cls}"` : ""}>${ICONS[icon]}</svg>`;
+    }
+
+    // ---------- broker funnel (WS subscribe actions, OpenAlgo parity) ------
+    // pageSubs is the panel-side desired state; the actual WS subscribe /
+    // unsubscribe actions happen through window.__wsSubKey / __wsUnsubKey
+    // maintained by the module script's market-data client. The server
+    // drops the socket's refcounts automatically on disconnect, so no
+    // sendBeacon / beforeunload bookkeeping is needed anymore.
+    const pageSubs = new Map(); // "EXCH|TOKEN" -> {exchange, token, tsym}
+    let pageActiveKey = null;   // "EXCH:TSYM" of the instrument on the chart
+
+    function subscribeChartItem(item) {
+      const key = `${item.exchange}|${item.token}`;
+      if (pageSubs.has(key)) return;
+      pageSubs.set(key, item);
+      if (window.__wsSubKey) window.__wsSubKey(item.exchange, item.token);
+      if (item.tsym && window.__addChartToken) window.__addChartToken(item.exchange, item.tsym, item.token);
+    }
+
+    function unsubscribeChartItem(item) {
+      const key = `${item.exchange}|${item.token}`;
+      if (!pageSubs.has(key)) return;
+      pageSubs.delete(key);
+      if (window.__wsUnsubKey) window.__wsUnsubKey(item.exchange, item.token);
+    }
+
+    function markCharted(exchange, tsym) {
+      pageActiveKey = `${String(exchange).toUpperCase()}:${String(tsym).toUpperCase()}`;
+      renderWatchlistActive();
+    }
+
+    function renderWatchlistActive() {
+      document.querySelectorAll(".wl-row").forEach(rowEl => {
+        const it = wlItemsActive[rowEl.dataset.idx];
+        rowEl.classList.toggle("active", !!it && `${it.exchange}:${it.tsym}` === pageActiveKey);
+      });
+    }
+
+    // ---------- number formatting (WatchlistPanel.tsx fmt / compact) --------
+    function fmt(v) {
+      if (v == null || !Number.isFinite(v)) return "-";
+      const dp = Math.abs(v) >= 1000 ? 1 : 2;
+      return v.toLocaleString("en-IN", { minimumFractionDigits: dp, maximumFractionDigits: dp });
+    }
+
+    // Lakhs and crores: raw volume does not fit a 58px column.
+    function fmtCompact(v) {
+      if (typeof v !== "number" || !Number.isFinite(v) || v === 0) return "-";
+      if (v >= 1e7) return `${(v / 1e7).toFixed(2)}Cr`;
+      if (v >= 1e5) return `${(v / 1e5).toFixed(2)}L`;
+      if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+      return String(Math.round(v));
+    }
+
+    /**
+     * A stable colour per instrument: a tinted initial, not a brand logo.
+     * The hue is derived from the symbol itself, so it never changes between
+     * sessions or devices (WatchlistPanel.symbolTint).
+     */
+    function symbolTint(symbol) {
+      let hash = 0;
+      for (let i = 0; i < symbol.length; i++) hash = (hash * 31 + symbol.charCodeAt(i)) | 0;
+      return `hsl(${Math.abs(hash) % 360} 55% 45%)`;
+    }
+
+    // ============================================================
+    // TAB 1 — WATCHLIST (WatchlistPanel.tsx)
+    // ============================================================
+    const WL_STORE = "cognix_chart_watchlist";
+    let wlItems = [];
+    try { wlItems = JSON.parse(localStorage.getItem(WL_STORE) || "[]"); } catch (e) { wlItems = []; }
+    const wlStates = new Map(); // key -> {ltp, prevClose, volume, open, high, low}
+
+    /* Every column the panel can show, in the order they appear. Which of them
+       are on is the user's choice; the row and its header build their grid
+       from the same selection (WatchlistPanel COLUMNS). */
+    const WL_COLUMNS = [
+      { id: "last",          label: "Last", width: 64, get: q => fmt(q.ltp) },
+      { id: "change",        label: "Chg",  width: 60, tone: true, get: q => (q.change == null ? "-" : `${q.change >= 0 ? "+" : ""}${fmt(q.change)}`) },
+      { id: "changePercent", label: "Chg%", width: 58, tone: true, get: q => (q.changePercent == null ? "-" : `${q.changePercent >= 0 ? "+" : ""}${q.changePercent.toFixed(2)}%`) },
+      { id: "volume",        label: "Vol",  width: 58, get: q => fmtCompact(q.volume) },
+      { id: "high",          label: "High", width: 60, get: q => fmt(q.high) },
+      { id: "low",           label: "Low",  width: 60, get: q => fmt(q.low) },
+      { id: "open",          label: "Open", width: 60, get: q => fmt(q.open) },
+    ];
+    let wlDisplay = { columns: ["last", "change", "changePercent"], logo: true, exchange: true };
+    try {
+      const saved = JSON.parse(localStorage.getItem("cognix_wl_display") || "{}");
+      const ids = WL_COLUMNS.map(c => c.id);
+      wlDisplay = {
+        columns: Array.isArray(saved.columns) ? saved.columns.filter(c => ids.includes(c)) : wlDisplay.columns,
+        logo: typeof saved.logo === "boolean" ? saved.logo : true,
+        exchange: typeof saved.exchange === "boolean" ? saved.exchange : true,
+      };
+    } catch (e) { /* defaults */ }
+
+    function saveWlDisplay() { localStorage.setItem("cognix_wl_display", JSON.stringify(wlDisplay)); }
+    function saveWL() { localStorage.setItem(WL_STORE, JSON.stringify(wlItems)); }
+
+    function shownWlColumns() {
+      return WL_COLUMNS.filter(c => wlDisplay.columns.includes(c.id));
+    }
+
+    // The row and its column header share this, so the two cannot drift apart.
+    function wlGridTemplate() {
+      return `1fr ${shownWlColumns().map(c => `${c.width}px`).join(" ")} 16px`;
+    }
+
+    function wlQuote(it) {
+      const key = `${it.exchange}|${it.token}`;
+      const st = wlStates.get(key);
+      if (!st || st.ltp == null) return null;
+      const known = typeof st.prevClose === "number" && st.prevClose > 0 && st.ltp > 0;
+      return {
+        ltp: st.ltp,
+        change: known ? st.ltp - st.prevClose : null,
+        changePercent: known ? ((st.ltp - st.prevClose) / st.prevClose) * 100 : null,
+        volume: st.volume,
+        // Live OHLC — served by the normalized market-data frames now
+        // (real OpenAlgo watchlist High/Low/Open values; "-" until the
+        // feed carries them).
+        high: (typeof st.high === "number" && st.high > 0) ? st.high : null,
+        low: (typeof st.low === "number" && st.low > 0) ? st.low : null,
+        open: (typeof st.open === "number" && st.open > 0) ? st.open : null,
+      };
+    }
+
+    function renderWatchlistHead() {
+      const cols = shownWlColumns();
+      const head = document.getElementById("wlHead");
+      if (!wlItems.length) { head.hidden = true; return; }
+      head.hidden = false;
+      head.style.gridTemplateColumns = wlGridTemplate();
+      head.innerHTML =
+        `<span>Symbol</span>` +
+        cols.map(c => `<span class="wr">${c.label}</span>`).join("") +
+        `<span></span>`;
+    }
+
+    let wlItemsActive = []; // index-aligned copy of rendered rows
+
+    function renderWatchlist() {
+      renderWatchlistHead();
+      const list = document.getElementById("wlList");
+      const cols = shownWlColumns();
+      wlItemsActive = wlItems;
+
+      if (!wlItems.length) {
+        list.innerHTML = `
+          <div class="wl-empty">
+            ${svg("search")}
+            <p>This list is empty.</p>
+            <button class="oa-btn" id="wlEmptyAdd" style="flex:none;height:28px;">
+              ${svg("plus")} Add an instrument
+            </button>
+          </div>`;
+        const add = document.getElementById("wlEmptyAdd");
+        if (add) add.addEventListener("click", () => {
+          document.getElementById("wlSearchbar").hidden = false;
+          document.getElementById("wlSearch").focus();
+        });
+        return;
+      }
+
+      list.innerHTML = wlItems.map((it, idx) => {
+        const key = `${it.exchange}|${it.token}`;
+        const q = wlQuote(it);
+        const direction = !q || q.changePercent == null ? "flat" : q.changePercent >= 0 ? "up" : "down";
+        const active = `${it.exchange}:${it.tsym}` === pageActiveKey;
+        return `
+        <div class="wl-row${active ? " active" : ""}" data-key="${key}" data-idx="${idx}" style="grid-template-columns:${wlGridTemplate()}">
+          <span class="wl-sym">
+            ${wlDisplay.logo ? `<span class="wl-avatar" style="background-color:${symbolTint(it.tsym)}" aria-hidden="true">${(it.tsym || "?").charAt(0)}</span>` : ""}
+            <span class="wl-name" title="${it.tsym}">${it.tsym}</span>
+            ${wlDisplay.exchange ? `<span class="wl-exch">${it.exchange}</span>` : ""}
+          </span>
+          ${cols.map(c => {
+            const cls = c.tone && direction === "up" ? "tone-up" : c.tone && direction === "down" ? "tone-down" : "muted";
+            return `<span class="wl-cell ${!q ? "muted" : cls}">${q ? c.get(q) : "-"}</span>`;
+          }).join("")}
+          <button class="wl-remove" data-remove="${key}" title="Remove ${it.tsym}" aria-label="Remove ${it.tsym}">${svg("trash")}</button>
+        </div>`;
+      }).join("");
+
+      list.querySelectorAll(".wl-row").forEach(rowEl => {
+        const key = rowEl.dataset.key;
+        rowEl.addEventListener("click", (e) => {
+          if (e.target.closest(".wl-remove")) return;
+          const it = wlItems.find(i => `${i.exchange}|${i.token}` === key);
+          if (it) { markCharted(it.exchange, it.tsym); window.__openBrokerSymbol(it.tsym, it.exchange); }
+        });
+        rowEl.querySelector(".wl-remove").addEventListener("click", (e) => {
+          e.stopPropagation();
+          const it = wlItems.find(i => `${i.exchange}|${i.token}` === key);
+          if (!it) return;
+          unsubscribeChartItem(it);
+          wlItems = wlItems.filter(i => i !== it);
+          saveWL();
           renderWatchlist();
         });
       });
     }
 
-    // ============================================================
-    // EVENT LISTENERS
-    // ============================================================
-    document.getElementById("symbolSelect").addEventListener("change", (e) => {
-      currentSymbol = e.target.value;
-      renderChart();
+    function paintWlRow(key) {
+      const rowEl = document.getElementById("wlList").querySelector(`.wl-row[data-key="${key}"]`) ||
+                    document.getElementById("wlList").querySelector(`.wl-row[data-key="${key}"]`);
+      if (!rowEl) return;
+      const it = wlItems.find(i => `${i.exchange}|${i.token}` === key);
+      if (!it) return;
+      const q = wlQuote(it);
+      const cols = shownWlColumns();
+      const direction = !q || q.changePercent == null ? "flat" : q.changePercent >= 0 ? "up" : "down";
+      const cells = rowEl.querySelectorAll(".wl-cell");
+      cols.forEach((c, i) => {
+        const cell = cells[i];
+        if (!cell) return;
+        cell.textContent = q ? c.get(q) : "-";
+        cell.className = `wl-cell ${!q ? "muted" : c.tone && direction === "up" ? "tone-up" : c.tone && direction === "down" ? "tone-down" : "muted"}`;
+      });
+    }
+
+    function updateWatchlistTick(msg) {
+      // Accepts BOTH shapes: the legacy flat tick {ltp, day_volume,
+      // prev_close} and the OpenAlgo-normalized market_data frame
+      // {exchange, token, data:{ltp, prev_close, volume, open, high, low}}.
+      const d = msg.data || {};
+      const g = (name, legacy) => (d[name] != null ? Number(d[name]) : legacy);
+      const patch = {
+        prevClose: g("prev_close", msg.prevClose != null ? Number(msg.prevClose) : null),
+        ltp: g("ltp", msg.ltp != null ? Number(msg.ltp) : null),
+        volume: g("volume", msg.day_volume != null ? Number(msg.day_volume) : null),
+        open: g("open", null),
+        high: g("high", null),
+        low: g("low", null),
+      };
+      const key = `${msg.exchange}|${msg.token}`;
+      const known = wlItems.some(i => `${i.exchange}|${i.token}` === key);
+      if (!known) return;
+      let st = wlStates.get(key);
+      if (!st) { st = { ltp: null, prevClose: null, volume: null, open: null, high: null, low: null }; wlStates.set(key, st); }
+      for (const [field, v] of Object.entries(patch)) {
+        if (v != null && Number.isFinite(v)) st[field] = v === 0 && field === "ltp" ? st.ltp : v;
+      }
+      paintWlRow(key);
+    }
+
+    async function seedWatchlistFromPlatform() {
+      if (localStorage.getItem("cognix_wl_seeded")) return;
+      localStorage.setItem("cognix_wl_seeded", "1");
+      try {
+        const res = await fetch("/api/symbols");
+        const list = await res.json();
+        if (window.__registerChartTokens) window.__registerChartTokens(Array.isArray(list) ? list : []);
+        wlItems = (Array.isArray(list) ? list : []).slice(0, 20).map(s => {
+          const cfg = s.config || s;
+          return {
+            exchange: cfg.exchange,
+            token: String(cfg.token),
+            tsym: cfg.trading_symbol,
+            name: cfg.strategy_name || cfg.trading_symbol,
+          };
+        });
+        saveWL();
+        renderWatchlist();
+        for (const it of wlItems) subscribeChartItem(it);
+      } catch (e) { /* watchlist stays empty */ }
+    }
+
+    // ---------- add an instrument (the SymbolSearchDialog, inlined) ---------
+    const wlSearch = document.getElementById("wlSearch");
+    const wlResults = document.getElementById("wlResults");
+    let wlSearchTimer = null;
+
+    // Multi-exchange symbol search (OpenAlgo InTokenSearchBar behaviour):
+    // every exchange Flattrade supports is queried IN PARALLEL and merged
+    // by priority, so no exchange starves the others. Results arrive as
+    // fast as the slowest broker search (~all in one wall-clock round trip
+    // because they run concurrently).
+    const WL_SEARCH_EXCHANGES = ["NSE", "NFO", "BFO", "BSE", "MCX", "CDS"];
+    const WL_SEARCH_PRIO = { NSE: 0, NFO: 1, BFO: 2, BSE: 3, MCX: 4, CDS: 5 };
+    let wlSearchSeq = 0; // stale-response guard
+
+    async function runWlSearch(q) {
+      if (!q || q.length < 2) { wlResults.hidden = true; return; }
+      const seq = ++wlSearchSeq;
+      wlResults.hidden = false;
+      wlResults.innerHTML = `<button class="oa-menu-item" disabled>Searching…</button>`;
+      const settled = await Promise.allSettled(
+        WL_SEARCH_EXCHANGES.map(exch =>
+          fetch("/api/search-symbols", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: q, exchange: exch }),
+          }).then(r => r.json()).then(p => (p && p.values) || [])
+        )
+      );
+      if (seq !== wlSearchSeq) return; // a newer query took over the box
+
+      const perExch = 5, cap = 16;
+      const seen = new Set();
+      const merged = [];
+      for (const outs of settled) {
+        const values = outs.status === "fulfilled" ? (outs.value || []) : [];
+        for (const v of values.slice(0, perExch)) {
+          const exch = String(v.exch || "").toUpperCase();
+          const tsym = String(v.tsym || v.ts || "");
+          if (!tsym) continue;
+          const k = `${exch}|${v.token}|${tsym}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          merged.push({ v, exch, tsym });
+        }
+      }
+      merged.sort((a, b) =>
+        ((WL_SEARCH_PRIO[a.exch] ?? 9) - (WL_SEARCH_PRIO[b.exch] ?? 9)) ||
+        a.tsym.localeCompare(b.tsym));
+      merged.length = Math.min(merged.length, cap);
+
+      wlResults.innerHTML = merged.length
+        ? merged.map(({ v, exch, tsym }) =>
+            `<button class="oa-menu-item" data-exch="${exch}" data-token="${v.token}" data-tsym="${tsym}">
+                      <span class="mi-hint" style="margin-left:0;order:2">${exch}</span>
+                      <span style="order:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${tsym}</span>
+                    </button>`).join("")
+        : `<button class="oa-menu-item" disabled>Is the broker session active?</button>`;
+      wlResults.hidden = false;
+      wlResults.querySelectorAll(".oa-menu-item[data-tsym]").forEach(el => {
+        el.addEventListener("click", () => {
+          const item = {
+            exchange: el.dataset.exch,
+            token: String(el.dataset.token),
+            tsym: el.dataset.tsym,
+            name: el.dataset.tsym,
+          };
+          if (wlItems.some(i => i.exchange === item.exchange && i.token === item.token)) {
+            wlSearch.value = "";
+            wlResults.hidden = true;
+            return;
+          }
+          wlItems.push(item);
+          saveWL();
+          subscribeChartItem(item);
+          renderWatchlist();
+          wlSearch.value = "";
+          wlResults.hidden = true;
+          wlSearchbar.hidden = true;
+        });
+      });
+    }
+
+    const wlSearchbar = document.getElementById("wlSearchbar");
+    document.getElementById("wlAddBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeAllMenus(wlResults);
+      wlSearchbar.hidden = !wlSearchbar.hidden;
+      if (!wlSearchbar.hidden) {
+        wlSearch.focus();
+        wlResults.hidden = true;
+      }
+    });
+    wlSearch.addEventListener("input", () => {
+      clearTimeout(wlSearchTimer);
+      wlSearchTimer = setTimeout(() => runWlSearch(wlSearch.value.trim()), 250);
+    });
+    wlSearch.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { clearTimeout(wlSearchTimer); runWlSearch(wlSearch.value.trim()); }
+      if (e.key === "Escape") { wlResults.hidden = true; wlSearchbar.hidden = true; }
+    });
+
+    // ---------- list menu + columns menu ------------------------------------
+    document.getElementById("wlListName").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById("wlListMenu");
+      const open = !menu.hidden;
+      closeAllMenus(menu);
+      menu.hidden = open;
+    });
+    document.getElementById("wlSeedMenu").addEventListener("click", () => {
+      document.getElementById("wlListMenu").hidden = true;
+      localStorage.removeItem("cognix_wl_seeded");
+      seedWatchlistFromPlatform();
+    });
+    document.getElementById("wlClear").addEventListener("click", () => {
+      document.getElementById("wlListMenu").hidden = true;
+      for (const it of wlItems) unsubscribeChartItem(it);
+      wlItems = [];
+      wlStates.clear();
+      saveWL();
       renderWatchlist();
     });
+    document.getElementById("wlColsBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById("wlColsMenu");
+      const open = !menu.hidden;
+      closeAllMenus(menu);
+      if (open) { menu.hidden = true; return; }
+      const bodyEl = document.createDocumentFragment();
+      bodyEl.appendChild(Object.assign(document.createElement("div"), { className: "oa-menu-label", textContent: "Columns" }));
+      for (const c of WL_COLUMNS) {
+        const label = c.label === "Chg" ? "Change" : c.label === "Chg%" ? "Change %" : c.label === "Vol" ? "Volume" : c.label;
+        const item = buildCheckItem(label, wlDisplay.columns.includes(c.id), () => {
+          wlDisplay.columns = wlDisplay.columns.includes(c.id)
+            ? wlDisplay.columns.filter(x => x !== c.id)
+            : [...wlDisplay.columns, c.id];
+          saveWlDisplay();
+          renderWatchlist();
+          renderWlColsMenu();
+        });
+        bodyEl.appendChild(item);
+      }
+      bodyEl.appendChild(Object.assign(document.createElement("div"), { className: "oa-menu-sep" }));
+      bodyEl.appendChild(Object.assign(document.createElement("div"), { className: "oa-menu-label", textContent: "Symbol display" }));
+      bodyEl.appendChild(buildCheckItem("Symbol letter", wlDisplay.logo, () => { wlDisplay.logo = !wlDisplay.logo; saveWlDisplay(); renderWatchlist(); }));
+      bodyEl.appendChild(buildCheckItem("Exchange", wlDisplay.exchange, () => { wlDisplay.exchange = !wlDisplay.exchange; saveWlDisplay(); renderWatchlist(); }));
+      menu.innerHTML = "";
+      menu.appendChild(bodyEl);
+      menu.hidden = false;
+    });
+    function renderWlColsMenu() { /* rebuilt on next open */ }
 
-    document.getElementById("intervalSelect").addEventListener("change", (e) => {
-      currentInterval = e.target.value;
-      renderChart();
+    // ============================================================
+    // TAB 2 — OPTION CHAIN (OptionChainPanel.tsx)
+    // ============================================================
+    const OC_PREFS = "cognix_optionchain";
+    let ocPrefs = { exchange: "NFO", underlying: "", token: "", tsymFut: "", expiry: "" };
+    try { const _prev = JSON.parse(localStorage.getItem(OC_PREFS) || "{}"); delete _prev.count; ocPrefs = Object.assign(ocPrefs, _prev); } catch (e) { /* defaults */ }
+    function saveOcPrefs() { localStorage.setItem(OC_PREFS, JSON.stringify(ocPrefs)); }
+
+    /* OpenAlgo's fixed strike window: STRIKE_COUNT = 10. "Twenty rows is about
+       one panel-height of scroll" — the panel has no strike-count control.
+       The backend keeps its ?count= parameter for other callers. */
+    const OC_STRIKE_COUNT = 10;
+
+    /* All available columns, in the outward-from-strike order both sides share.
+       LTP is first because it sits against the strike (OptionChainPanel
+       ALL_COLUMNS). Width is the whole column: header, data cell and OI bar. */
+    const OC_COLUMNS = [
+      { id: "ltp",    label: "LTP",    symbol: "LTP", width: 68, group: "Price" },
+      { id: "oi",     label: "OI",     symbol: "OI",  width: 60, group: "Price" },
+      { id: "volume", label: "Volume", symbol: "Vol", width: 60, group: "Price", hideSymbol: true },
+      { id: "iv",     label: "IV",     symbol: "σ",   width: 56, group: "Greeks" },
+      { id: "delta",  label: "Delta",  symbol: "Δ",   width: 56, group: "Greeks" },
+      { id: "gamma",  label: "Gamma",  symbol: "Γ",   width: 56, group: "Greeks" },
+      { id: "theta",  label: "Theta",  symbol: "Θ",   width: 56, group: "Greeks" },
+      { id: "vega",   label: "Vega",   symbol: "V",   width: 56, group: "Greeks" },
+    ];
+    let ocDisplay = { columns: ["ltp", "oi", "volume"], showBars: true };
+    try {
+      const saved = JSON.parse(localStorage.getItem("cognix_oc_display") || "{}");
+      const ids = OC_COLUMNS.map(c => c.id);
+      ocDisplay = {
+        columns: Array.isArray(saved.columns) ? saved.columns.filter(c => ids.includes(c)) : ocDisplay.columns,
+        showBars: typeof saved.showBars === "boolean" ? saved.showBars : true,
+      };
+    } catch (e) { /* defaults */ }
+    function saveOcDisplay() { localStorage.setItem("cognix_oc_display", JSON.stringify(ocDisplay)); }
+
+    function shownOcColumns() { return OC_COLUMNS.filter(c => ocDisplay.columns.includes(c.id)); }
+
+    /* Fixed pixel tracks, the OpenAlgo contract (tracksFor/widthFor): BOTH
+       sides render every column at its full declared width and the overflow
+       scrolls horizontally — the call side renders the SAME list REVERSED
+       (callColumns) so its LTP sits against the strike, and the put side
+       renders forward. No flexible slack column anywhere. */
+    const OC_COL_GAP = 6;    // gap-x-1.5
+    const OC_SIDE_PX = 16;   // px-2, padding inside the header strip AND the cells
+    const OC_STRIKE_W = 64;  // strike column, borders included (STRIKE_WIDTH)
+
+    function ocTracks(cols) { return cols.map(c => `${c.width}px`).join(" "); }
+
+    /* Total pixel width of one side's content: tracks + gaps + the px-2
+       padding the header strip carries on both sides. The header grid, the
+       body's side stack and the pinned bar's spacer all get exactly this. */
+    function ocWidthFor(cols) {
+      return cols.reduce((s, c) => s + c.width, 0) +
+             Math.max(0, cols.length - 1) * OC_COL_GAP + OC_SIDE_PX;
+    }
+
+    /**
+     * One leg's value for the selected metric. Everything unavailable renders
+     * as a dash rather than a zero (metricOf).
+     */
+    function ocMetric(leg, id) {
+      if (!leg) return "-";
+      if (id === "ltp") return leg.ltp > 0 ? leg.ltp.toFixed(2) : "-";
+      if (id === "oi") return fmtCompact(leg.oi);
+      if (id === "volume") return fmtCompact(leg.volume);
+      const v = leg[id];
+      if (!(typeof v === "number" && Number.isFinite(v))) return "-";
+      // Per-column precision (OptionChainPanel.tsx): gamma 4dp, IV 1dp %,
+      // everything else 2dp — gamma at 2dp always reads "0.00".
+      const dp = id === "gamma" ? 4 : id === "iv" ? 1 : 2;
+      return id === "iv" ? `${v.toFixed(dp)}%` : v.toFixed(dp);
+    }
+
+    /* One leg's day change in percent, only when the chain carried a usable
+       previous close — otherwise the cell shows nothing rather than a
+       fabricated zero. */
+    function ocChangePct(leg) {
+      if (!leg || !(leg.ltp > 0) || !(leg.prev_close > 0)) return null;
+      return ((leg.ltp - leg.prev_close) / leg.prev_close) * 100;
+    }
+
+    let ocLoading = false;
+    let ocData = null; // last chain payload
+    let ocSpotPrevClose = null; // underlying prev_close from live frames (spot tri-state)
+    let ocLastUpdate = null;    // Date of the last successful chain fetch
+    let ocChainError = null;    // last chain error message
+    let ocStatusTimer = null;   // 5s status-footer refresher
+    let ocPaneW = null;         // measured px width of one side pane
+
+    /* ── side-pane width sharing (OpenAlgo sidePaneStyle) ─────────────────
+       One measured pixel width per side pane — floor((bodyWidth − strike)/2)
+       — applied to the header panes, the body panes AND the pinned-bar pans,
+       so the strike column's vertical separators sit on the same pixel in
+       all three strips. Before the first measurement everything falls back
+       to the CSS flex-1 layout. */
+    const ocBodyEl = document.getElementById("ocBody");
+
+    function ocApplyPaneWidths() {
+      for (const id of ["ocCallHeadPane", "ocPutHeadPane", "ocCallSide", "ocPutSide", "ocCallPin", "ocPutPin"]) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        if (ocPaneW != null) {
+          el.style.width = ocPaneW + "px";
+          el.style.flex = "0 0 auto";
+        } else {
+          el.style.width = "";
+          el.style.flex = "";
+        }
+      }
+    }
+
+    function ocMeasurePanes() {
+      if (rightPanel.hidden || !ocBodyEl.clientWidth) return;
+      const w = Math.max(0, Math.floor((ocBodyEl.clientWidth - OC_STRIKE_W) / 2));
+      if (w !== ocPaneW) {
+        ocPaneW = w;
+        ocApplyPaneWidths();
+      }
+      // Pane width follows the live body size (the vertical scrollbar comes
+      // and goes with row count), and the call side's pinned anchor moves
+      // with it — while the panel is dragged, scrollLeft does not re-pin
+      // by itself (OpenAlgo re-runs the effect on pane width change).
+      repinCallScroll();
+    }
+    new ResizeObserver(ocMeasurePanes).observe(ocBodyEl);
+
+    /* Open the call table fully scrolled right: its columns render
+       reversed, so LTP is the LAST cell in DOM order and only scrollLeft
+       == scrollWidth puts it against the strike. rAF because freshly
+       injected rows have not laid out yet (scrollWidth still 0), and on
+       the layout frame the assignment would be a no-op. */
+    function repinCallScroll() {
+      requestAnimationFrame(() => {
+        const el = document.getElementById("ocCallSide");
+        if (!el || !el.scrollWidth) return;
+        el.scrollLeft = el.scrollWidth;
+        const head = document.getElementById("ocCallHeadPane");
+        const pin = document.getElementById("ocCallPin");
+        if (head) head.scrollLeft = el.scrollLeft;
+        if (pin) pin.scrollLeft = el.scrollLeft;
+      });
+    }
+
+    const ocExchangeEl = document.getElementById("ocExchange");
+    const ocExpiryEl = document.getElementById("ocExpiry");
+    const ocRefreshIcon = document.getElementById("ocRefreshIcon");
+    ocExchangeEl.value = ocPrefs.exchange;
+
+    ocExpiryEl.addEventListener("change", () => {
+      ocPrefs.expiry = ocExpiryEl.value;
+      saveOcPrefs();
+      fetchOptionChain();
     });
 
+    // ---------- underlying universe (OpenAlgo scalping all_underlyings) ----
+    /* The FULL per-exchange list, loaded once per exchange and filtered
+       client-side, exactly like OpenAlgo's searchable combobox: indices at
+       the top, then alphabetical; no broker search per keystroke. */
+
+    function ocSetExpiryList(entry) {
+      const exps = (entry && entry.expiries) || [];
+      ocExpiryEl.innerHTML = "";
+      if (!exps.length) {
+        ocExpiryEl.disabled = true;
+        ocExpiryEl.innerHTML = `<option value="">No expiries</option>`;
+        ocPrefs.expiry = "";
+      } else {
+        ocExpiryEl.disabled = false;
+        for (const e of exps) {
+          const o = document.createElement("option");
+          o.value = e;
+          o.textContent = e;
+          ocExpiryEl.appendChild(o);
+        }
+        if (!exps.includes(ocPrefs.expiry)) ocPrefs.expiry = exps[0];
+        ocExpiryEl.value = ocPrefs.expiry;
+      }
+      saveOcPrefs();
+    }
+
+    function ocSelectUnderlying(entry) {
+      ocPrefs.underlying = entry.base;
+      ocPrefs.token = entry.token;
+      ocPrefs.tsymFut = entry.tsym;
+      saveOcPrefs();
+      document.getElementById("ocUnderlyingLabel").textContent = entry.base;
+      ocSetExpiryList(entry);
+      ocUnderlyingMenu.hidden = true;
+      ocData = null;          // the previous contract's chain must not linger
+      startOcLive();
+      fetchOptionChain();
+    }
+
+    ocExchangeEl.addEventListener("change", async () => {
+      ocPrefs.exchange = ocExchangeEl.value;
+      saveOcPrefs();
+      clearOcLegs();
+      ocData = null;
+      document.getElementById("ocUnderlyingLabel").textContent = "Select";
+      document.getElementById("ocBody").innerHTML = `<p class="oc-loadmsg">Select an underlying…</p>`;
+      // OpenAlgo: switching segment keeps the old underlying only when the
+      // new segment has it too; otherwise it falls back to the FIRST one the
+      // segment actually carries, and the chain loads on its own.
+      try {
+        const list = await loadOcUniverse(ocPrefs.exchange);
+        const keep = list.find(u => u.base === ocPrefs.underlying);
+        const target = keep || list[0] || null;
+        if (target) {
+          ocSelectUnderlying(target);
+          return;
+        }
+      } catch (e) {
+        loadOcUnderlyingsIntoMenuIfOpen();  // surface the error in the picker
+      }
+    });
+
+    // ---------- underlying picker (a searchable Popover+Command) ----------
+    const ocUnderlyingBtn = document.getElementById("ocUnderlyingBtn");
+    const ocUnderlyingMenu = document.getElementById("ocUnderlyingMenu");
+    const ocSearchEl = document.getElementById("ocUnderlyingSearch");
+    const ocUnderlyingResults = document.getElementById("ocUnderlyingResults");
+
+    let ocUList = [];       // universe entries for the current exchange
+    let ocUState = "idle";  // idle | loading | ready | error
+    let ocUError = null;
+
+    async function ocHydrateExpiry() {
+      /* A saved underlying restored on panel open still needs its expiry
+         select filled (the picker may never have opened this session). */
+      try {
+        const list = await loadOcUniverse(ocPrefs.exchange);
+        const entry = list.find(u => u.base === ocPrefs.underlying);
+        if (entry) ocSetExpiryList(entry);
+      } catch (e) { /* the picker surfaces its own loading errors */ }
+    }
+
+    async function loadOcUniverse(ex) {
+      /* Cached in-memory per exchange — like OpenAlgo's effect keyed on
+         `prefs.exchange`, the fetch itself is once per segment, not per
+         keystroke. */
+      if (ocUniverseCache.has(ex)) return ocUniverseCache.get(ex);
+      const res = await fetch(`/api/optionchain/underlyings?exchange=${encodeURIComponent(ex)}`);
+      const payload = await res.json();
+      if (!payload || payload.stat !== "Ok") {
+        throw new Error((payload && payload.emsg) || `Could not load ${ex} underlyings`);
+      }
+      const list = payload.underlyings || [];
+      ocUniverseCache.set(ex, list);
+      return list;
+    }
+    const ocUniverseCache = new Map();
+
+    function ocListItem(entry) {
+      const selected = entry.base === ocPrefs.underlying;
+      const btn = document.createElement("button");
+      btn.className = "oa-menu-item";
+      const check = document.createElement("span");
+      check.textContent = selected ? "✓" : "";
+      check.style.cssText = "width:14px;flex:0 0 14px;text-align:center;font-weight:700;";
+      const name = document.createElement("span");
+      name.textContent = entry.base;
+      name.style.cssText = "flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+      const hint = document.createElement("span");
+      hint.className = "mi-hint";
+      hint.textContent = entry.tsym || "";
+      btn.append(check, name, hint);
+      btn.addEventListener("click", () => ocSelectUnderlying(entry));
+      return btn;
+    }
+
+    function ocListMessage(text, cls) {
+      const div = document.createElement("div");
+      div.style.cssText = "padding:12px;text-align:center;font-size:12px;color:" +
+        (cls === "err" ? "var(--oa-rose)" : "var(--oa-muted-fg)");
+      div.textContent = text;
+      return div;
+    }
+
+    /* Client-side Command filter: substring, case-insensitive, over the whole
+       already-loaded universe. No network on keystrokes. */
+    function renderOcList() {
+      ocUnderlyingResults.innerHTML = "";
+      if (ocUState === "loading") {
+        ocUnderlyingResults.appendChild(ocListMessage("Loading…"));
+        return;
+      }
+      if (ocUState === "error") {
+        // "Could not load X underlyings" + the one Retry, OpenAlgo states.
+        const err = ocListMessage(ocUError || "Could not load underlyings", "err");
+        const retry = document.createElement("button");
+        retry.className = "oc-retry";
+        retry.textContent = "Retry";
+        retry.style.margin = "0 auto 10px";
+        retry.addEventListener("click", reloadOcUniverse);
+        ocUnderlyingResults.append(err, retry);
+        return;
+      }
+      const q = ocSearchEl.value.trim().toUpperCase();
+      const hits = q ? ocUList.filter(u => u.base.includes(q)) : ocUList;
+      if (!hits.length) {
+        ocUnderlyingResults.appendChild(ocListMessage("No underlying found."));
+        return;
+      }
+      for (const entry of hits.slice(0, 80)) {
+        ocUnderlyingResults.appendChild(ocListItem(entry));
+      }
+    }
+
+    async function reloadOcUniverse() {
+      ocUState = "loading";
+      ocUError = null;
+      ocUList = [];
+      renderOcList();
+      try {
+        ocUList = await loadOcUniverse(ocPrefs.exchange);
+        ocUState = "ready";
+      } catch (e) {
+        ocUState = "error";
+        ocUError = e.message || `Could not load ${ocPrefs.exchange} underlyings`;
+      }
+      if (!ocUnderlyingMenu.hidden) renderOcList();
+    }
+
+    // A segment switch in flight while the menu is closed still needs to
+    // repaint the open menu when its load resolves — cheap identity check.
+    let ocUSeg = ocPrefs.exchange;
+    function loadOcUnderlyingsIntoMenuIfOpen() {
+      if (ocUnderlyingMenu.hidden) return;
+      if (ocUSeg !== ocPrefs.exchange) { ocUSeg = ocPrefs.exchange; reloadOcUniverse(); }
+      else renderOcList();
+    }
+
+    ocUnderlyingBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = !ocUnderlyingMenu.hidden;
+      closeAllMenus(ocUnderlyingMenu);
+      ocUnderlyingMenu.hidden = open;
+      if (!ocUnderlyingMenu.hidden) {
+        ocSearchEl.value = "";
+        if (ocUSeg !== ocPrefs.exchange || ocUState === "idle" || ocUState === "error") {
+          reloadOcUniverse();
+          ocUSeg = ocPrefs.exchange;
+        } else {
+          renderOcList();
+        }
+        setTimeout(() => ocSearchEl.focus(), 10);
+      }
+    });
+
+    ocSearchEl.addEventListener("input", () => {
+      // Client-side over the loaded list — instant, no debounce, no fetch.
+      if (ocUState === "ready") renderOcList();
+    });
+
+    // ---------- live spot through the funnel --------------------------------
+    let ocLiveKey = null;
+
+    function startOcLive() {
+      if (ocLiveKey) {
+        const old = pageSubs.get(ocLiveKey);
+        if (old) unsubscribeChartItem(old);
+        ocLiveKey = null;
+      }
+      if (!ocPrefs.token) return;
+      const item = { exchange: ocPrefs.exchange, token: ocPrefs.token, tsym: ocPrefs.tsymFut };
+      subscribeChartItem(item);
+      ocLiveKey = `${item.exchange}|${item.token}`;
+    }
+
+    // ---------- live option-chain legs (OpenAlgo chain parity) --------------
+    // Legs are subscribed over the same page WS; each market-data frame
+    // paints the leg's LTP + day-change chip in place, and merges
+    // bid/ask/volume/prev_close into the leg model so re-renders (columns
+    // menu, OI poll) keep carrying it. OI/IV/greeks are refreshed by a
+    // 30-second chain poll, exactly like the OpenAlgo option-chain panel.
+    let ocLegsByToken = new Map(); // "EXCH|TOKEN" -> {leg, cell, valueEl, chgEl, prevLtp}
+    let ocOiTimer = null;
+
+    function wireOcLegs(payload) {
+      const wanted = new Set();
+      const body = document.getElementById("ocBody");
+      for (const row of (payload.chain || [])) {
+        for (const side of ["ce", "pe"]) {
+          const leg = row[side];
+          if (!leg || !leg.token) continue;
+          const key = `${payload.exchange}|${String(leg.token)}`;
+          wanted.add(key);
+          const cell = body.querySelector(
+            `.oc-cell[data-side="${side}"][data-strike="${row.strike}"]`);
+          if (!cell) continue;
+          const valueEl = cell.querySelector(".oc-value > span");
+          const chgEl = cell.querySelector(".oc-ltp-chg");
+          ocLegsByToken.set(key, { leg, cell, valueEl, chgEl, prevLtp: null });
+        }
+      }
+      // Release subscriptions for strikes that left the window.
+      for (const key of [...ocLegsByToken.keys()]) {
+        if (wanted.has(key)) continue;
+        const [ex, tok] = key.split("|");
+        if (window.__wsUnsubKey) window.__wsUnsubKey(ex, tok);
+        ocLegsByToken.delete(key);
+      }
+      // Desired-state subscribe (idempotent — the module dedupes).
+      if (window.__wsSubKey) {
+        for (const key of wanted) {
+          const [ex, tok] = key.split("|");
+          window.__wsSubKey(ex, tok);
+        }
+      }
+    }
+
+    function clearOcLegs() {
+      for (const key of [...ocLegsByToken.keys()]) {
+        const [ex, tok] = key.split("|");
+        if (window.__wsUnsubKey) window.__wsUnsubKey(ex, tok);
+        ocLegsByToken.delete(key);
+      }
+      stopOcOiPoll();
+    }
+
+    function paintOcLegs(md) {
+      const entries = ocLegsByToken.get(`${md.exchange}|${md.token}`);
+      if (!entries) return;
+      const d = md.data || {};
+      const leg = entries.leg;
+
+      // Merge everything the frame carries into the chain's leg model.
+      if (d.ltp != null && Number(d.ltp) > 0) leg.ltp = Number(d.ltp);
+      if (d.bid != null && Number(d.bid) >= 0) leg.bid = Number(d.bid);
+      if (d.ask != null && Number(d.ask) >= 0) leg.ask = Number(d.ask);
+      if (d.volume != null) leg.volume = Number(d.volume);
+      if (d.prev_close != null && Number(d.prev_close) > 0) leg.prev_close = Number(d.prev_close);
+
+      // In-place LTP + day-change chip.
+      if (entries.valueEl && leg.ltp > 0) {
+        entries.valueEl.textContent = fmt(leg.ltp);
+        entries.prevLtp = leg.ltp;
+      }
+      if (entries.chgEl !== undefined) {
+        const change = ocChangePct(leg);
+        if (entries.chgEl) {
+          if (change === null) { entries.chgEl.remove(); entries.chgEl = null; }
+          else entries.chgEl.textContent = `${change >= 0 ? "+" : ""}${change.toFixed(2)}%`;
+        }
+      }
+    }
+
+    // 30s OI/IV poll (silent refetch — no spinner, no flash reset).
+    function startOcOiPoll() {
+      if (ocOiTimer) return;
+      ocOiTimer = setInterval(() => {
+        if (ocPrefs.underlying && ocPrefs.token && !ocLoading) fetchOptionChain({ silent: true });
+      }, 30000);
+    }
+    function stopOcOiPoll() {
+      if (ocOiTimer) { clearInterval(ocOiTimer); ocOiTimer = null; }
+    }
+
+    document.getElementById("ocRefreshBtn").addEventListener("click", () => fetchOptionChain());
+
+    async function fetchOptionChain(opts = {}) {
+      const silent = !!opts.silent;
+      if (!ocPrefs.underlying || !ocPrefs.token) return;
+      ocLoading = true;
+      if (!silent) {
+        ocRefreshIcon.classList.add("oc-spin");
+        ocRefreshIcon.style.animation = "oaSpin 1s linear infinite";
+        // Loading state only when nothing is on screen — a refresh never
+        // blanks the rendered chain (OpenAlgo `loading && rows.length === 0`).
+        if (!(ocData && (ocData.chain || []).length)) {
+          document.getElementById("ocBody").innerHTML =
+            `<p class="oc-loadmsg">Loading chain…</p>`;
+        }
+      }
+      try {
+        const p = new URLSearchParams({
+          exchange: ocPrefs.exchange,
+          underlying: ocPrefs.tsymFut,
+          token: ocPrefs.token,
+          count: String(OC_STRIKE_COUNT),
+        });
+        if (ocPrefs.expiry) p.set("expiry", ocPrefs.expiry);
+        const res = await fetch(`/api/optionchain/chain?${p.toString()}`);
+        const payload = await res.json();
+        if (payload.stat !== "Ok") {
+          ocChainError = payload.emsg || "Chain unavailable";
+          ocFailBody(ocChainError);
+        } else {
+          ocChainError = null;
+          ocLastUpdate = new Date();
+          ocData = payload;
+          renderChain(payload);
+          startOcOiPoll();
+          startOcStatusTimer();
+        }
+      } catch (e) {
+        ocChainError = String(e.message || e);
+        ocFailBody(ocChainError);
+      } finally {
+        ocLoading = false;
+        if (!silent) {
+          ocRefreshIcon.style.animation = "";
+          ocRefreshIcon.classList.remove("oc-spin");
+        }
+      }
+    }
+
+    /* A failed refresh with a chain already on screen keeps the rows and
+       reports the stall in the amber footer line; with nothing rendered it
+       becomes the inline state with a Retry button (OpenAlgo body states). */
+    function ocFailBody(msg) {
+      if (ocData && (ocData.chain || []).length) {
+        updateOcStatus();
+        return;
+      }
+      const body = document.getElementById("ocBody");
+      const box = document.createElement("div");
+      box.className = "oc-empty";
+      const p = document.createElement("p");
+      p.textContent = msg;
+      const btn = document.createElement("button");
+      btn.className = "oc-retry";
+      btn.textContent = "Retry";
+      btn.addEventListener("click", () => { if (!ocLoading) fetchOptionChain(); });
+      box.append(p, btn);
+      body.innerHTML = "";
+      body.appendChild(box);
+      document.getElementById("ocPinbar").hidden = true;
+      clearOcLegs();
+      updateOcStatus();
+    }
+
+    // ---------- status footer (Not updating / Not streaming / closed) -------
+    /* A silently-polled chain that stopped updating otherwise reads as live.
+       Priority mirrors OptionChainPanel: stall > not-streaming > closed. */
+    function ocMarketOpen() {
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+      if (now.getDay() === 0 || now.getDay() === 6) return false;
+      const mins = now.getHours() * 60 + now.getMinutes();
+      return mins >= 555 && mins <= 930; // 09:15–15:30 IST
+    }
+
+    function updateOcStatus() {
+      const foot = document.getElementById("ocStatus");
+      if (!ocData || !(ocData.chain || []).length) { foot.hidden = true; return; }
+      const hhmm = ocLastUpdate ? ocLastUpdate.toLocaleTimeString() : "";
+      if (ocChainError && ocLastUpdate) {
+        foot.textContent = `Not updating. Last loaded ${hhmm}`;
+        foot.className = "wl-foot amber";
+      } else if (ocMarketOpen() && !(window.__wsConnected && window.__wsConnected())) {
+        foot.textContent = `Not streaming. Last update ${hhmm}`;
+        foot.className = "wl-foot amber";
+      } else if (!ocMarketOpen()) {
+        foot.textContent = "Market closed. Showing last traded prices.";
+        foot.className = "wl-foot";
+      } else {
+        foot.hidden = true;
+        return;
+      }
+      foot.hidden = false;
+    }
+
+    function startOcStatusTimer() {
+      if (ocStatusTimer) return;
+      ocStatusTimer = setInterval(updateOcStatus, 5000);
+    }
+
+    // ---------- header cell (headerCell): label + greek chip ---------------
+    function ocHeaderCell(column, align) {
+      const showChip = column.symbol !== column.label && !column.hideSymbol;
+      const chip = showChip ? `<span class="hchip">${column.symbol}</span>` : "";
+      return `<span class="oc-hcell">${align === "right" ? chip : ""}<span style="overflow:hidden;text-overflow:ellipsis;">${column.label}</span>${align === "left" ? chip : ""}</span>`;
+    }
+
+    /**
+     * The three-pane table:
+     *   [ call table ][ strike ][ put table ]
+     * Call cells read right-to-left toward the strike, puts left-to-right.
+     * Each side owns ONE horizontal scroller; the strike column never
+     * scrolls; the pinned strip under the body carries the visible bars.
+     */
+    function renderChain(payload) {
+      const spotEl = document.getElementById("ocSpot");
+      spotEl.hidden = false;
+      document.getElementById("ocAtmValue").textContent = payload.atm_strike;
+      document.getElementById("ocSpotValue").textContent = fmt(payload.underlying_ltp);
+      updatePcrValue();
+      paintSpotDirection();
+
+      /* The put side's render order is the canonical outward-from-strike
+         order; the call side is the SAME list reversed (callColumns), so
+         its LTP also sits against the strike. */
+      const cols = shownOcColumns();
+      const callCols = [...cols].reverse();
+      const callTracks = ocTracks(callCols);
+      const putTracks = ocTracks(cols);
+      const callW = ocWidthFor(callCols);
+      const putW = ocWidthFor(cols);
+      const peakOi = (payload.chain || []).reduce((m, r) => Math.max(m, (r.ce && r.ce.oi) || 0, (r.pe && r.pe.oi) || 0), 0);
+
+      // Header strip (call header reads right-to-left, chip on the outer edge)
+      const callHead = document.getElementById("ocCallHead");
+      const putHead = document.getElementById("ocPutHead");
+      callHead.style.gridTemplateColumns = callTracks;
+      callHead.style.width = callW + "px";
+      putHead.style.gridTemplateColumns = putTracks;
+      putHead.style.width = putW + "px";
+      callHead.innerHTML = callCols.map(c => ocHeaderCell(c, "right")).join("");
+      putHead.innerHTML = cols.map(c => ocHeaderCell(c, "left")).join("");
+
+      // Body rows
+      const rows = payload.chain || [];
+      if (!rows.length) {
+        document.getElementById("ocBody").innerHTML =
+          `<div class="oc-empty"><p>No chain for this contract. Check the expiry, or that master contracts are downloaded.</p></div>`;
+        document.getElementById("ocPinbar").hidden = true;
+        clearOcLegs();
+        updateOcStatus();
+        return;
+      }
+
+      const legCell = (side, row, column) => {
+        const leg = row[side];
+        const atm = row.strike === payload.atm_strike;
+        const otm = side === "ce" ? row.strike > payload.atm_strike : row.strike < payload.atm_strike;
+        const key = leg ? `${payload.exchange}:${String(leg.tsym).toUpperCase()}` : null;
+        const active = key !== null && key === pageActiveKey;
+        const cls = ["oc-cell", side,
+          otm ? "otm" : "",
+          active ? "legActive" : ""].filter(Boolean).join(" ");
+        const value = ocMetric(leg, column.id);
+        const change = column.id === "ltp" ? ocChangePct(leg) : null;
+        const chgHtml = change != null
+          ? `<span class="oc-ltp-chg ${change >= 0 ? "up" : "down"}">${change >= 0 ? "+" : ""}${change.toFixed(2)}%</span>`
+          : "";
+        let barHtml = "";
+        if (ocDisplay.showBars && column.id === "oi" && leg && leg.oi > 0 && peakOi > 0) {
+          const w = Math.min(100, (leg.oi / peakOi) * 100);
+          barHtml = `<span class="oc-oi-bar" style="width:${w}%;"></span>`;
+        }
+        return `<div class="${cls}" data-side="${side}" data-strike="${row.strike}">
+                  ${barHtml}
+                  <span class="oc-value ${leg ? "" : "oc-dim"}">
+                    <span>${value}</span>${chgHtml}
+                  </span>
+                </div>`;
+      };
+
+      const callRows = rows.map(row =>
+        `<div class="oc-leg" style="grid-template-columns:${callTracks};">
+           ${callCols.map(c => legCell("ce", row, c)).join("")}
+         </div>`).join("");
+      const putRows = rows.map(row =>
+        `<div class="oc-leg" style="grid-template-columns:${putTracks};">
+           ${cols.map(c => legCell("pe", row, c)).join("")}
+         </div>`).join("");
+      const strikeRows = rows.map(row => {
+        const atm = row.strike === payload.atm_strike;
+        return `<div class="oc-strike rowcell${atm ? " atm" : ""}">${row.strike}</div>`;
+      }).join("");
+
+      /* Each side owns ONE horizontal scroller wrapping a content-width
+         stack of its rows — panning moves all rows on that side together,
+         the two sides stay independent, the strike column never scrolls. */
+      document.getElementById("ocBody").innerHTML = `
+        <div class="oc3-rowwrap">
+          <div class="oc3-side" id="ocCallSide"><div class="oc-sideInner" style="width:${callW}px;">${callRows}</div></div>
+          <div id="ocStrikeCol">${strikeRows}</div>
+          <div class="oc3-side" id="ocPutSide"><div class="oc-sideInner" style="width:${putW}px;">${putRows}</div></div>
+        </div>`;
+
+      // Fixed-width strike column keeps its separators on the body's lines.
+      const strikeCol = document.getElementById("ocStrikeCol");
+      strikeCol.style.width = "64px";
+      strikeCol.style.flexShrink = "0";
+
+      // The pinned bar's spacers get the same content widths as their
+      // tables, so the visible thumb covers the same fraction as the body's.
+      document.getElementById("ocCallPinInner").style.width = callW + "px";
+      document.getElementById("ocPutPinInner").style.width = putW + "px";
+
+      // Leg clicks chart the contract, the same pick the OA panel does.
+      document.getElementById("ocBody").querySelectorAll(".oc-cell").forEach(cell => {
+        cell.addEventListener("click", () => {
+          const side = cell.dataset.side === "ce" ? "ce" : "pe";
+          const strike = Number(cell.dataset.strike);
+          const row = rows.find(r => r.strike === strike);
+          const leg = row && row[side];
+          if (!leg || !leg.tsym) return;
+          if (leg.token && window.__addChartToken) window.__addChartToken(payload.exchange, leg.tsym, String(leg.token));
+          markCharted(payload.exchange, leg.tsym);
+          renderChain(ocData); // repaint active ring
+          window.__openBrokerSymbol(leg.tsym, payload.exchange);
+        });
+      });
+
+      // Shared pane pixel width across header/body/pinned bar.
+      ocApplyPaneWidths();
+
+      // Scroll sync between the pinned strips, the headers and the side
+      // scrollers — per-side guards, so a call drag can never fight a put
+      // drag (OpenAlgo `syncing` refs).
+      const callSide = document.getElementById("ocCallSide");
+      const putSide = document.getElementById("ocPutSide");
+      const callPin = document.getElementById("ocCallPin");
+      const putPin = document.getElementById("ocPutPin");
+      const callHeadPane = document.getElementById("ocCallHeadPane");
+      const putHeadPane = document.getElementById("ocPutHeadPane");
+      const syncing = { call: false, put: false };
+      const wire = (from, targets, side) => from.addEventListener("scroll", () => {
+        if (syncing[side]) return;
+        syncing[side] = true;
+        targets.forEach(t => { t.scrollLeft = from.scrollLeft; });
+        syncing[side] = false;
+      });
+      wire(callSide, [callPin, callHeadPane], "call");
+      wire(putSide, [putPin, putHeadPane], "put");
+      wire(callPin, [callSide, callHeadPane], "call");
+      wire(putPin, [putSide, putHeadPane], "put");
+      document.getElementById("ocPinbar").hidden = false;
+      callHeadPane.scrollLeft = 0;
+
+      // Put LTP against the strike needs nothing (scrollLeft 0); the call
+      // side must open fully scrolled right so ITS LTP meets the strike.
+      repinCallScroll();
+
+      // Subscribe the legs so they paint live from market-data frames.
+      wireOcLegs(payload);
+      updateOcStatus();
+    }
+
+    function updatePcrValue() {
+      if (!ocData || !ocData.chain) return;
+      let ceOi = 0, peOi = 0;
+      for (const row of ocData.chain) {
+        ceOi += (row.ce && row.ce.oi) || 0;
+        peOi += (row.pe && row.pe.oi) || 0;
+      }
+      document.getElementById("ocPcrLabel").textContent = `PCR(${ocData.chain.length})`;
+      const wrap = document.getElementById("ocPcrWrap");
+      if (wrap) wrap.title = `Across ${ocData.chain.length} strikes on screen`;
+      document.getElementById("ocPcrValue").textContent =
+        ceOi > 0 ? (peOi / ceOi).toFixed(2) : "-";
+    }
+
+    /* Tri-state spot, OpenAlgo spotDirection: green above the previous
+       close, red below it, NEUTRAL when the close is unknown or equal.
+       Persistent, never a tick-flash. */
+    function paintSpotDirection() {
+      const el = document.getElementById("ocSpotValue");
+      el.classList.remove("spot-up", "spot-down");
+      const ltp = Number(String(el.textContent).replace(/,/g, ""));
+      if (!Number.isFinite(ltp) || !(ocSpotPrevClose > 0) || ltp === ocSpotPrevClose) return;
+      el.classList.add(ltp > ocSpotPrevClose ? "spot-up" : "spot-down");
+    }
+
+    // ---------- chains columns menu -----------------------------------------
+    document.getElementById("ocColsBtn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById("ocColsMenu");
+      const open = !menu.hidden;
+      closeAllMenus(menu);
+      if (open) { menu.hidden = true; return; }
+      const frag = document.createDocumentFragment();
+      frag.appendChild(Object.assign(document.createElement("div"), { className: "oa-menu-label", textContent: "Columns" }));
+      for (const c of OC_COLUMNS) {
+        frag.appendChild(buildCheckItem(c.label, ocDisplay.columns.includes(c.id), () => {
+          ocDisplay.columns = ocDisplay.columns.includes(c.id)
+            ? ocDisplay.columns.filter(x => x !== c.id)
+            : [...ocDisplay.columns, c.id];
+          saveOcDisplay();
+          if (ocData) renderChain(ocData);
+        }));
+      }
+      frag.appendChild(Object.assign(document.createElement("div"), { className: "oa-menu-sep" }));
+      frag.appendChild(Object.assign(document.createElement("div"), { className: "oa-menu-label", textContent: "Options" }));
+      frag.appendChild(buildCheckItem("OI Bars", ocDisplay.showBars, () => {
+        ocDisplay.showBars = !ocDisplay.showBars;
+        saveOcDisplay();
+        if (ocData) renderChain(ocData);
+      }));
+      menu.innerHTML = "";
+      menu.appendChild(frag);
+      menu.hidden = false;
+    });
+
+    // ============================================================
+    // TAB 3 — ALGO SYMBOLS (algo-hub/AlgoSymbolsPanel.tsx)
+    // One card per symbol, three lines:
+    //   1. symbol, enable switch, status, actions menu
+    //   2. Mode / Qty / Brick / LTP          (heading over value)
+    //   3. Last brick / Long-Short / Pending B-S / SL  (heading over value)
+    // ============================================================
+    const algoRows = new Map(); // id -> merged record (config fields + live status)
+    let algoTimer = null;
+    let algoBusy = new Set();
+
+    async function refreshAlgoSymbols() {
+      try {
+        const res = await fetch("/api/symbols");
+        const list = await res.json();
+        const arr = Array.isArray(list) ? list : [];
+        for (const rec of arr) {
+          const cfg = rec.config || rec;
+          const merged = {
+            id: rec.id,
+            exchange: cfg.exchange,
+            token: String(cfg.token),
+            tsym: cfg.trading_symbol,
+            name: cfg.strategy_name || cfg.trading_symbol,
+            trade_mode: cfg.trade_mode,
+            quantity: cfg.quantity,
+            brick_size: cfg.brick_size,
+            product: cfg.product || "",
+            config: cfg,   // full SymbolConfig for the settings dialog
+            status: "STOPPED",
+            ltp: null, position_qty: null, trend: null, brick: null,
+            pending_buy_order_id: null, pending_sell_order_id: null, sl_trigger_price: null,
+          };
+          if (rec.live_status) Object.assign(merged, rec.live_status);
+          algoRows.set(rec.id, merged);
+          if (window.__addChartToken) window.__addChartToken(merged.exchange, merged.tsym, merged.token);
+        }
+        for (const id of [...algoRows.keys()]) {
+          if (!arr.some(r => r.id === id)) algoRows.delete(id);
+        }
+        document.getElementById("algoError").hidden = true;
+        renderAlgo();
+      } catch (e) {
+        const err = document.getElementById("algoError");
+        err.textContent = "Could not reach the server";
+        err.hidden = false;
+      }
+    }
+
+    function startAlgoPolling() { stopAlgoPolling(); algoTimer = setInterval(refreshAlgoSymbols, 3000); }
+    function stopAlgoPolling() { if (algoTimer) { clearInterval(algoTimer); algoTimer = null; } }
+
+    function algoStatusBadge(r) {
+      const running = r.status === "RUNNING";
+      if (running) return `<span class="oa-badge run">Running</span>`;
+      if (r.status === "ERROR") return `<span class="oa-badge err">Error</span>`;
+      if (r.status === "HALTED") return `<span class="oa-badge warn">Halted</span>`;
+      return `<span class="oa-badge off">${r.status || "Disabled"}</span>`;
+    }
+
+    /** A heading with its value directly underneath (Field). */
+    function algoField(label, valueHtml, cls) {
+      return `<div class="algo-field">
+                <div class="k">${label}</div>
+                <div class="v ${cls || ""}">${valueHtml}</div>
+              </div>`;
+    }
+
+    function renderAlgo() {
+      const list = document.getElementById("algoList");
+      const entries = [...algoRows.values()];
+
+      // Mode badge across the configured symbols (consolidated trade modes).
+      const modes = [...new Set(entries.map(r => r.trade_mode).filter(Boolean))];
+      const badge = document.getElementById("algoModeBadge");
+      if (modes.length === 1) {
+        badge.className = "oa-badge off";
+        badge.textContent = modes[0];
+      } else if (modes.length > 1) {
+        badge.className = "oa-badge warn";
+        badge.textContent = "Mixed";
+      } else {
+        badge.className = "oa-badge off";
+        badge.textContent = "Mode —";
+      }
+
+      if (!entries.length) {
+        list.innerHTML = `<div class="algo-empty">No symbols yet. Use <span style="font-weight:600;">Add symbol</span> to configure one.</div>`;
+        return;
+      }
+
+      list.innerHTML = entries.map(r => {
+        const running = r.status === "RUNNING";
+        const isBusy = algoBusy.has(r.id);
+        const trendCls = r.trend === 1 ? "up" : r.trend === -1 ? "down" : "";
+        const brickText = r.trend === 1 ? `<span class="up">Green</span>` : r.trend === -1 ? `<span class="down">Red</span>` : "-";
+        const pos = r.position_qty == null ? "-" : r.position_qty;
+        const pendB = r.pending_buy_order_id ? "Buy" : "-";
+        const pendS = r.pending_sell_order_id ? "Sell" : "-";
+        const sl = r.sl_trigger_price != null ? fmt(r.sl_trigger_price) : "-";
+        return `
+        <div class="algo-card" data-id="${r.id}">
+          <div class="algo-l1">
+            <span class="algo-sym" title="${r.exchange}:${r.tsym}" data-chart="1">${r.tsym}</span>
+            <button class="oa-switch ${running ? "on" : ""}" data-toggle="1" aria-label="${running ? "Disable" : "Enable"} ${r.tsym}" ${isBusy ? "disabled" : ""}></button>
+            <span>${algoStatusBadge(r)}</span>
+            <span class="kekku">
+              <button class="oa-icon-btn" data-menu="1" aria-label="${r.tsym} actions" style="width:28px;height:28px;">${svg("kebab")}</button>
+              <div class="oa-menu" hidden>
+                <button class="oa-menu-item" data-act="edit" ${running ? "disabled" : ""}>Edit settings</button>
+                <button class="oa-menu-item" data-act="restart">Restart</button>
+                <button class="oa-menu-item" data-act="chart">Chart symbol</button>
+                <button class="oa-menu-item destructive" data-act="squareoff" ${!running ? "disabled" : ""}>Square off</button>
+                <div class="oa-menu-sep"></div>
+                <button class="oa-menu-item destructive" data-act="remove">Remove</button>
+              </div>
+            </span>
+          </div>
+          <div class="algo-grid" style="grid-template-columns: 1.35fr 0.7fr 0.8fr 1fr;">
+            ${algoField("Mode", r.trade_mode || "-")}
+            ${algoField("Qty", r.quantity ?? "-")}
+            ${algoField("Brick", r.brick_size ?? "-")}
+            ${algoField("LTP", r.ltp != null ? fmt(r.ltp) : "-")}
+          </div>
+          <div class="algo-grid" style="grid-template-columns: 1.1fr 0.85fr 1fr 1fr;">
+            ${algoField("Last brick", brickText, trendCls)}
+            ${algoField("Position", pos === 0 ? "FLAT" : pos > 0 ? `+${pos}` : String(pos), pos > 0 ? "up" : pos < 0 ? "down" : "")}
+            ${algoField("Pending B / S", `${pendB} / ${pendS}`)}
+            ${algoField("SL trigger", sl)}
+          </div>
+        </div>`;
+      }).join("");
+
+      list.querySelectorAll(".algo-card").forEach(cardEl => {
+        const id = cardEl.dataset.id;
+        const r = algoRows.get(id);
+
+        cardEl.querySelector(".algo-sym").addEventListener("click", () => {
+          markCharted(r.exchange, r.tsym);
+          window.__openBrokerSymbol(r.tsym, r.exchange);
+        });
+
+        cardEl.querySelector("[data-toggle]").addEventListener("click", (e) => {
+          if (algoBusy.has(id)) return;
+          const btn = e.currentTarget;
+          const r = algoRows.get(id);
+          const enabling = !runningNow(r);
+          const go = () => {
+            algoBusy.add(id);
+            btn.disabled = true;
+            fetch(`/api/symbols/${id}/${enabling ? "start" : "stop"}`, { method: "POST" })
+              .catch(() => {})
+              .finally(() => { algoBusy.delete(id); refreshAlgoSymbols(); });
+          };
+          // OpenAlgo's position-aware confirms on the switch. This engine
+          // only trades real orders (no paper mode), so enabling always
+          // confirms; disabling with an open position warns about what is
+          // left live at the broker.
+          if (enabling) {
+            if (!window.confirm(`Enable ${r.tsym}?\nEnabling starts the strategy and it will place real orders as soon as a signal appears.`)) return;
+            go();
+          } else if ((r.position_qty || 0) !== 0) {
+            if (!window.confirm(`Disable ${r.tsym}?\nThis symbol has an open position. Disabling stops the bot but leaves the position and its stop-loss order live at the broker. Use Square off first if you want to flatten.`)) return;
+            go();
+          } else {
+            go();
+          }
+        });
+
+        const menuBtn = cardEl.querySelector("[data-menu]");
+        const menu = cardEl.querySelector(".oa-menu");
+        menuBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const open = !menu.hidden;
+          closeAllMenus(menu);
+          menu.hidden = open;
+        });
+        menu.querySelectorAll(".oa-menu-item[data-act]").forEach(item => {
+          item.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            menu.hidden = true;
+            const act = item.dataset.act;
+            if (act === "chart") {
+              markCharted(r.exchange, r.tsym);
+              window.__openBrokerSymbol(r.tsym, r.exchange);
+              return;
+            }
+            if (act === "edit") {
+              openAlgoSettings("edit", id);
+              return;
+            }
+            if (act === "remove") {
+              if (!window.confirm(`Remove ${r.tsym}? This deletes the symbol and its settings.`)) return;
+              algoBusy.add(id);
+              await fetch(`/api/symbols/${id}`, { method: "DELETE" }).catch(() => {});
+              algoBusy.delete(id);
+              refreshAlgoSymbols();
+              return;
+            }
+            if (act === "squareoff") {
+              // OpenAlgo's SQUAREOFF confirm, verbatim in meaning.
+              if (!window.confirm(`Square off ${r.tsym}?\nCancels all pending entries and stop-loss orders for this symbol and closes the position. Trading for this symbol stays halted until you disable and re-enable it.`)) return;
+            }
+            if (algoBusy.has(id)) return;
+            algoBusy.add(id);
+            await fetch(`/api/symbols/${id}/${act}`, { method: "POST" }).catch(() => {});
+            algoBusy.delete(id);
+            refreshAlgoSymbols();
+          });
+        });
+      });
+    }
+
+    function runningNow(r) { return !!r && r.status === "RUNNING"; }
+
+    // ============================================================
+    // SYMBOL SETTINGS DIALOG (algo-hub/SymbolSettingsDialog.tsx)
+    // Add mode: debounced broker symbol search (POST /api/search-symbols)
+    //           → pick fills quantity from the lot size, tick/limit offset
+    //           from the contract tick, defaults the name; config saved as
+    //           POST /api/symbols {config:{...}}.
+    // Edit mode: prefilled from the saved SymbolConfig, PUT /api/symbols/{id}
+    //           (the backend stops → recreates → restarts the engine).
+    // Fields map 1:1 onto models/symbol_config.py — our engine is fixed
+    // brick_size only (OpenAlgo's atr/ltp_pct methods don't exist here).
+    // ============================================================
+    const escAlgo = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    const ALGO_EXCHANGES = ["NSE", "BSE", "NFO", "BFO", "MCX", "CDS", "BCD", "NCO"];
+
+    const ALGO_SECTIONS = [
+      { title: "Order", fields: [
+        { key: "product_type", label: "Product", kind: "select", options: ["I", "C", "M"], labels: { I: "INTRADAY", C: "CNC", M: "MARGIN" } },
+        { key: "quantity", label: "Quantity", kind: "number", hint: "Multiple of the lot size" },
+        { key: "trade_mode", label: "Trade mode", kind: "select", options: ["LONG_ONLY", "SHORT_ONLY", "LONG_SHORT"] },
+      ]},
+      { title: "Renko", fields: [
+        { key: "brick_size", label: "Brick size", kind: "number", step: "any", hint: "Fixed brick size (pts)" },
+        { key: "green_to_red_rev", label: "Green → Red reversal", kind: "number", hint: "Bricks" },
+        { key: "red_to_green_rev", label: "Red → Green reversal", kind: "number", hint: "Bricks" },
+      ]},
+      { title: "Entries and trailing", fields: [
+        { key: "buy_brick_no", label: "BUY brick no", kind: "number", hint: "Green brick, >= 0" },
+        { key: "sell_brick_no", label: "SELL brick no", kind: "number", hint: "Red brick, <= 0" },
+        { key: "limit_price_buy_brick_no", label: "BUY limit = brick + N", kind: "number" },
+        { key: "limit_price_sell_brick_no", label: "SELL limit = brick + N", kind: "number" },
+        { key: "entry_trail_brick_number", label: "Entry trail (bricks)", kind: "number", step: "any", hint: "Empty = SL trail" },
+        { key: "sl_trail_brick_number", label: "SL trail (bricks)", kind: "number", step: "any" },
+      ]},
+      { title: "Prices and squareoff", fields: [
+        { key: "tick_size", label: "Tick size", kind: "number", step: "any" },
+        { key: "limit_offset", label: "SL trigger/limit offset", kind: "number", step: "any", hint: "Empty = tick size" },
+        { key: "sl_lmt_buffer", label: "Squareoff limit buffer", kind: "number", step: "any" },
+        { key: "squareoff", label: "Squareoff time (IST)", kind: "time" },
+      ]},
+    ];
+
+    const ALGO_FORM_DEFAULTS = {
+      strategy_name: "",
+      product_type: "I",
+      quantity: "1",
+      trade_mode: "LONG_ONLY",
+      brick_size: "1",
+      green_to_red_rev: "2",
+      red_to_green_rev: "2",
+      buy_brick_no: "1",
+      sell_brick_no: "-1",
+      limit_price_buy_brick_no: "3",
+      limit_price_sell_brick_no: "3",
+      entry_trail_brick_number: "",
+      sl_trail_brick_number: "2",
+      tick_size: "0.05",
+      limit_offset: "",
+      sl_lmt_buffer: "0.10",
+      squareoff: "15:15",
+      autostart: false,
+    };
+
+    let algoDlgEditing = null;   // record being edited, null in add mode
+    let algoDlgForm = null;
+    let algoDlgTimer = null;
+    let algoDlgSeq = 0;
+
+    function algoDlgCfgToForm(c) {
+      const pad = (n) => String(n).padStart(2, "0");
+      return {
+        strategy_name: c.strategy_name ?? "",
+        product_type: c.product_type ?? "I",
+        quantity: String(c.quantity ?? 1),
+        trade_mode: c.trade_mode ?? "LONG_ONLY",
+        brick_size: String(c.brick_size ?? 1),
+        green_to_red_rev: String(c.green_to_red_rev ?? 2),
+        red_to_green_rev: String(c.red_to_green_rev ?? 2),
+        buy_brick_no: String(c.buy_brick_no ?? 1),
+        sell_brick_no: String(c.sell_brick_no ?? -1),
+        limit_price_buy_brick_no: String(c.limit_price_buy_brick_no ?? 3),
+        limit_price_sell_brick_no: String(c.limit_price_sell_brick_no ?? 3),
+        entry_trail_brick_number: c.entry_trail_brick_number == null ? "" : String(c.entry_trail_brick_number),
+        sl_trail_brick_number: String(c.sl_trail_brick_number ?? 2),
+        tick_size: String(c.tick_size ?? 0.05),
+        limit_offset: c.limit_offset == null ? "" : String(c.limit_offset),
+        sl_lmt_buffer: String(c.sl_lmt_buffer ?? 0.10),
+        squareoff: `${pad(c.squareoff_hour ?? 15)}:${pad(c.squareoff_minute ?? 15)}`,
+        autostart: !!c.autostart,
+      };
+    }
+
+    function openAlgoSettings(mode, id) {
+      const rec = mode === "edit" && id ? algoRows.get(id) : null;
+      algoDlgEditing = rec || null;
+      algoDlgForm = rec
+        ? algoDlgCfgToForm(rec.config || {})
+        : Object.assign({}, ALGO_FORM_DEFAULTS);
+
+      const editing = !!rec;
+      const cfg = rec ? (rec.config || {}) : null;
+      // Title / description / save (OpenAlgo's strings).
+      document.getElementById("algoDlgTitle").textContent = editing ? `Edit ${rec.tsym || cfg.trading_symbol}` : "Add symbol for trade";
+      document.getElementById("algoDlgDesc").textContent = editing
+        ? "Settings apply the next time this symbol is enabled."
+        : "Search the symbol master, then set this symbol's own configuration.";
+      document.getElementById("algoDlgSave").textContent = editing ? "Save settings" : "Add symbol";
+
+      // Exchange selector (add mode only, like OpenAlgo)
+      const exSel = document.getElementById("algoDlgExchange");
+      exSel.innerHTML = ALGO_EXCHANGES.map(x =>
+        `<option value="${x}" ${x === String(rec?.config?.exchange ?? "NFO") ? "selected" : ""}>${x}</option>`).join("");
+      exSel.disabled = editing;
+
+      // Search row (add) vs fixed symbol row (edit — symbol/exchange are fixed)
+      document.getElementById("algoDlgSearch").value = "";
+      const resultsBox = document.getElementById("algoDlgResults");
+      resultsBox.hidden = true; resultsBox.innerHTML = "";
+      const selEl = document.getElementById("algoDlgSelected");
+      if (editing) {
+        selEl.innerHTML = `Edit settings for <span class="mono">${escAlgo(rec.exchange)}:${escAlgo(rec.tsym || cfg.trading_symbol)}</span>`;
+        selEl.hidden = false;
+      } else {
+        selEl.hidden = true; selEl.innerHTML = "";
+      }
+
+      document.getElementById("algoDlgError").hidden = true;
+      algoDlgRenderGroups();
+      document.getElementById("algoDlgOverlay").hidden = false;
+    }
+
+    function algoDlgClose() {
+      document.getElementById("algoDlgOverlay").hidden = true;
+      algoDlgEditing = null;
+      algoDlgForm = null;
+      clearTimeout(algoDlgTimer);
+    }
+
+    function algoDlgRenderGroups() {
+      const wrap = document.getElementById("algoDlgGroups");
+      wrap.innerHTML = ALGO_SECTIONS.map(sec => `
+        <div class="oa-dlg-section-title">${escAlgo(sec.title)}</div>
+        <div class="oa-dlg-fields">
+          ${sec.fields.map(f => {
+            const hint = f.hint ? `<div class="hint">${f.hint}</div>` : "";
+            if (f.kind === "checkbox") {
+              return `<label class="oa-dlg-check"><input type="checkbox" data-f="${f.key}" ${algoDlgForm[f.key] ? "checked" : ""} /><span>${f.label}</span></label>`;
+            }
+            if (f.kind === "select") {
+              return `<label class="oa-dlg-field">${f.label}
+                <select data-f="${f.key}">${f.options.map(o =>
+                  `<option value="${o}" ${algoDlgForm[f.key] === o ? "selected" : ""}>${(f.labels && f.labels[o]) || o}</option>`).join("")}</select>${hint}</label>`;
+            }
+            const type = f.kind === "time" ? "time" : f.kind === "text" ? "text" : "number";
+            return `<label class="oa-dlg-field">${f.label}
+              <input type="${type}" data-f="${f.key}" value="${algoDlgForm[f.key] ?? ""}" ${f.step ? `step="${f.step}"` : ""} />${hint}</label>`;
+          }).join("")}
+        </div>`).join("");
+
+      wrap.querySelectorAll("[data-f]").forEach(el => {
+        const key = el.dataset.f;
+        const evt = el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "input";
+        el.addEventListener(evt, () => { algoDlgForm[key] = el.type === "checkbox" ? el.checked : el.value; });
+      });
+    }
+
+    // ---- debounced broker symbol search (add mode only) ---------------------
+    const dlgSearchInput = document.getElementById("algoDlgSearch");
+    dlgSearchInput.addEventListener("input", () => {
+      clearTimeout(algoDlgTimer);
+      algoDlgForm.trading_symbol = "";
+      algoDlgForm.token = "";
+      const q = dlgSearchInput.value.trim();
+      const resBox = document.getElementById("algoDlgResults");
+      if (q.length < 2) { resBox.hidden = true; resBox.innerHTML = ""; return; }
+      algoDlgTimer = setTimeout(async () => {
+        const seq = ++algoDlgSeq;
+        const exchange = document.getElementById("algoDlgExchange").value;
+        resBox.hidden = false;
+        resBox.innerHTML = `<div style="padding:7px 9px;font-size:12px;color:var(--oa-muted-fg);">Searching…</div>`;
+        try {
+          const r = await fetch("/api/search-symbols", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: q, exchange }),
+          });
+          if (seq !== algoDlgSeq) return;
+          const d = await r.json();
+          const values = (d && d.values) || [];
+          if (!values.length) {
+            resBox.innerHTML = `<div style="padding:7px 9px;font-size:12px;color:var(--oa-muted-fg);">No matches</div>`;
+            return;
+          }
+          resBox.innerHTML = values.map((v, i) => `
+            <button type="button" class="oa-dlg-result" data-i="${i}">
+              <span class="mono">${escAlgo(v.tsym)}</span>
+              <small>${escAlgo(v.exch || exchange)} · lot ${escAlgo(v.ls ?? "-")} · tick ${escAlgo(v.ti ?? "-")}</small>
+            </button>`).join("");
+          resBox.querySelectorAll(".oa-dlg-result").forEach(btn => {
+            btn.addEventListener("click", () => algoDlgPick(values[Number(btn.dataset.i)], exchange));
+          });
+        } catch {
+          if (seq === algoDlgSeq) { resBox.hidden = true; }
+        }
+      }, 300);
+    });
+
+    function algoDlgPick(v, exchange) {
+      algoDlgForm.trading_symbol = v.tsym;
+      algoDlgForm.token = String(v.token ?? "");
+      algoDlgForm.exchange = v.exch || exchange;
+      // Fresh add: contract lot size + broker tick for all price offsets
+      // (OpenAlgo fills its strategy defaults the same way), then a display
+      // name from the scrip master.
+      if (v.ls) algoDlgForm.quantity = String(v.ls);
+      if (v.ti) {
+        algoDlgForm.tick_size = String(v.ti);
+        algoDlgForm.limit_offset = String(v.ti);
+      }
+      algoDlgForm.strategy_name = v.dname || v.cname || v.tsym;
+      const selEl = document.getElementById("algoDlgSelected");
+      selEl.innerHTML = `Selected: <span class="mono">${escAlgo(v.exch || exchange)}:${escAlgo(v.tsym)}</span>`;
+      selEl.hidden = false;
+      const resBox = document.getElementById("algoDlgResults");
+      resBox.hidden = true; resBox.innerHTML = "";
+      dlgSearchInput.value = "";
+      algoDlgRenderGroups();
+    }
+
+    // ---- save ----------------------------------------------------------------
+    async function algoDlgSubmit() {
+      const err = document.getElementById("algoDlgError");
+      err.hidden = true;
+      const editing = !!algoDlgEditing;
+      if (!editing && !algoDlgForm.trading_symbol) {
+        err.textContent = "Search and pick a symbol first";
+        err.hidden = false;
+        return;
+      }
+      const num = (k, dflt) => { const n = Number(algoDlgForm[k]); return Number.isFinite(n) && String(algoDlgForm[k]).trim() !== "" ? n : dflt; };
+      const iint = (k, dflt) => Math.round(num(k, dflt));
+      const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+      const sq = String(algoDlgForm.squareoff || "15:15").split(":");
+      const cfg = {
+        strategy_name: String(algoDlgForm.strategy_name || "").trim() || algoDlgForm.trading_symbol || "Algo",
+        exchange: editing ? algoDlgEditing.exchange : algoDlgForm.exchange,
+        trading_symbol: editing ? algoDlgEditing.tsym : algoDlgForm.trading_symbol,
+        token: editing ? String(algoDlgEditing.token) : String(algoDlgForm.token),
+        quantity: Math.max(1, iint("quantity", 1)),
+        product_type: algoDlgForm.product_type || "I",
+        brick_size: Math.max(0.01, num("brick_size", 1)),
+        green_to_red_rev: Math.max(1, iint("green_to_red_rev", 2)),
+        red_to_green_rev: Math.max(1, iint("red_to_green_rev", 2)),
+        buy_brick_no: iint("buy_brick_no", 1),
+        sell_brick_no: iint("sell_brick_no", -1),
+        limit_price_buy_brick_no: iint("limit_price_buy_brick_no", 3),
+        limit_price_sell_brick_no: iint("limit_price_sell_brick_no", 3),
+        tick_size: num("tick_size", 0.05),
+        sl_trail_brick_number: num("sl_trail_brick_number", 2),
+        entry_trail_brick_number: algoDlgForm.entry_trail_brick_number === "" ? null : num("entry_trail_brick_number", 2),
+        limit_offset: algoDlgForm.limit_offset === "" ? null : num("limit_offset", 0.05),
+        sl_lmt_buffer: num("sl_lmt_buffer", 0.10),
+        trade_mode: algoDlgForm.trade_mode || "LONG_ONLY",
+        squareoff_hour: clamp(Math.round(Number(sq[0]) || 15), 0, 23),
+        squareoff_minute: clamp(Math.round(Number(sq[1]) || 0), 0, 59),
+        autostart: !!algoDlgForm.autostart,
+      };
+      const btn = document.getElementById("algoDlgSave");
+      btn.disabled = true;
+      btn.textContent = editing ? "Saving…" : "Adding…";
+      try {
+        const res = await fetch(editing ? `/api/symbols/${algoDlgEditing.id}` : "/api/symbols", {
+          method: editing ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ config: cfg }),
+        });
+        if (!res.ok) {
+          let detail = "";
+          try { const d = await res.json(); detail = typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail || d); } catch {}
+          throw new Error(detail || `HTTP ${res.status}`);
+        }
+        algoDlgClose();
+        refreshAlgoSymbols();
+      } catch (e2) {
+        err.textContent = e2.message || "Save failed";
+        err.hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = editing ? "Save settings" : "Add symbol";
+      }
+    }
+
+    document.getElementById("algoAddBtn").addEventListener("click", () => openAlgoSettings("add"));
+    document.getElementById("algoDashBtn").addEventListener("click", () => window.open("/", "_blank"));
+    document.getElementById("algoDlgCancel").addEventListener("click", algoDlgClose);
+    document.getElementById("algoDlgClose").addEventListener("click", algoDlgClose);
+    document.getElementById("algoDlgSave").addEventListener("click", algoDlgSubmit);
+    document.getElementById("algoDlgOverlay").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) algoDlgClose();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !document.getElementById("algoDlgOverlay").hidden) algoDlgClose();
+    });
+
+    document.getElementById("algoRefreshBtn").addEventListener("click", () => refreshAlgoSymbols());
+    document.getElementById("algoChartFocusBtn").addEventListener("click", () => refreshAlgoSymbols());
+
+    // Live status patches from ws: {"type":"status","instance_id":..,"status":{...}}
+    function updateAlgoFromStatus(msg) {
+      if (!algoRows.has(msg.instance_id)) return;
+      const merged = Object.assign({}, algoRows.get(msg.instance_id), msg.status || {});
+      algoRows.set(msg.instance_id, merged);
+      renderAlgo();
+    }
+
+    // ---------- page tick router (market_data frames from the module) -------
+    // md looks like {exchange, token, feed, data:{ltp, prev_close, volume,
+    // open, high, low, bid, ask, oi, ...}} — the OpenAlgo-normalized
+    // market-data payload. Legacy flat ticks are converted by the module
+    // before they reach here.
+    window.__pageTick = (md) => {
+      updateWatchlistTick(md);
+      const d = md.data || {};
+      const ltp = d.ltp != null ? Number(d.ltp) : null;
+      if (ocLiveKey && `${md.exchange}|${md.token}` === ocLiveKey) {
+        // The underlying's feed carries its previous close — the tri-state
+        // anchor. The spot text itself moves with every frame.
+        if (d.prev_close != null && Number(d.prev_close) > 0) {
+          ocSpotPrevClose = Number(d.prev_close);
+        }
+        if (ltp) {
+          const el = document.getElementById("ocSpotValue");
+          el.textContent = fmt(ltp);
+          paintSpotDirection();
+        }
+      }
+      paintOcLegs(md); // live option-chain legs (no-op when token not a leg)
+    };
+    window.__pageStatus = updateAlgoFromStatus;
     // ============================================================
     // THEME TOGGLE
     // ============================================================
@@ -693,30 +3786,444 @@
       const selected = e.target.value;
       document.documentElement.setAttribute("data-theme", selected);
       localStorage.setItem("cognix_theme", selected);
-      renderChart();
-      updateTickerTheme();
+      if (window.__brokerSetTheme) window.__brokerSetTheme(selected);
     });
 
     // ============================================================
     // INIT
     // ============================================================
-    renderChart();
+    // openPanel is a toggle (OpenAlgo behaviour), so clear the remembered
+    // id before restoring — otherwise the boot would immediately "close" it.
+    const restorePanel = activePanel;
+    activePanel = null;
+    if (restorePanel) openPanel(restorePanel);
+    seedWatchlistFromPlatform().then(() => { if (!wlItems.length) renderWatchlist(); });
     renderWatchlist();
-    updateTickerTheme();
+  </script>
 
-    // Handle window resize
-    let resizeTimeout;
-    window.addEventListener("resize", () => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        if (chartWidget) {
-          try { chartWidget.resize(); } catch (e) {}
+  <!-- ============================================================
+  BROKER TERMINAL — openalgo-charts + live Noren feed
+  ============================================================ -->
+  <script type="module">
+    import {
+      registerInterval,
+      withBarCache,
+    } from "/static/vendor/openalgo-charts/openalgo-charts.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-charts.indicators.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-charts.transform.mjs";
+    import { createWidget } from "/static/vendor/openalgo-charts/openalgo-charts.widget.mjs";
+
+    // ----------------------------------------------------------
+    // Interval registry — codes the Noren TPSeries can serve
+    // ----------------------------------------------------------
+    const INTERVAL_SECONDS = { "1m": 60, "3m": 180, "5m": 300, "10m": 600, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400 };
+    const NOREN_INTRV = { "1m": 1, "3m": 3, "5m": 5, "10m": 10, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240 };
+    for (const [code, sec] of Object.entries(INTERVAL_SECONDS)) {
+      try { registerInterval({ code, bucketing: { mode: "interval", seconds: sec } }); } catch (e) { /* already registered */ }
+    }
+
+    // ----------------------------------------------------------
+    // Symbol → token resolution
+    // ----------------------------------------------------------
+    const tokenMap = new Map(); // "EXCH:SYMBOL" -> token
+    tokenMap.set("NSE:NIFTY", "26000");       // Noren index tokens, always valid
+    tokenMap.set("NSE:BANKNIFTY", "26009");
+    tokenMap.set("BSE:SENSEX", "4172");
+
+    window.__registerChartTokens = function (symbols) {
+      for (const s of symbols || []) {
+        const cfg = s.config || s;
+        if (cfg.exchange && cfg.token) {
+          tokenMap.set(`${cfg.exchange}:${cfg.trading_symbol}`, String(cfg.token));
         }
-      }, 200);
-    });
+      }
+    };
 
-    console.log("📊 TradingView Charts loaded");
-    console.log(`📈 Current symbol: ${currentSymbol}`);
+    // Page hooks (right panel tabs) to pre-resolve tokens without search
+    window.__addChartToken = function (exchange, tsym, token) {
+      if (!exchange || !tsym || !token) return;
+      tokenMap.set(`${String(exchange).toUpperCase()}:${String(tsym).toUpperCase()}`, String(token));
+    };
+
+    async function resolveToken(exchange, symbol) {
+      const k = `${String(exchange || "").toUpperCase()}:${String(symbol).toUpperCase()}`;
+      if (tokenMap.has(k)) return tokenMap.get(k);
+      for (const exchFallback of ["NSE", "NFO", "BFO", "MCX"]) {
+        try {
+          const res = await fetch("/api/search-symbols", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: symbol, exchange: exchFallback }),
+          });
+          const payload = await res.json();
+          const values = (payload && payload.values) || [];
+          const exact = values.find(v => (v.tsym || v.ts || "").toUpperCase() === String(symbol).toUpperCase());
+          const v = exact || (values.length === 1 ? values[0] : null);
+          if (v) {
+            const tok = String(v.token);
+            tokenMap.set(`${(v.exch || exchange).toUpperCase()}:${String(v.tsym || v.ts).toUpperCase()}`, tok);
+            return tok;
+          }
+        } catch (e) { /* try the next exchange */ }
+      }
+      throw new Error(`No instrument token found for ${exchange}:${symbol} — is your broker session active?`);
+    }
+
+    // ----------------------------------------------------------
+    // Live market data over /ws — OpenAlgo market-data client parity
+    //   • desired-state subscriptions (mdWanted) replayed on every (re)open
+    //   • {"action":"subscribe"/"unsubscribe"} with per-key modes
+    //   • heartbeat watchdog: quiet >45s → {"action":"ping"} probes every
+    //     5s; ≥60s silence → reconnect (OpenAlgo 45s/5s watchdog)
+    //   • REST fallback: while the socket is down, poll /api/multiquotes
+    //     every 5s and feed the same handlers (fallback LED semantics)
+    // ----------------------------------------------------------
+    const liveSubs = new Map();     // "EXCH|TOKEN" -> {intervalSec, onBar, bar, lastDayVol}
+    const mdWanted = new Map();     // "EXCH|TOKEN" -> {exchange, token, mode}
+    let ws = null;
+    let wsRetry = 0;
+    let wsLastInbound = Date.now();
+    let wsPingTimer = null;
+    let ltpFallbackTimer = null;
+
+    function desiredSymbolsList() {
+      return [...mdWanted.values()].map(v => ({ exchange: v.exchange, token: v.token }));
+    }
+
+    function wsSend(obj) {
+      if (ws && ws.readyState === 1) { ws.send(JSON.stringify(obj)); return true; }
+      return false;
+    }
+
+    function resubscribeAll() {
+      // Market data (desired state — idempotent on reconnect)
+      if (mdWanted.size) {
+        wsSend({ action: "subscribe", mode: "quote", symbols: desiredSymbolsList() });
+      }
+      // Account-level order stream (OpenAlgo subscribe_orders)
+      wsSend({ action: "subscribe_orders" });
+    }
+
+    // Subscribe / unsubscribe helpers shared with the page panels (funnel).
+    // Panels call these via window hooks from the classic script.
+    function mdSubscribe(exchange, token) {
+      const key = `${String(exchange).toUpperCase()}|${String(token)}`;
+      const isNew = !mdWanted.has(key);
+      mdWanted.set(key, { exchange, token, mode: "quote" });
+      if (isNew) wsSend({ action: "subscribe", mode: "quote", symbols: [{ exchange, token }] });
+      return key;
+    }
+    function mdUnsubscribe(exchange, token) {
+      const key = `${String(exchange).toUpperCase()}|${String(token)}`;
+      const had = mdWanted.delete(key);
+      if (had) wsSend({ action: "unsubscribe", symbols: [{ exchange, token }] });
+      return key;
+    }
+    window.__wsSubKey = mdSubscribe;
+    window.__wsUnsubKey = mdUnsubscribe;
+    // Connection probe for panels — the option-chain status footer's
+    // "Not streaming" line reads it every 5s.
+    window.__wsConnected = () => !!(ws && ws.readyState === WebSocket.OPEN);
+
+    // ---------- REST LTP fallback (WS down) — OpenAlgo startLtpFallback ----
+    function startLtpFallback() {
+      if (ltpFallbackTimer) return;
+      ltpFallbackTimer = setInterval(async () => {
+        const symbols = desiredSymbolsList();
+        if (!symbols.length) return;
+        try {
+          const res = await fetch("/api/multiquotes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ symbols }),
+          });
+          const payload = await res.json();
+          for (const q of (payload && payload.quotes) || []) {
+            if (q.status !== "success") continue;
+            handleMarketData({
+              type: "market_data",
+              exchange: q.exchange,
+              token: q.token,
+              feed: "rest",
+              data: q,
+            });
+          }
+        } catch (e) { /* next tick retries */ }
+      }, 5000);
+    }
+    function stopLtpFallback() {
+      if (ltpFallbackTimer) { clearInterval(ltpFallbackTimer); ltpFallbackTimer = null; }
+    }
+
+    // ---------- market-data routing (shared by WS frames + REST fallback) --
+    function handleMarketData(md) {
+      if (window.__pageTick) window.__pageTick(md); // watchlist / option chain, works panel-open or not
+      const key = `${md.exchange}|${md.token}`;
+      const sub = liveSubs.get(key);
+      if (!sub) return;
+      const d = md.data || {};
+      const ltp = Number(d.ltp);
+      if (!Number.isFinite(ltp) || ltp <= 0) return;
+
+      const ts = d.ts || Math.floor(Date.now() / 1000);
+      const bucket = Math.floor(ts / sub.intervalSec) * sub.intervalSec;
+
+      // Day-volume deltas → per-bar volume (feed v is a running total)
+      let volDelta = 0;
+      if (d.volume != null) {
+        if (sub.lastDayVol != null && d.volume > sub.lastDayVol) {
+          volDelta = d.volume - sub.lastDayVol;
+        }
+        sub.lastDayVol = d.volume;
+      }
+
+      let bar = sub.bar;
+      if (!bar || bar.time !== bucket) {
+        // New bucket. seedFrom (the loaded history's last bar) continues
+        // the current candle when it matches; otherwise the previous
+        // bar's close becomes the opening price for continuity.
+        const seed = (!bar && sub.seed && sub.seed.time === bucket) ? sub.seed : null;
+        bar = {
+          time: bucket,
+          open: seed ? seed.open : (bar ? bar.close : ltp),
+          high: seed ? Math.max(seed.high, ltp) : ltp,
+          low: seed ? Math.min(seed.low, ltp) : ltp,
+          close: ltp,
+          volume: seed ? seed.volume || 0 : 0,
+        };
+        sub.bar = bar;
+      }
+      bar.high = Math.max(bar.high, ltp);
+      bar.low = Math.min(bar.low, ltp);
+      bar.close = ltp;
+      bar.volume = (bar.volume || 0) + volDelta;
+      sub.onBar({ ...bar });
+    }
+    window.__pageMarketData = handleMarketData;
+
+    function destroySocket() {
+      if (wsPingTimer) { clearInterval(wsPingTimer); wsPingTimer = null; }
+      try { ws && ws.close(); } catch (e) {}
+      ws = null;
+    }
+
+    function connectWS() {
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+      ws.onopen = () => {
+        wsRetry = 0;
+        wsLastInbound = Date.now();
+        stopLtpFallback();
+        // OpenAlgo heartbeat watchdog: quiet >45s → action ping every 5s;
+        // ≥60s of silence → the socket is a zombie, recycle it.
+        if (wsPingTimer) clearInterval(wsPingTimer);
+        wsPingTimer = setInterval(() => {
+          const quietMs = Date.now() - wsLastInbound;
+          if (quietMs >= 60000) { destroySocket(); return; }
+          if (quietMs >= 45000) wsSend({ action: "ping" });
+        }, 5000);
+        resubscribeAll();
+      };
+
+      ws.onclose = () => {
+        wsRetry = Math.min(wsRetry + 1, 10);
+        destroySocket();
+        startLtpFallback(); // candle + panel data keep flowing over REST
+        setTimeout(connectWS, 1000 * wsRetry);
+      };
+      ws.onerror = () => { try { ws.close(); } catch (e) {} };
+
+      ws.onmessage = (event) => {
+        wsLastInbound = Date.now();
+        let msg;
+        try { msg = JSON.parse(event.data); } catch (e) { return; }
+        if (msg.type === "status") {
+          // Renko engine status deltas — Algo Symbols panel lives off these
+          if (window.__pageStatus) window.__pageStatus(msg);
+          return;
+        }
+        if (msg.type === "subscribe" || msg.type === "subscribe_orders" ||
+            msg.type === "pong" || msg.type === "unsubscribe") {
+          return; // protocol acks — the watchdog only needs the timestamp
+        }
+        if (msg.type === "order_update") {
+          if (window.refreshAlgoSymbols) window.refreshAlgoSymbols();
+          return;
+        }
+        if (msg.type === "market_data") { handleMarketData(msg); return; }
+        if (msg.type === "tick" && window.__pageTick) {
+          // legacy shape, kept for safety during rolling restarts
+          handleMarketData({
+            type: "market_data",
+            exchange: msg.exchange,
+            token: msg.token,
+            feed: "quote",
+            data: {
+              ltp: msg.ltp,
+              ts: msg.ft || undefined,
+              volume: msg.day_volume != null ? msg.day_volume : undefined,
+              prev_close: msg.prev_close != null ? msg.prev_close : undefined,
+            },
+          });
+        }
+      };
+    }
+    connectWS();
+
+    // ----------------------------------------------------------
+    // Custom DataFeed bridging CogniX ⇄ openalgo-charts
+    // ----------------------------------------------------------
+    class NorenFeed {
+      async getBars(req) {
+        const token = await resolveToken(req.exchange, req.symbol);
+        const params = new URLSearchParams({
+          exchange: req.exchange,
+          token,
+          interval: NOREN_INTRV[req.interval] != null ? req.interval : "5m",
+        });
+        if (req.to) params.set("to_ts", String(Math.floor(req.to)));
+        if (req.from) params.set("from_ts", String(Math.floor(req.from)));
+
+        const res = await fetch(`/api/chart/history?${params.toString()}`);
+        if (!res.ok) throw new Error(`History request failed: HTTP ${res.status}`);
+        const payload = await res.json();
+        if (payload.stat !== "Ok") throw new Error(payload.emsg || "No history returned");
+
+        return payload.bars.map(b => ({
+          time: b.time,
+          open: b.open, high: b.high, low: b.low, close: b.close,
+          ...(b.volume != null ? { volume: b.volume } : {}),
+          ...(b.oi != null ? { oi: b.oi } : {}),
+        })).sort((a, b) => a.time - b.time);
+      }
+
+      async subscribeBars(req, onBar, opts) {
+        const token = await resolveToken(req.exchange, req.symbol);
+        const key = `${req.exchange}|${token}`;
+        const intervalSec = INTERVAL_SECONDS[req.interval] || 300;
+
+        liveSubs.set(key, {
+          intervalSec, onBar, bar: null, lastDayVol: null,
+          seed: opts && opts.seedFrom ? opts.seedFrom : null,
+        });
+        // Market data rides the page WebSocket now — same desired-state
+        // funnel the watchlist / option chain use (window.__wsSubKey).
+        if (window.__wsSubKey) window.__wsSubKey(req.exchange, token);
+
+        return () => { // unsubscribe
+          liveSubs.delete(key);
+          if (window.__wsUnsubKey) window.__wsUnsubKey(req.exchange, token);
+        };
+      }
+
+      async searchSymbols({ query }) {
+        const q = String(query || "").trim();
+        if (!q) return [];
+        // Multi-exchange parallel search — no exchange starves the others.
+        const SEARCH_EXCHANGES = ["NSE", "NFO", "BFO", "BSE", "MCX", "CDS"];
+        const settled = await Promise.allSettled(SEARCH_EXCHANGES.map(exch =>
+          fetch("/api/search-symbols", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: q, exchange: exch }),
+          }).then(r => r.json()).then(p => (p && p.values) || [])
+        ));
+        const seen = new Set();
+        const out = [];
+        for (const res of settled) {
+          const values = res.status === "fulfilled" ? (res.value || []) : [];
+          for (const v of values) {
+            const symbol = v.tsym || v.ts;
+            if (!symbol) continue;
+            const vExch = String(v.exch || "").toUpperCase() || "NSE";
+            const mapKey = `${vExch}:${String(symbol).toUpperCase()}`;
+            if (seen.has(mapKey)) continue;
+            seen.add(mapKey);
+            tokenMap.set(mapKey, String(v.token));
+            const text = (v.cname || v.name || v.text || symbol).toUpperCase();
+            let assetClass = "Equity";
+            if (v.optt === "CE" || v.optt === "PE") assetClass = "Options";
+            else if (text.includes("FUT")) assetClass = "Futures";
+            else if (vExch !== "NSE" && vExch !== "BSE") assetClass = "Derivatives";
+            out.push({
+              symbol,
+              exchange: vExch,
+              name: v.cname || v.name || symbol,
+              assetClass,
+            });
+          }
+        }
+        return out.slice(0, 50);
+      }
+    }
+
+    // ----------------------------------------------------------
+    // Widget lifecycle
+    // ----------------------------------------------------------
+    let brokerWidget = null;
+    let brokerWidgetMeta = { symbol: null, exchange: null };
+
+    async function defaultSymbol() {
+      try {
+        const res = await fetch("/api/symbols");
+        const payload = await res.json();
+        const symbols = Array.isArray(payload) ? payload : (payload.symbols || []);
+        if (symbols.length) {
+          const cfg = symbols[0].config || symbols[0];
+          return { symbol: cfg.trading_symbol, exchange: cfg.exchange };
+        }
+      } catch (e) { /* fall through */ }
+      return { symbol: "NIFTY", exchange: "NSE" };
+    }
+
+    async function createBrokerWidget(opts = {}) {
+      const target = document.getElementById("terminal");
+      target.innerHTML = "";
+      const { symbol, exchange, interval } = opts.symbol ? opts : await defaultSymbol();
+
+      try {
+        brokerWidget = createWidget(target, {
+          feed: withBarCache(new NorenFeed(), { ttlMs: 60_000 }),
+          symbol,
+          exchange,
+          ...(interval ? { interval } : {}),
+          intervals: Object.keys(INTERVAL_SECONDS),
+          theme: currentTheme(),
+          mobile: "auto",
+          persist: true,
+        });
+        brokerWidgetMeta = { symbol, exchange };
+      } catch (e) {
+        target.innerHTML =
+          `<div class="chart-error"><span style="font-size:28px">⚠️</span>` +
+          `<b>Broker terminal failed to load</b><span>${String(e.message || e)}</span>` +
+          `<span>Check that the app is logged in to the broker (token valid) and reload.</span></div>`;
+        console.error("openalgo-charts widget creation failed:", e);
+      }
+    }
+
+    window.__openBrokerSymbol = async (symbol, exchange) => {
+      if (!symbol) return;
+      if (brokerWidget && brokerWidget.setSymbol) {
+        try { brokerWidget.setSymbol(symbol, exchange); brokerWidgetMeta = { symbol, exchange }; return; } catch (e) { /* fall through */ }
+      }
+      if (brokerWidget) { try { brokerWidget.destroy(); } catch (e) {} brokerWidget = null; }
+      await createBrokerWidget({ symbol, exchange });
+    };
+
+    window.__brokerSetTheme = async (theme) => {
+      if (brokerWidget) {
+        try { brokerWidget.destroy(); } catch (e) {}
+        brokerWidget = null;
+      }
+      await createBrokerWidget({ interval: null }); // persisted layout+selection restore
+    };
+
+    window.__brokerResize = () => { /* the widget observes its container itself */ };
+
+    createBrokerWidget();
+    console.log("📈 CogniX charts: openalgo-charts broker terminal booting");
   </script>
 </body>
 </html>

@@ -24,10 +24,12 @@ class InstanceManager:
         self._lock = threading.Lock()
         self.on_log = None      # callback(instance_id, entry) for ws broadcast
         self.on_status = None   # callback(instance_id, status_dict) for ws broadcast
+        self.on_watchlist_status = None  # callback(watchlist_id, status_dict) for ws broadcast
 
-    def set_callbacks(self, on_log=None, on_status=None):
+    def set_callbacks(self, on_log=None, on_status=None, on_watchlist_status=None):
         self.on_log = on_log
         self.on_status = on_status
+        self.on_watchlist_status = on_watchlist_status
 
     # -------- bootstrap --------
     def load_from_db(self, autostart_saved=True):
@@ -116,6 +118,12 @@ class InstanceManager:
         engine.restart()
         return engine.get_status()
 
+    def squareoff(self, instance_id):
+        engine = self.get_engine(instance_id)
+        if not engine:
+            raise KeyError(f"No instance for id {instance_id}")
+        return engine.squareoff()
+
     # -------- dashboard --------
     def all_statuses(self):
         with self._lock:
@@ -137,6 +145,49 @@ class InstanceManager:
                 merged.append({**entry, "symbol": e.cfg.strategy_name, "id": e.id})
         merged.sort(key=lambda x: x["time"])
         return merged[-limit:]
+
+    # -------- Watchlist Management --------
+    def add_to_watchlist(self, exchange, token, symbol, callback_id=None):
+        """
+        Add a symbol to watchlist for real-time tracking.
+        Returns a watchlist_id that can be used to reference this item.
+        """
+        if callback_id is None:
+            callback_id = f"wl_{exchange}_{token}"
+        
+        # Register with broker to receive feed updates
+        self.broker.register_watchlist_feed(
+            exchange=exchange,
+            token=token,
+            callback_id=callback_id,
+            callback=self._handle_watchlist_tick
+        )
+        
+        # Get initial status
+        initial_status = self.broker.get_watchlist_status(exchange, token)
+        if initial_status:
+            initial_status['symbol'] = symbol
+            initial_status['exchange'] = exchange
+            initial_status['token'] = token
+            if self.on_watchlist_status:
+                self.on_watchlist_status(callback_id, initial_status)
+        
+        return callback_id
+    
+    def remove_from_watchlist(self, exchange, token, callback_id=None):
+        """Remove a symbol from watchlist"""
+        if callback_id is None:
+            callback_id = f"wl_{exchange}_{token}"
+        self.broker.unregister_watchlist_feed(exchange, token, callback_id)
+    
+    def _handle_watchlist_tick(self, callback_id, status_data):
+        """Handle incoming watchlist tick data and broadcast"""
+        if self.on_watchlist_status:
+            self.on_watchlist_status(callback_id, status_data)
+
+    def get_watchlist_status(self, exchange, token):
+        """Get current watchlist status for a symbol"""
+        return self.broker.get_watchlist_status(exchange, token)
 
 
 instance_manager = InstanceManager()

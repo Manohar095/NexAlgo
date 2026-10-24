@@ -1291,7 +1291,190 @@
     }
 
     /* ==========================================================================
-       11. RESPONSIVE
+       11. ORDER/TRADE/POSITION/HOLDINGS DASHBOARD STYLES
+       ========================================================================== */
+
+    .dashboard-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-card);
+      padding: 4px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      border: 1px solid var(--border-color);
+    }
+
+    .dashboard-tab {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+    }
+
+    .dashboard-tab:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+
+    .dashboard-tab.active {
+      background: var(--input-bg);
+      color: var(--text-main);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      border: 1px solid var(--border-glow);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .dashboard-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .dashboard-card-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-main);
+      margin: 0;
+    }
+
+    .dashboard-card-header .timestamp {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .auto-refresh {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .auto-refresh input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #ff2d95;
+    }
+
+    .status-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status-item {
+      background: var(--input-bg);
+      padding: 8px 12px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .status-item .label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .status-item .count {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .status-item .count.open { color: #60a5fa; }
+    .status-item .count.filled { color: #34d399; }
+    .status-item .count.rejected { color: #f87171; }
+    .status-item .count.cancelled { color: #fbbf24; }
+    .status-item .count.partial { color: #f59e0b; }
+
+    .holdings-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .holdings-item {
+      background: var(--input-bg);
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+    }
+
+    .holdings-item .label {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .holdings-item .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .badge-info { background: #60a5fa33; color: #60a5fa; }
+    .badge-success { background: #34d39933; color: #34d399; }
+    .badge-danger { background: #f8717133; color: #f87171; }
+    .badge-warning { background: #fbbf2433; color: #fbbf24; }
+    .badge-buy { background: #34d39933; color: #34d399; }
+    .badge-sell { background: #f8717133; color: #f87171; }
+    .badge-open { background: #60a5fa33; color: #60a5fa; }
+    .badge-filled { background: #34d39933; color: #34d399; }
+    .badge-rejected { background: #f8717133; color: #f87171; }
+    .badge-cancelled { background: #fbbf2433; color: #fbbf24; }
+    .badge-partial { background: #f59e0b33; color: #f59e0b; }
+    .badge-complete { background: #34d39933; color: #34d399; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+    }
+
+    /* ==========================================================================
+       12. RESPONSIVE
        ========================================================================== */
 
     @media (max-width: 1024px) {
@@ -1373,6 +1556,19 @@
       }
       .search-results .result-item .symbol-actions {
         margin-top: 8px;
+      }
+      .dashboard-tabs {
+        flex-direction: column;
+      }
+      .dashboard-tab {
+        width: 100%;
+        text-align: center;
+      }
+      .status-summary {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .holdings-summary {
+        grid-template-columns: repeat(2, 1fr);
       }
     }
 
@@ -1482,6 +1678,108 @@
         </div>
       </div>
     </main>
+
+    <!-- ============================================================
+    DASHBOARD TABS: Orderbook, Tradebook, Positionbook, Holdings
+    ============================================================ -->
+    <section class="board" style="padding: 1.5rem 2rem;">
+      <div class="dashboard-tabs">
+        <button class="dashboard-tab active" data-tab="orders" onclick="switchDashboardTab('orders')">
+          📋 Orders
+        </button>
+        <button class="dashboard-tab" data-tab="trades" onclick="switchDashboardTab('trades')">
+          💰 Trades
+        </button>
+        <button class="dashboard-tab" data-tab="positions" onclick="switchDashboardTab('positions')">
+          📈 Positions
+        </button>
+        <button class="dashboard-tab" data-tab="holdings" onclick="switchDashboardTab('holdings')">
+          🏦 Holdings
+        </button>
+      </div>
+
+      <!-- Orderbook Tab -->
+      <div id="tab-orders" class="tab-content active">
+        <div class="dashboard-card-header">
+          <div>
+            <h3>📋 Orderbook</h3>
+            <span class="timestamp" id="orderbookTimestamp"></span>
+          </div>
+          <div class="auto-refresh">
+            <input type="checkbox" id="orderbookAutoRefresh" checked onchange="toggleAutoRefresh('orderbook')">
+            <label for="orderbookAutoRefresh">Auto-refresh (30s)</label>
+            <button class="btn btn-sm" onclick="fetchOrderbook()" style="background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 12px; cursor: pointer;">🔄 Refresh</button>
+          </div>
+        </div>
+        <div id="orderbookStatus" class="status-summary"></div>
+        <div class="loading" id="orderbookLoading">
+          <div class="spinner"></div>
+          <p style="margin-top: 8px; color: var(--text-muted);">Loading orders...</p>
+        </div>
+        <div id="orderbookContent"></div>
+      </div>
+
+      <!-- Tradebook Tab -->
+      <div id="tab-trades" class="tab-content">
+        <div class="dashboard-card-header">
+          <div>
+            <h3>💰 Tradebook</h3>
+            <span class="timestamp" id="tradebookTimestamp"></span>
+          </div>
+          <div class="auto-refresh">
+            <input type="checkbox" id="tradebookAutoRefresh" checked onchange="toggleAutoRefresh('tradebook')">
+            <label for="tradebookAutoRefresh">Auto-refresh (30s)</label>
+            <button class="btn btn-sm" onclick="fetchTradebook()" style="background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 12px; cursor: pointer;">🔄 Refresh</button>
+          </div>
+        </div>
+        <div class="loading" id="tradebookLoading">
+          <div class="spinner"></div>
+          <p style="margin-top: 8px; color: var(--text-muted);">Loading trades...</p>
+        </div>
+        <div id="tradebookContent"></div>
+      </div>
+
+      <!-- Positionbook Tab -->
+      <div id="tab-positions" class="tab-content">
+        <div class="dashboard-card-header">
+          <div>
+            <h3>📈 Positionbook</h3>
+            <span class="timestamp" id="positionbookTimestamp"></span>
+          </div>
+          <div class="auto-refresh">
+            <input type="checkbox" id="positionbookAutoRefresh" checked onchange="toggleAutoRefresh('positionbook')">
+            <label for="positionbookAutoRefresh">Auto-refresh (30s)</label>
+            <button class="btn btn-sm" onclick="fetchPositionbook()" style="background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 12px; cursor: pointer;">🔄 Refresh</button>
+          </div>
+        </div>
+        <div class="loading" id="positionbookLoading">
+          <div class="spinner"></div>
+          <p style="margin-top: 8px; color: var(--text-muted);">Loading positions...</p>
+        </div>
+        <div id="positionbookContent"></div>
+      </div>
+
+      <!-- Holdings Tab -->
+      <div id="tab-holdings" class="tab-content">
+        <div class="dashboard-card-header">
+          <div>
+            <h3>🏦 Holdings</h3>
+            <span class="timestamp" id="holdingsTimestamp"></span>
+          </div>
+          <div class="auto-refresh">
+            <input type="checkbox" id="holdingsAutoRefresh" checked onchange="toggleAutoRefresh('holdings')">
+            <label for="holdingsAutoRefresh">Auto-refresh (30s)</label>
+            <button class="btn btn-sm" onclick="fetchHoldings()" style="background: var(--input-bg); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 12px; cursor: pointer;">🔄 Refresh</button>
+          </div>
+        </div>
+        <div id="holdingsSummary" class="holdings-summary"></div>
+        <div class="loading" id="holdingsLoading">
+          <div class="spinner"></div>
+          <p style="margin-top: 8px; color: var(--text-muted);">Loading holdings...</p>
+        </div>
+        <div id="holdingsContent"></div>
+      </div>
+    </section>
 
     <section class="logs-panel">
       <div class="logs-header">

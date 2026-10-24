@@ -256,6 +256,18 @@ class TradingEngine:
 
         self.status = "STOPPED"
         self._log("INFO", "🛑 Stopped (open positions/orders at the broker are left untouched)")
+
+        # Disable re-arms trading (OpenAlgo semantics: after a square-off the
+        # symbol stays halted until it is disabled and re-enabled — stop()
+        # IS the disable, so the halt and its done-flags reset here. The
+        # broker-side positions/orders themselves are untouched.)
+        with self.state_lock:
+            self.trades_blocked = False
+            self.squareoff_done_today = False
+            self.squareoff_completed = False
+            self.squareoff_order_id = None
+            self.squareoff_side = None
+
         self._push_status()
 
         self._push_thread.join(timeout=3)   # <-- added
@@ -265,6 +277,35 @@ class TradingEngine:
         self.stop()
         time.sleep(0.5)
         self.start()
+
+    def squareoff(self):
+        """
+        Manual SQUAREOFF command (OpenAlgo algo-hub parity).
+
+        Cancels the SL order and both pending entries, then closes the open
+        position with a marketable LMT order. Like OpenAlgo's command, trading
+        for this symbol stays halted afterwards (trades_blocked=True) until
+        the symbol is disabled (stop clears the halt) and re-enabled, or the
+        monitor's next-day reset clears it.
+
+        Called from the API thread — serialized with the scheduled squareoff
+        by holding state_lock, the same way _squareoff_monitor holds it around
+        its own execution.
+        """
+        if self.status != "RUNNING":
+            self._log("WARNING", "⚠️ Squareoff requested but engine is stopped")
+            return self.get_status()
+
+        self._log("INFO", "🧹 Manual squareoff requested → cancelling pendings and flattening")
+        with self.state_lock:
+            self.trades_blocked = True
+            # Done flags prevent the 15:15 monitor from re-running after a
+            # manual flatten; the new-day reset (or a disable) re-arms them.
+            self.squareoff_done_today = True
+            self.squareoff_completed = True
+            self._execute_squareoff()
+        self._push_status()
+        return self.get_status()
 
     # ================= TIME UTILITIES =================
     def _get_current_time(self):

@@ -340,7 +340,6 @@ const searchResultsList = document.getElementById("searchResultsList");
 let searchResultsData = [];
 let searchTimeout = null;
 
-// Function to perform search with LTP
 async function performSearch() {
   const query = searchInputLarge?.value?.trim() || '';
   const exchange = searchExchangeSelect?.value || "NSE";
@@ -387,10 +386,8 @@ async function performSearch() {
         return;
       }
 
-      // Show loading
       searchResultsList.innerHTML = '<div class="no-results">Fetching live prices...</div>';
 
-      // Fetch LTP for each symbol
       const maxResults = Math.min(values.length, 20);
       const enhancedResults = [];
       
@@ -440,7 +437,6 @@ async function performSearch() {
         });
       }
       
-      // Add remaining results without LTP
       if (values.length > maxResults) {
         for (let i = maxResults; i < values.length; i++) {
           enhancedResults.push({
@@ -458,10 +454,8 @@ async function performSearch() {
       
       searchResultsData = enhancedResults;
 
-      // Render results with dark theme compatibility - With Watchlist button
       searchResultsList.innerHTML = `
         <div style="display: flex; flex-direction: column; width: 100%; font-size: 12px;">
-          <!-- Table Header -->
           <div style="display: flex; background: rgba(255, 255, 255, 0.05); padding: 8px 12px; font-weight: 600; font-size: 11px; color: var(--text-muted, #a0b4d0); border-bottom: 2px solid var(--border-color, rgba(255,255,255,0.12)); position: sticky; top: 0; z-index: 5; text-transform: uppercase; letter-spacing: 0.5px;">
             <div style="flex: 0.25; min-width: 28px; text-align: center;">#</div>
             <div style="flex: 1.8; min-width: 100px;">Symbol</div>
@@ -525,7 +519,6 @@ async function performSearch() {
   }, 300);
 }
 
-// Search input handler
 if (searchInputLarge) {
   searchInputLarge.addEventListener("input", performSearch);
   searchInputLarge.addEventListener("keypress", (e) => {
@@ -540,12 +533,10 @@ if (searchInputLarge) {
   });
 }
 
-// Exchange dropdown change handler
 if (searchExchangeSelect) {
   searchExchangeSelect.addEventListener("change", performSearch);
 }
 
-// Open search modal
 if (btnSearchSymbol) {
   btnSearchSymbol.addEventListener("click", () => {
     const overlay = document.getElementById("searchModalOverlay");
@@ -568,14 +559,11 @@ function selectSearchResult(index) {
 
   console.log("SELECTED SYMBOL:", item);
 
-  // Close search popup
   const searchOverlay = document.getElementById("searchModalOverlay");
   if (searchOverlay) searchOverlay.classList.add("hidden");
 
-  // Open Add Symbol form
   openCreateModal();
 
-  // Populate the form with the selected data
   const strategyNameField = document.getElementById("strategy_name");
   const exchangeField = document.getElementById("exchange");
   const tradingSymbolField = document.getElementById("trading_symbol");
@@ -583,7 +571,6 @@ function selectSearchResult(index) {
   const tickSizeField = document.getElementById("tick_size");
   const quantityField = document.getElementById("quantity");
 
-  // For options, try multiple fields to get the best name
   const displayName = item.dname || item.cname || item.tsym || "";
 
   if (strategyNameField) strategyNameField.value = displayName;
@@ -596,7 +583,6 @@ function selectSearchResult(index) {
   console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
 }
 
-// Close search popup
 const searchModalClose = document.getElementById("searchModalClose");
 if (searchModalClose) {
   searchModalClose.addEventListener("click", () => {
@@ -614,7 +600,7 @@ if (searchModalOverlay) {
   });
 }
 
-// ---------------- Select from Quotes Function (like selectSearchResult) ----------------
+// ---------------- Select from Quotes Function ----------------
 function selectFromQuotes() {
   console.log("selectFromQuotes called!");
   
@@ -626,16 +612,13 @@ function selectFromQuotes() {
   
   console.log("Quote data:", quoteData);
   
-  // Close quotes modal
   const quotesModalOverlay = document.getElementById('quotesModalOverlay');
   if (quotesModalOverlay) {
     quotesModalOverlay.classList.add('hidden');
   }
   
-  // Open Add Symbol form - using the same function as search results
   openCreateModal();
   
-  // Populate form fields
   const strategyNameField = document.getElementById("strategy_name");
   const exchangeField = document.getElementById("exchange");
   const tradingSymbolField = document.getElementById("trading_symbol");
@@ -643,7 +626,6 @@ function selectFromQuotes() {
   const tickSizeField = document.getElementById("tick_size");
   const quantityField = document.getElementById("quantity");
   
-  // For options, cname might have the full name with expiry
   const displayName = quoteData.cname || quoteData.dname || quoteData.tsym || '';
   const exchange = quoteData.exch || '';
   const token = quoteData.token || '';
@@ -712,7 +694,6 @@ async function getQuotes(exchange, token, symbol) {
   }
 }
 
-// ---------------- Display Quotes in Modal ----------------
 function displayQuotesInModal(data) {
   const modalContent = document.getElementById('quotesModalContent');
   
@@ -720,7 +701,6 @@ function displayQuotesInModal(data) {
   
   let html = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0;">
-      <!-- Basic Information -->
       <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Company Name</span>
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.cname || 'N/A')}</span>
@@ -750,7 +730,6 @@ function displayQuotesInModal(data) {
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.isin || 'N/A')}</span>
       </div>
       
-      <!-- Instrument Details -->
       <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Instrument</span>
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">
@@ -782,7 +761,6 @@ function displayQuotesInModal(data) {
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.prcftr_d || 'N/A')}</span>
       </div>
       
-      <!-- Price & Market Data -->
       <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Last Price</span>
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.lp || '0.00')}</span>
@@ -820,7 +798,6 @@ function displayQuotesInModal(data) {
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.ltd || data.exd || 'N/A')}</span>
       </div>
       
-      <!-- Best Bid/Ask (Level 1) -->
       <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Best Bid Price</span>
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp1 || '0.00')}</span>
@@ -838,7 +815,6 @@ function displayQuotesInModal(data) {
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq1 || '0')}</span>
       </div>
       
-      <!-- Best Bid/Ask (Level 2) -->
       <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 2</span>
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp2 || '0.00')}</span>
@@ -855,90 +831,9 @@ function displayQuotesInModal(data) {
         <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 2</span>
         <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq2 || '0')}</span>
       </div>
-      
-      <!-- Best Bid/Ask (Level 3) -->
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 3</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp3 || '0.00')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 3</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp3 || '0.00')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 3</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq3 || '0')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 3</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq3 || '0')}</span>
-      </div>
-      
-      <!-- Best Bid/Ask (Level 4) -->
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 4</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp4 || '0.00')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 4</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp4 || '0.00')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 4</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq4 || '0')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 4</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq4 || '0')}</span>
-      </div>
-      
-      <!-- Best Bid/Ask (Level 5) -->
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Price 5</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bp5 || '0.00')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Price 5</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sp5 || '0.00')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Qty 5</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bq5 || '0')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Qty 5</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.sq5 || '0')}</span>
-      </div>
-      
-      <!-- Best Bid/Ask Orders -->
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Bid Orders 1</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.bo1 || '0')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Ask Orders 1</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.so1 || '0')}</span>
-      </div>
-      
-      <!-- Additional Fields -->
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Option Type</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">
-          <span style="background: #feebc8; color: #744210; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">${escapeHTML(data.optt || data.opt || 'N/A')}</span>
-        </span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Expiry Date</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.exd || 'N/A')}</span>
-      </div>
-      <div style="background: var(--input-bg); padding: 12px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); grid-column: span 2;">
-        <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">Request Time</span>
-        <span style="font-size: 14px; font-weight: 600; color: var(--text-main);">${escapeHTML(data.request_time || 'N/A')}</span>
-      </div>
     </div>
   `;
 
-  // Add Close button only
   html += `
     <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-color);">
       <button 
@@ -954,7 +849,6 @@ function displayQuotesInModal(data) {
   modalContent.innerHTML = html;
 }
 
-// ---------------- Close Quotes Modal Function ----------------
 function closeQuotesModal() {
   console.log("closeQuotesModal called!");
   const quotesModalOverlay = document.getElementById('quotesModalOverlay');
@@ -980,7 +874,6 @@ function closeQuotesModal() {
   }
 }
 
-// ---------------- Quotes Modal Event Listeners ----------------
 const quotesModalOverlay = document.getElementById('quotesModalOverlay');
 const quotesModalClose = document.getElementById('quotesModalClose');
 
@@ -1002,7 +895,6 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ---------------- Make functions globally accessible ----------------
 window.closeQuotesModal = closeQuotesModal;
 window.getQuotes = getQuotes;
 window.selectSearchResult = selectSearchResult;
@@ -1055,270 +947,128 @@ if (logFilter) {
   });
 }
 
-// ---------------- WebSocket ----------------
-function connectWS() {
-  const proto = location.protocol === "https:" ? "wss:" : "ws:";
-  const ws = new WebSocket(`${proto}//${location.host}/ws`);
+// =====================================================================
+// WATCHLIST - LTP now updates exactly like the Strategy table: a
+// websocket tick mutates the in-memory item and calls renderWatchlist()
+// directly, with zero API calls in that hot path.
+//
+// Previous Close is fetched ONCE per token (on load / on add) and
+// cached in `previousCloseCache`. Every later LTP update — whether
+// from the initial fetch or from a websocket tick — reuses that
+// cached value to compute Change / Change% locally. It is never
+// re-fetched for the lifetime of that token in the watchlist.
+// =====================================================================
 
-  ws.onopen = () => { 
-    connDot.className = "conn-dot live"; 
-    connLabel.textContent = "live"; 
-  };
-  
-  ws.onclose = () => {
-    connDot.className = "conn-dot down"; 
-    connLabel.textContent = "reconnecting…";
-    setTimeout(connectWS, 2000);
-  };
-  
-  ws.onerror = () => ws.close();
+// Watchlist data
+let watchlistData = {};
 
-  ws.onmessage = (evt) => {
-    try {
-      const msg = JSON.parse(evt.data);
-      
-      // --- STATUS MESSAGES (Strategy Updates) ---
-      if (msg.type === "status") {
-        if (symbols[msg.instance_id]) {
-          symbols[msg.instance_id].live_status = msg.status;
-          renderBoard();
-        }
-      } 
-      
-      // --- LOG MESSAGES ---
-      else if (msg.type === "log") {
-        const name = knownSymbolNames[msg.instance_id];
-        appendLogLine({ ...msg.entry, id: msg.instance_id, symbol: name });
-      } 
-      
-      // --- QUOTE / LTP / TICK MESSAGES (Real-time Market Data) ---
-      else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick") {
-        const data = msg.data || msg;
-        if (data && data.token) {
-          const token = String(data.token);
-          const watchlistItem = watchlistData.find(item => String(item.token) === token);
-          
-          if (watchlistItem) {
-            // Extract price data
-            const ltp = parseFloat(data.lp || data.ltp || data.last_price || 0);
-            const prevClose = parseFloat(data.c || data.prev_close || 0);  // Previous Close from WebSocket
-            const open = parseFloat(data.o || data.open || 0);
-            
-            let change = 0;
-            let changePercent = 0;
-            
-            // Method 1: Use Previous Close (c) - Most accurate for daily change
-            if (prevClose > 0) {
-              change = ltp - prevClose;
-              changePercent = (change / prevClose) * 100;
-            } 
-            // Method 2: Use Open Price (o) - Fallback
-            else if (open > 0) {
-              change = ltp - open;
-              changePercent = (change / open) * 100;
-            }
-            // Method 3: Use cached LTP - Last resort
-            else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
-              const prevLtp = watchlistLTPCache[token].ltp || ltp;
-              change = ltp - prevLtp;
-              changePercent = (change / prevLtp) * 100;
-            }
-            
-            // Store in cache
-            watchlistLTPCache[token] = {
-              ltp: ltp,
-              change: change,
-              changePercent: changePercent,
-              prevClose: prevClose,
-              open: open,
-              lastUpdated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
-            };
-            
-            // Update UI if watchlist is visible
-            const watchlistBody = document.getElementById('watchlistBody');
-            if (watchlistBody && watchlistData.length > 0) {
-              updateWatchlistDisplay();
-            }
-          }
-        }
-      }
-      
-      // --- DEPTH MESSAGES (Market Depth / Level 2 Data) ---
-      else if (msg.type === "depth" || msg.type === "df" || msg.type === "dk") {
-        const data = msg.data || msg;
-        if (data && data.token) {
-          const token = String(data.token);
-          const watchlistItem = watchlistData.find(item => String(item.token) === token);
-          
-          if (watchlistItem) {
-            // Extract price data from depth message
-            const ltp = parseFloat(data.lp || data.ltp || 0);
-            const prevClose = parseFloat(data.c || data.prev_close || 0);  // Previous Close from depth
-            const open = parseFloat(data.o || data.open || 0);
-            const high = parseFloat(data.h || data.high || 0);
-            const low = parseFloat(data.l || data.low || 0);
-            const volume = parseFloat(data.v || data.volume || 0);
-            
-            let change = 0;
-            let changePercent = 0;
-            
-            // Use Previous Close for accurate daily change
-            if (prevClose > 0) {
-              change = ltp - prevClose;
-              changePercent = (change / prevClose) * 100;
-            } else if (open > 0) {
-              change = ltp - open;
-              changePercent = (change / open) * 100;
-            } else if (watchlistLTPCache[token] && watchlistLTPCache[token].ltp > 0) {
-              const prevLtp = watchlistLTPCache[token].ltp || ltp;
-              change = ltp - prevLtp;
-              changePercent = (change / prevLtp) * 100;
-            }
-            
-            // Store in cache with additional depth data
-            watchlistLTPCache[token] = {
-              ltp: ltp,
-              change: change,
-              changePercent: changePercent,
-              prevClose: prevClose,
-              open: open,
-              high: high,
-              low: low,
-              volume: volume,
-              // Bid/Ask Levels
-              bid: {
-                price1: parseFloat(data.bp1 || 0),
-                qty1: parseFloat(data.bq1 || 0),
-                price2: parseFloat(data.bp2 || 0),
-                qty2: parseFloat(data.bq2 || 0),
-                price3: parseFloat(data.bp3 || 0),
-                qty3: parseFloat(data.bq3 || 0),
-                price4: parseFloat(data.bp4 || 0),
-                qty4: parseFloat(data.bq4 || 0),
-                price5: parseFloat(data.bp5 || 0),
-                qty5: parseFloat(data.bq5 || 0)
-              },
-              ask: {
-                price1: parseFloat(data.sp1 || 0),
-                qty1: parseFloat(data.sq1 || 0),
-                price2: parseFloat(data.sp2 || 0),
-                qty2: parseFloat(data.sq2 || 0),
-                price3: parseFloat(data.sp3 || 0),
-                qty3: parseFloat(data.sq3 || 0),
-                price4: parseFloat(data.sp4 || 0),
-                qty4: parseFloat(data.sq4 || 0),
-                price5: parseFloat(data.sp5 || 0),
-                qty5: parseFloat(data.sq5 || 0)
-              },
-              lastUpdated: data.ft || data.lastUpdated || new Date().toLocaleTimeString()
-            };
-            
-            // Update UI if watchlist is visible
-            const watchlistBody = document.getElementById('watchlistBody');
-            if (watchlistBody && watchlistData.length > 0) {
-              updateWatchlistDisplay();
-            }
-          }
-        }
-      }
-      
-      // --- Any other message types (debug) ---
-      else {
-        // Uncomment for debugging
-        // console.log('📨 Unknown WebSocket message type:', msg.type, msg);
-      }
-      
-    } catch (error) {
-      console.error('WebSocket message parse error:', error);
-    }
-  };
+// token (string) -> previous close price. Populated once, reused forever.
+const previousCloseCache = {};
+
+function cachePrevClose(token, prevClose) {
+  if (token === undefined || token === null || token === '') return;
+  const key = String(token);
+  const val = parseFloat(prevClose);
+  // Only set it if we don't already have one — this is the "fetch once" guarantee.
+  if (!(key in previousCloseCache) && !isNaN(val) && val > 0) {
+    previousCloseCache[key] = val;
+  }
 }
 
-// ---------------- Init ----------------
-const logoutBtn = document.getElementById("btnLogout");
-if (logoutBtn) {
-  logoutBtn.addEventListener("click", async () => {
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
-      window.location.href = "/login";
-    }
-  });
+function getPrevClose(token) {
+  return previousCloseCache[String(token)];
 }
 
-(async function init() {
-  try {
-    const authStatus = await fetch("/api/auth/status").then(r => r.json());
-    if (!authStatus.auth_enabled && logoutBtn) {
-      logoutBtn.classList.add("hidden");
-    }
-  } catch (e) { /* ignore */ }
+function clearPrevClose(token) {
+  delete previousCloseCache[String(token)];
+}
 
-  await loadSymbols();
-  await loadInitialLogs();
-  loadWatchlist();
-  connectWS();
-  setInterval(loadSymbols, 15000);
-  
-  // Auto-refresh watchlist every 3 seconds for independent LTP updates
-  setInterval(() => {
-    if (watchlistData.length > 0) {
-      refreshWatchlist();
-    }
-  }, 1000);
-})();
+// Single, shared update path for BOTH the initial REST fetch and every
+// websocket tick — mirrors how renderBoard() is the single update path
+// for the Strategy table.
+function applyLTPUpdate(item, ltp) {
+  if (!item || ltp === null || ltp === undefined || isNaN(ltp)) return;
 
+  const prevClose = getPrevClose(item.token);
 
-// ---------------- Watchlist Functionality ----------------
+  let change = 0;
+  let changePercent = 0;
+  if (prevClose && prevClose > 0) {
+    change = ltp - prevClose;
+    changePercent = (change / prevClose) * 100;
+  }
 
-// Watchlist data stored in localStorage
-let watchlistData = [];
-// Watchlist LTP cache for real-time updates
-let watchlistLTPCache = {};
+  item.ltp = ltp;
+  item.change = change;
+  item.changePercent = changePercent;
+  item.lastUpdated = new Date().toLocaleTimeString();
+
+  renderWatchlist();
+}
 
 // Load watchlist from localStorage
 function loadWatchlist() {
   try {
     const saved = localStorage.getItem('cognix_watchlist');
     if (saved) {
-      watchlistData = JSON.parse(saved);
+      const items = JSON.parse(saved);
+      watchlistData = {};
+      items.forEach(item => {
+        const id = `wl_${Date.now()}_${Math.random()}`;
+        watchlistData[id] = {
+          id: id,
+          symbol: item.symbol,
+          exchange: item.exchange,
+          token: item.token,
+          ltp: null,
+          change: 0,
+          changePercent: 0,
+          lastUpdated: null
+        };
+      });
     } else {
-      // Start with empty watchlist
-      watchlistData = [];
-      saveWatchlist();
+      watchlistData = {};
     }
   } catch (e) {
     console.error('Error loading watchlist:', e);
-    watchlistData = [];
+    watchlistData = {};
   }
   
-  // Update count
-  const countEl = document.getElementById('watchlistCount');
-  if (countEl) {
-    countEl.textContent = watchlistData.length;
-  }
-  
+  updateWatchlistCount();
   renderWatchlist();
+
+  // Seed previous-close cache + initial LTP exactly once per symbol,
+  // right when the watchlist loads — same idea as loadSymbols() pulling
+  // initial live_status for the Strategy table on page load.
+  Object.keys(watchlistData).forEach(id => fetchWatchlistLTP(id));
 }
 
 // Save watchlist to localStorage
 function saveWatchlist() {
   try {
-    localStorage.setItem('cognix_watchlist', JSON.stringify(watchlistData));
+    const items = Object.values(watchlistData).map(item => ({
+      symbol: item.symbol,
+      exchange: item.exchange,
+      token: item.token
+    }));
+    localStorage.setItem('cognix_watchlist', JSON.stringify(items));
   } catch (e) {
     console.error('Error saving watchlist:', e);
   }
-  
+  updateWatchlistCount();
+}
+
+function updateWatchlistCount() {
   const countEl = document.getElementById('watchlistCount');
   if (countEl) {
-    countEl.textContent = watchlistData.length;
+    countEl.textContent = Object.keys(watchlistData).length;
   }
 }
 
 // Add symbol to watchlist
 function addToWatchlist(symbol, exchange, token) {
   // Check if already exists
-  const exists = watchlistData.some(item => 
+  const exists = Object.values(watchlistData).some(item => 
     String(item.token) === String(token) && item.exchange === exchange
   );
   
@@ -1327,36 +1077,90 @@ function addToWatchlist(symbol, exchange, token) {
     return;
   }
   
-  watchlistData.push({ symbol, exchange, token });
+  const id = `wl_${Date.now()}_${Math.random()}`;
+  watchlistData[id] = {
+    id: id,
+    symbol: symbol,
+    exchange: exchange,
+    token: token,
+    ltp: null,
+    change: 0,
+    changePercent: 0,
+    lastUpdated: null
+  };
+  
   saveWatchlist();
   renderWatchlist();
   showAlert(`Added ${symbol} to watchlist`, 'success');
+  
+  // Fetch initial LTP + cache Previous Close ONCE for this token.
+  fetchWatchlistLTP(id);
+  // Live updates ride the page WebSocket now.
+  wsSubscribeSymbols([{ exchange, token, symbol }]);
 }
 
-// Remove symbol from watchlist with confirmation
-function removeFromWatchlist(index) {
-  const removed = watchlistData[index];
-  if (!removed) return;
+// Remove symbol from watchlist
+function removeFromWatchlist(id) {
+  if (!id) return;
   
-  // Show confirmation dialog
-  if (confirm(`Remove "${removed.symbol}" from watchlist?`)) {
-    watchlistData.splice(index, 1);
+  const item = watchlistData[id];
+  if (!item) return;
+  
+  if (confirm(`Remove "${item.symbol}" from watchlist?`)) {
+    const token = item.token;
+    delete watchlistData[id];
+
+    // Drop the cached previous close only if no other watchlist row
+    // still references this token.
+    const stillUsed = Object.values(watchlistData).some(w => String(w.token) === String(token));
+    if (!stillUsed) {
+      clearPrevClose(token);
+      // Nobody needs this token on this page anymore — release the feed.
+      wsUnsubscribeSymbol(item.exchange, token);
+    }
+
     saveWatchlist();
-    
-    // Remove from cache
-    delete watchlistLTPCache[String(removed.token)];
-    
     renderWatchlist();
-    showAlert(`Removed ${removed.symbol} from watchlist`, 'info');
+    showAlert(`Removed ${item.symbol} from watchlist`, 'info');
   }
 }
 
-// Update watchlist display from cache with percentage below change
-function updateWatchlistDisplay() {
+// Fetch LTP for watchlist item — this is the ONLY place Previous Close
+// is ever pulled from the API, and cachePrevClose() makes even repeated
+// calls here a no-op once a value is cached for that token.
+async function fetchWatchlistLTP(id) {
+  const item = watchlistData[id];
+  if (!item) return;
+  
+  try {
+    const response = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(item.exchange)}&token=${encodeURIComponent(item.token)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      const quote = data.data;
+      const ltp = parseFloat(quote.lp) || 0;
+
+      // Cache previous close ONCE. If it's already cached, this no-ops.
+      const prevCloseFromQuote = parseFloat(quote.c) || parseFloat(quote.o) || 0;
+      cachePrevClose(item.token, prevCloseFromQuote);
+
+      applyLTPUpdate(item, ltp);
+    }
+  } catch (e) {
+    console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
+  }
+}
+
+// Render watchlist
+function renderWatchlist() {
   const tbody = document.getElementById('watchlistBody');
   if (!tbody) return;
   
-  if (!watchlistData || watchlistData.length === 0) {
+  const items = Object.values(watchlistData);
+  if (items.length === 0) {
     tbody.innerHTML = `
       <tr>
         <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
@@ -1368,253 +1172,101 @@ function updateWatchlistDisplay() {
   }
   
   let html = '';
-  
-  watchlistData.forEach((item, index) => {
-    const cached = watchlistLTPCache[String(item.token)];
+  items.forEach(item => {
+    const ltpDisplay = item.ltp !== null && item.ltp !== undefined 
+      ? (typeof item.ltp === "number" ? item.ltp.toFixed(2) : item.ltp)
+      : "⌛";
     
-    if (cached && cached.ltp > 0) {
-      const changeColor = cached.change > 0 ? '#48bb78' : (cached.change < 0 ? '#fc8181' : 'var(--text-muted)');
-      const changeArrow = cached.change > 0 ? '▲' : (cached.change < 0 ? '▼' : '');
-      
-      // Change value with arrow on the SAME LINE (arrow left, value right)
-      const changeDisplay = cached.change !== 0 ? 
-        `<span style="display: inline-flex; align-items: center; gap: 2px;">
-          <span style="font-size: 11px;">${changeArrow}</span>
-          <span>${cached.change > 0 ? '+' : ''}${cached.change.toFixed(2)}</span>
-        </span>` : 
-        '<span>--</span>';
-      
-      // Percentage (displayed below)
-      const percentDisplay = (cached.changePercent !== undefined && cached.changePercent !== 0) ?
-        `${cached.changePercent > 0 ? '+' : ''}${cached.changePercent.toFixed(2)}%` :
-        '';
-      
-      const ltpDisplay = cached.ltp.toFixed(2);
-      
-      html += `
-        <tr>
-          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
-            <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
-            <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
-            ${cached.lastUpdated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${cached.lastUpdated}</span>` : ''}
-          </td>
-          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: right; font-weight: 600; vertical-align: middle;">
-            ${ltpDisplay}
-          </td>
-          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: right; font-weight: 600; position: relative; vertical-align: middle; padding-right: 32px;">
-            <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3;">
-              ${changeDisplay}
-              ${percentDisplay ? `<span style="font-size: 11px; opacity: 0.8; font-weight: 500;">${percentDisplay}</span>` : ''}
-            </div>
-            <button 
-              class="watchlist-remove-btn" 
-              onclick="removeFromWatchlist(${index})" 
-              title="Remove from watchlist"
-              style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
-              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
-              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
-            >
-              ✕
-            </button>
-          </td>
-        </tr>
-      `;
-    } else {
-      // Show loading state with delete button
-      html += `
-        <tr>
-          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
-            <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
-            <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
-          </td>
-          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: right; vertical-align: middle;">
-            <span style="opacity: 0.5;">⌛</span>
-          </td>
-          <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: right; position: relative; vertical-align: middle; padding-right: 32px;">
-            <span>--</span>
-            <button 
-              class="watchlist-remove-btn" 
-              onclick="removeFromWatchlist(${index})" 
-              title="Remove from watchlist"
-              style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
-              onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
-              onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
-            >
-              ✕
-            </button>
-          </td>
-        </tr>
-      `;
-    }
+    const changeColor = item.change > 0 ? '#48bb78' : (item.change < 0 ? '#fc8181' : 'var(--text-muted)');
+    const changeArrow = item.change > 0 ? '▲' : (item.change < 0 ? '▼' : '');
+    
+    const changeDisplay = item.change !== 0 ? 
+      `<span style="display: inline-flex; align-items: center; gap: 2px;">
+        <span style="font-size: 11px;">${changeArrow}</span>
+        <span>${item.change > 0 ? '+' : ''}${item.change.toFixed(2)}</span>
+      </span>` : 
+      '<span>--</span>';
+    
+    const percentDisplay = (item.changePercent !== 0) ?
+      `${item.changePercent > 0 ? '+' : ''}${item.changePercent.toFixed(2)}%` :
+      '';
+    
+    html += `
+      <tr>
+        <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
+          <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
+          <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
+          ${item.lastUpdated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${item.lastUpdated}</span>` : ''}
+        </td>
+        <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: right; font-weight: 600; vertical-align: middle;">
+          ${ltpDisplay}
+        </td>
+        <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: right; font-weight: 600; position: relative; vertical-align: middle; padding-right: 32px;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3;">
+            ${changeDisplay}
+            ${percentDisplay ? `<span style="font-size: 11px; opacity: 0.8; font-weight: 500;">${percentDisplay}</span>` : ''}
+          </div>
+          <button 
+            onclick="removeFromWatchlist('${item.id}')"
+            title="Remove from watchlist"
+            style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
+            onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
+            onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
+          >
+            ✕
+          </button>
+        </td>
+      </tr>
+    `;
   });
   
   tbody.innerHTML = html;
 }
 
-// Fetch LTP for all watchlist items independently (without relying on strategy symbols)
-async function refreshWatchlist() {
-  const container = document.getElementById('watchlistBody');
-  if (!container) return;
+// Update watchlist from WebSocket — SIMPLE AND DIRECT, exactly like the
+// Strategy table's `status` handler: find the row, mutate it, render.
+// NO API calls happen here. Previous Close comes from the cache only.
+function updateWatchlistFromWebSocket(data) {
+  if (!data || !data.token) return;
   
-  // Show loading if no cache
-  const hasCache = watchlistData.some(item => watchlistLTPCache[String(item.token)]);
-  if (!hasCache && watchlistData.length > 0) {
-    container.innerHTML = `
-      <tr>
-        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted);">
-          <div class="spinner" style="display: inline-block; width: 20px; height: 20px;"></div>
-          <p style="margin-top: 8px; font-size: 12px;">Loading prices...</p>
-        </td>
-      </tr>
-    `;
-  }
+  const token = String(data.token);
   
-  // Fetch LTP for each symbol in watchlist
-  for (const item of watchlistData) {
-    try {
-      const response = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(item.exchange)}&token=${encodeURIComponent(item.token)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const data = await response.json();
-      
-      if (data.success && data.data) {
-        const quote = data.data;
-        const ltp = parseFloat(quote.lp) || 0;
-        const prevClose = parseFloat(quote.c) || 0;  // ← Previous Close from WebSocket cache
-        const open = parseFloat(quote.o) || 0;
-        
-        let change = 0;
-        let changePercent = 0;
-        
-        // Method 1: Use Previous Close (c) - Most accurate for daily change
-        if (prevClose > 0) {
-          change = ltp - prevClose;
-          changePercent = (change / prevClose) * 100;
-        } 
-        // Method 2: Use Open Price (o) - Fallback
-        else if (open > 0) {
-          change = ltp - open;
-          changePercent = (change / open) * 100;
-        }
-        // Method 3: Use cached LTP - Last resort
-        else if (watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0) {
-          const prevLtp = watchlistLTPCache[String(item.token)].ltp || ltp;
-          change = ltp - prevLtp;
-          changePercent = (change / prevLtp) * 100;
-        }
-        
-        watchlistLTPCache[String(item.token)] = {
-          ltp: ltp,
-          change: change,
-          changePercent: changePercent,
-          prevClose: prevClose,
-          open: open,
-          lastUpdated: new Date().toLocaleTimeString()
-        };
-      } else {
-        if (!watchlistLTPCache[String(item.token)]) {
-          watchlistLTPCache[String(item.token)] = {
-            ltp: 0,
-            change: 0,
-            changePercent: 0,
-            lastUpdated: new Date().toLocaleTimeString(),
-            error: true
-          };
-        }
-      }
-    } catch (e) {
-      console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
-      if (!watchlistLTPCache[String(item.token)]) {
-        watchlistLTPCache[String(item.token)] = {
-          ltp: 0,
-          change: 0,
-          changePercent: 0,
-          lastUpdated: new Date().toLocaleTimeString(),
-          error: true
-        };
-      }
+  // Find matching watchlist item
+  let targetItem = null;
+  for (const id in watchlistData) {
+    if (String(watchlistData[id].token) === token) {
+      targetItem = watchlistData[id];
+      break;
     }
-  } 
-
-  updateWatchlistDisplay();
-}
-
-// Render watchlist (initial)
-function renderWatchlist() {
-  const container = document.getElementById('watchlistBody');
-  if (!container) return;
-  
-  // Check if we have cached data
-  const hasCache = watchlistData.some(item => watchlistLTPCache[String(item.token)] && watchlistLTPCache[String(item.token)].ltp > 0);
-  
-  if (hasCache) {
-    // Render from cache instantly
-    updateWatchlistDisplay();
-  } else if (watchlistData.length > 0) {
-    // Show loading state
-    container.innerHTML = `
-      <tr>
-        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted);">
-          <div class="spinner" style="display: inline-block; width: 20px; height: 20px;"></div>
-          <p style="margin-top: 8px; font-size: 12px;">Loading watchlist...</p>
-        </td>
-      </tr>
-    `;
-    // Fetch data
-    refreshWatchlist();
-  } else {
-    // Empty state
-    container.innerHTML = `
-      <tr>
-        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
-          No symbols in watchlist
-        </td>
-      </tr>
-    `;
   }
+  
+  if (!targetItem) return;
+
+  const ltp = parseFloat(data.lp ?? data.ltp ?? data.last_price ?? 0);
+  if (!ltp || isNaN(ltp)) return;
+
+  // Edge case only: a tick arrives before the initial REST fetch has
+  // completed, so the cache is still empty. Seed it from whatever the
+  // feed itself provides — this fires at most once per token, since
+  // cachePrevClose() never overwrites an existing cached value.
+  if (getPrevClose(token) === undefined) {
+    const seed = parseFloat(data.c ?? data.prev_close ?? data.o ?? data.open ?? 0);
+    if (seed > 0) cachePrevClose(token, seed);
+  }
+
+  // Single shared path — no extra fetch, no recomputation from message
+  // fields beyond the seed-once fallback above.
+  applyLTPUpdate(targetItem, ltp);
 }
 
-// Add "Add to Watchlist" button to search results
-// Modify the selectSearchResult function to include watchlist option
-const originalSelectSearchResult = selectSearchResult;
-selectSearchResult = function(index) {
-  const item = searchResultsData[index];
-  if (!item) return;
-  
-  // Close search popup
-  const searchOverlay = document.getElementById("searchModalOverlay");
-  if (searchOverlay) searchOverlay.classList.add("hidden");
-  
-  // Open Add Symbol form
-  openCreateModal();
-  
-  // Populate the form with the selected data
-  const strategyNameField = document.getElementById("strategy_name");
-  const exchangeField = document.getElementById("exchange");
-  const tradingSymbolField = document.getElementById("trading_symbol");
-  const tokenField = document.getElementById("token");
-  const tickSizeField = document.getElementById("tick_size");
-  const quantityField = document.getElementById("quantity");
-  
-  const displayName = item.dname || item.cname || item.tsym || "";
-  
-  if (strategyNameField) strategyNameField.value = displayName;
-  if (exchangeField) exchangeField.value = item.exch || "";
-  if (tradingSymbolField) tradingSymbolField.value = item.tsym || "";
-  if (tokenField) tokenField.value = item.token || "";
-  if (tickSizeField) tickSizeField.value = item.ti || "";
-  if (quantityField && item.ls) quantityField.value = item.ls;
-  
-  console.log("SCRIP POPULATED:", displayName, "TOKEN:", item.token, "EXCHANGE:", item.exch);
-};
-
-// ---------------- Watchlist Modal ----------------
+// Watchlist Modal functions
 function openWatchlistModal() {
   const overlay = document.getElementById("watchlistModalOverlay");
   if (overlay) {
     overlay.classList.remove("hidden");
-    refreshWatchlist();
+    // Refresh all watchlist items — cachePrevClose() no-ops if already
+    // cached, so this only ever re-pulls LTP, never re-fetches Previous Close.
+    Object.keys(watchlistData).forEach(id => fetchWatchlistLTP(id));
   }
 }
 
@@ -1625,7 +1277,7 @@ function closeWatchlistModal() {
   }
 }
 
-// ---------------- Add to Watchlist from Search Results ----------------
+// Add to Watchlist from Search Results
 function addToWatchlistFromSearch(index) {
   const item = searchResultsData[index];
   if (!item) return;
@@ -1641,17 +1293,8 @@ function addToWatchlistFromSearch(index) {
   }
 }
 
-// ---------------- Refresh Watchlist Button Handler ----------------
-const refreshBtn = document.getElementById('refreshWatchlistBtn');
-if (refreshBtn) {
-  refreshBtn.addEventListener('click', () => {
-    refreshWatchlist();
-  });
-}
-
-// ---------------- Alert Function ----------------
+// Alert function
 function showAlert(message, type = 'info') {
-  // Create a simple alert popup
   const alertDiv = document.createElement('div');
   alertDiv.style.cssText = `
     position: fixed;
@@ -1670,7 +1313,6 @@ function showAlert(message, type = 'info') {
     animation: modalPop 0.3s ease forwards;
   `;
   
-  // Set color based on type
   if (type === 'success') {
     alertDiv.style.borderColor = '#48bb78';
     alertDiv.style.borderLeft = '4px solid #48bb78';
@@ -1697,5 +1339,148 @@ function showAlert(message, type = 'info') {
   }, 4000);
 }
 
-// Make remove function globally accessible
+// Make functions globally accessible
 window.removeFromWatchlist = removeFromWatchlist;
+window.addToWatchlist = addToWatchlist;
+window.addToWatchlistFromSearch = addToWatchlistFromSearch;
+window.openWatchlistModal = openWatchlistModal;
+window.closeWatchlistModal = closeWatchlistModal;
+
+// Refresh Watchlist Button
+const refreshBtn = document.getElementById('refreshWatchlistBtn');
+if (refreshBtn) {
+  refreshBtn.addEventListener('click', () => {
+    Object.keys(watchlistData).forEach(id => fetchWatchlistLTP(id));
+  });
+}
+
+// Watchlist Modal button
+const watchlistBtn = document.getElementById('btnWatchlist');
+if (watchlistBtn) {
+  watchlistBtn.addEventListener('click', openWatchlistModal);
+}
+
+
+
+// ---------------- WebSocket ----------------
+let boardWS = null;
+
+// OpenAlgo-parity WS market data: the dashboard declares WHICH instruments
+// it wants via {action:"subscribe"}; the server fans market_data frames
+// only to sockets that asked for them, and frees the broker feed refcount
+// automatically when this socket drops.
+function wsSubscribeSymbols(list, mode = "quote") {
+  const symbols = (list || []).map(i => ({ exchange: i.exchange, token: String(i.token), symbol: i.symbol }));
+  if (!symbols.length) return;
+  try {
+    if (boardWS && boardWS.readyState === 1) {
+      boardWS.send(JSON.stringify({ action: "subscribe", mode, symbols }));
+    }
+  } catch (e) { /* socket just dropped — reconnect resubscribes */ }
+}
+
+function wsUnsubscribeSymbol(exchange, token) {
+  try {
+    if (boardWS && boardWS.readyState === 1) {
+      boardWS.send(JSON.stringify({ action: "unsubscribe", symbols: [{ exchange, token: String(token) }] }));
+    }
+  } catch (e) { /* best effort */ }
+}
+
+function wsSubscribeWatchlist() {
+  wsSubscribeSymbols(Object.values(watchlistData));
+}
+
+function connectWS() {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  boardWS = new WebSocket(`${proto}//${location.host}/ws`);
+
+  boardWS.onopen = () => {
+    connDot.className = "conn-dot live";
+    connLabel.textContent = "live";
+    wsSubscribeWatchlist();            // desired-state replay (idempotent)
+    try {
+      boardWS.send(JSON.stringify({ action: "subscribe_orders" }));
+    } catch (e) { /* ignore */ }
+  };
+
+  boardWS.onclose = () => {
+    connDot.className = "conn-dot down";
+    connLabel.textContent = "reconnecting…";
+    setTimeout(connectWS, 2000);
+  };
+
+  boardWS.onerror = () => boardWS.close();
+
+  boardWS.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+
+      // --- STATUS MESSAGES (Strategy Updates) ---
+      if (msg.type === "status") {
+        if (symbols[msg.instance_id]) {
+          symbols[msg.instance_id].live_status = msg.status;
+          renderBoard();
+        }
+      }
+
+      // --- LOG MESSAGES ---
+      else if (msg.type === "log") {
+        const name = knownSymbolNames[msg.instance_id];
+        appendLogLine({ ...msg.entry, id: msg.instance_id, symbol: name });
+      }
+
+      // --- ORDER STREAM (subscribe_orders) — refresh the strategy board ---
+      else if (msg.type === "order_update") {
+        loadSymbols();
+      }
+
+      // --- REAL-TIME MARKET DATA for WATCHLIST ---
+      else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick" ||
+              msg.type === "depth" || msg.type === "df" || msg.type === "dk" ||
+              msg.type === "market_data") {
+
+        // market_data frames keep token/exchange at the frame level and the
+        // normalized quote under data — flatten them for the handler.
+        const data = msg.type === "market_data"
+          ? { token: msg.token, exchange: msg.exchange, ...(msg.data || {}) }
+          : (msg.data || msg);
+        if (data && data.token) {
+          // Update watchlist with the data
+          updateWatchlistFromWebSocket(data);
+        }
+      }
+
+    } catch (error) {
+      console.error('WebSocket message parse error:', error);
+    }
+  };
+}
+
+
+// ---------------- Init ----------------
+const logoutBtn = document.getElementById("btnLogout");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/login";
+    }
+  });
+}
+
+(async function init() {
+  try {
+    const authStatus = await fetch("/api/auth/status").then(r => r.json());
+    if (!authStatus.auth_enabled && logoutBtn) {
+      logoutBtn.classList.add("hidden");
+    }
+  } catch (e) { /* ignore */ }
+
+  await loadSymbols();
+  await loadInitialLogs();
+  loadWatchlist();
+  connectWS();
+  setInterval(loadSymbols, 15000);
+})();
