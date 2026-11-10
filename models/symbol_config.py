@@ -44,6 +44,16 @@ class SymbolConfig(BaseModel):
     green_to_red_rev: int = Field(2, ge=1)
     red_to_green_rev: int = Field(2, ge=1)
 
+    # Brick SIZE method (OpenAlgo parity): fixed = constant brick_size;
+    # atr = Wilder ATR(period, 5m candles) * atr_multiplier, resolved once at
+    # engine start and snapped onto the tick; ltp_pct = multiplicative price
+    # bands — the band the edge sits in fixes the size. brick_size stays the
+    # fallback/seed for atr and is unused while ltp_pct runs.
+    brick_method: str = Field("fixed", description="fixed | atr | ltp_pct")
+    atr_period: int = Field(14, ge=2, le=200)
+    atr_multiplier: float = Field(1.0, gt=0)
+    ltp_percent: float = Field(0.25, gt=0, description="Brick = % of the price band")
+
     # ---- Entry settings ----
     buy_brick_no: int = 1
     sell_brick_no: int = -1
@@ -110,6 +120,14 @@ class SymbolConfig(BaseModel):
     def default_entry_trail(cls, v, info):
         if v is None:
             return info.data.get("sl_trail_brick_number", 2)
+        return v
+
+    @field_validator("brick_method")
+    @classmethod
+    def valid_brick_method(cls, v):
+        v = str(v).lower()
+        if v not in ("fixed", "atr", "ltp_pct"):
+            return "fixed"
         return v
 
 

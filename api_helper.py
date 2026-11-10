@@ -45,7 +45,10 @@ class NorenApiPy(NorenApi):
     def __init__(self):
         # NorenApi.__init__(self, host='https://piconnect.flattrade.in/PiConnectTP/', websocket='wss://piconnect.flattrade.in/PiConnectWSTp/', eodhost='https://web.flattrade.in/chartApi/getdata/')
         #NorenApi.__init__(self, host='https://piconnect.flattrade.in/PiConnectAPI/', websocket='wss://piconnect.flattrade.in/PiConnectWSAPI/')
-        NorenApi.__init__(self, host='https://piconnect.flattrade.in/PiConnectAPI/', websocket='wss://ftkambalaweb.flattrade.in/NorenWSWeb/')
+        # No trailing slash on the host: NorenApi builds every URL as
+        # f"{host}{route}" and every route already starts with "/", so a
+        # trailing slash produced "…/PiConnectAPI//GetQuotes" on the wire.
+        NorenApi.__init__(self, host='https://piconnect.flattrade.in/PiConnectAPI', websocket='wss://ftkambalaweb.flattrade.in/NorenWSWeb/')
 
         global api
         api = self
@@ -107,7 +110,7 @@ class NorenApiPy(NorenApi):
         """Shared PiConnect POST: raw-JSON jData + jKey form body, the
         documented Content-Type header, case-insensitive stat comparison."""
         config = NorenApi._NorenApi__service_config
-        url = f"{config['host']}{path}"
+        url = f"{config['host'].rstrip('/')}{path}"
         payload = ("jData=" + json.dumps(values) +
                    "&jKey=" + (self._NorenApi__susertoken or ""))
         res = requests.post(url, data=payload,
@@ -123,6 +126,40 @@ class NorenApiPy(NorenApi):
                     "emsg": data.get("emsg") or f"{path} returned stat={data.get('stat')!r}"}
         data["stat"] = st  # normalize "Ok"/"OK" casing for callers
         return data
+
+    def pi_get_eod_chart_data(self, sym, start_ts, end_ts):
+        """EODChartData — the daily-candle endpoint (openalgo parity):
+        key on `sym` = "EXCH:TRADINGSYMBOL" (the scripmaster tsym, NSE
+        equities with -EQ suffix, BSE without), epoch-string `from`/`to`,
+        NO intrv, NO token. Rows come back `ssboe` (epoch s) + the
+        into/inth/intl/intc/intv/oi family — same OHLC keys as TPSeries.
+        Returns the raw LIST on success, or {"stat","emsg"} on refusal —
+        never None, so the caller can always tell refusal apart."""
+        values = {"sym": str(sym), "from": str(int(start_ts)), "to": str(int(end_ts))}
+        config = NorenApi._NorenApi__service_config
+        url = config["host"].rstrip("/") + "/EODChartData"
+        payload = ("jData=" + json.dumps(values) +
+                   "&jKey=" + (self._NorenApi__susertoken or ""))
+        # The SDK's get_daily_price_series posts this exact shape (raw jData,
+        # charset header). Unlike the option-chain endpoints the doc says
+        # nothing special here; wire-tested with the SDK's own form.
+        res = requests.post(url, data=payload,
+                            headers={"Content-Type": "application/json; charset=utf-8"})
+        try:
+            data = res.json()
+        except (ValueError, TypeError):
+            return {"stat": "Not_Ok",
+                    "emsg": f"Bad response from /EODChartData: {res.text[:160]}"}
+        if isinstance(data, list):
+            # Rows may arrive as JSON-encoded strings (Noren quirk, openalgo
+            # re-parses them too); normalize in place.
+            return [json.loads(row) if isinstance(row, str) else row for row in data]
+        st = str(data.get("stat") or "").strip().upper()
+        if st != "OK":
+            return {"stat": "Not_Ok",
+                    "emsg": data.get("emsg") or f"/EODChartData returned stat={data.get('stat')!r}"}
+        # stat Ok but not a list (empty body variants) → empty series
+        return []
 
     def pi_get_option_chain(self, exch, tsym, strprc, cnt):
         """GetOptionChain (SPEC-verbatim quirks): string numerics, tsym

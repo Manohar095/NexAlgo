@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+  `dark trading-desk` is on <html> from the first byte, not applied by the
+  bundle: this sub-app is dark-only in practice (see `trading-desk` in
+  src/index.css and the seed in src/main.tsx), and a class added after the
+  script runs would flash a white page while the chart boots. `trading-desk`
+  restates the /charts page palette; it is inert without `dark`, so the band's
+  light/dark toggle still reverts cleanly.
+-->
+<html lang="en" class="dark trading-desk">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="OpenAlgo - Open Source, Self-Hosted Trading Platform for Algo, Options and Discretionary Traders" />
+    <meta name="theme-color" content="#3b82f6" />
+    <title>OpenAlgo</title>
+    <!-- The right edge panel is the /charts one, mounted from the shared
+         module (src/components/trading/RightPanel.tsx). Its stylesheet lives
+         beside it so both desks paint the same rail and the same three tabs. -->
+    <link rel="stylesheet" href="/static/panels/right_panel.css" />
+    <style>
+      /* OpenAlgoNew's AppLayout normally supplies a full-height root. This
+         sub-app mounts the trading page alone, so the html → body → #root
+         chain has to be explicit — otherwise the desk collapses to its
+         content height and leaves a dead band under the chart. */
+      html,
+      body,
+      #root {
+        height: 100%;
+      }
+      /* The page root is `flex flex-1 flex-col` — it stretches to its flex
+         parent, which in OpenAlgoNew is the AppLayout shell. Without a flex
+         container here the desk stops at its content height. */
+      #root {
+        display: flex;
+        flex-direction: column;
+      }
+      body {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

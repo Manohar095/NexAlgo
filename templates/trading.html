@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CogniX Algo — Trading Terminal</title>
+
+  <style>
+    /* OpenAlgoNew trading-page band chrome, as scoped tokens. */
+    :root {
+      --tt-bg: #0b0e17;
+      --tt-band: #101422;
+      --tt-border: rgba(255, 255, 255, 0.08);
+      --tt-border-strong: rgba(255, 255, 255, 0.14);
+      --tt-text: #e6ecf5;
+      --tt-muted: #8d99b8;
+      --tt-up: #14b887;
+      --tt-down: #f0525f;
+      --tt-accent: #4b7bec;
+      --tt-primary: #9db8ff;
+      --tt-primary-dim: rgba(75, 123, 236, 0.14);
+      --tt-primary-line: rgba(75, 123, 236, 0.45);
+      --tt-input: #0d111d;
+      --tt-hover: rgba(255, 255, 255, 0.06);
+      --tt-foreground10: rgba(255, 255, 255, 0.1);
+      --tt-radius: 8px;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      background: var(--tt-bg);
+      color: var(--tt-text);
+      font: 12.5px/1.45 "Inter", "Segoe UI", system-ui, sans-serif;
+      overflow: hidden;
+    }
+    button, select, input { color: inherit; font: inherit; }
+    button svg { display: block; }
+
+    /* ---------------------------------------------------------------
+       The toolbar row (toolbarStyles.tsx vocabulary): controls keep their
+       glyph and label on the bar's own surface — a fill appears under the
+       pointer, a soft tint of the accent marks a toggle that is on, groups
+       are told apart by hairline dividers rather than by boxes, every
+       control is 28px tall so the 40px row reads as one band. The row
+       scrolls its overflow with the scrollbar hidden (h-10 / overflow-x).
+       --------------------------------------------------------------- */
+    .tt-topbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      padding: 0 8px;
+      height: 40px;
+      flex: 0 0 40px;
+      background: var(--tt-band);
+      border-bottom: 1px solid var(--tt-border);
+      white-space: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      flex-shrink: 0;
+    }
+    .tt-topbar::-webkit-scrollbar { display: none; }
+    .tt-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      height: 28px; padding: 0 6px;
+      border: none; border-radius: 6px;
+      background: transparent; color: var(--tt-text);
+      cursor: pointer; flex-shrink: 0; font-size: 13px;
+      white-space: nowrap;
+    }
+    .tt-btn:hover { background: var(--tt-hover); }
+    .tt-btn[aria-pressed="true"] { background: var(--tt-primary-dim); color: var(--tt-primary); }
+    .tt-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .tt-btn[disabled]:hover { background: transparent; }
+    .tt-sep { width: 1px; height: 18px; background: var(--tt-border-strong); margin: 0 2px; flex: none; }
+    .tt-growth { flex: 1 1 auto; }
+
+    /* labels that give way as the window narrows (their TB_LABEL_xL media) */
+    .tb-wide, .tb-2xl { display: inline; }
+    @media (max-width: 1799px) { .tb-2xl { display: none; } }
+    @media (max-width: 1279px) { .tb-wide { display: none; } }
+
+    /* symbol pill */
+    .tt-sym-btn .sym { font-weight: 600; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+    .tt-ex-badge {
+      font-size: 9.5px; font-weight: 700; letter-spacing: 0.4px;
+      padding: 1.5px 5px; border-radius: 4px;
+      background: var(--tt-primary-dim); color: var(--tt-primary);
+      border: 1px solid var(--tt-primary-line);
+    }
+
+    /* ---- timeframe controls (TimeframeMenu.tsx) ---- */
+    .tt-tf-strip {
+      display: flex; align-items: center; gap: 2px;
+      max-width: 14rem; overflow-x: auto; scrollbar-width: none;
+      flex: 0 1 auto; min-width: 0;
+    }
+    .tt-tf-strip::-webkit-scrollbar { display: none; }
+    .tt-tf-fav {
+      display: inline-flex; align-items: center;
+      height: 32px; padding: 0 6px; flex-shrink: 0;
+      border: none; border-radius: 6px; background: transparent;
+      color: var(--tt-muted); font-size: 12px; cursor: pointer;
+    }
+    .tt-tf-fav:hover { background: var(--tt-hover); }
+    .tt-tf-fav[disabled] { opacity: 0.4; cursor: not-allowed; }
+    .tt-tf-fav.active { background: var(--tt-primary-dim); color: var(--tt-primary); }
+    .tt-tf-wrap { position: relative; display: inline-flex; flex: none; }
+    .tt-tf-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      height: 32px; padding: 0 8px;
+      border: none; border-radius: 6px; background: transparent;
+      color: var(--tt-text); font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .tt-tf-btn:hover { background: var(--tt-hover); }
+    .tt-tf-btn svg { color: var(--tt-muted); }
+    .tt-tf-pop {
+      position: fixed; z-index: 90;
+      width: 288px; max-width: calc(100vw - 1rem);
+      max-height: min(36rem, calc(100vh - 56px));
+      padding: 6px; overflow-y: auto;
+      background: var(--tt-band);
+      border: 1px solid var(--tt-border-strong); border-radius: 10px;
+      box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+      flex-direction: column;
+    }
+    .tt-tf-group { border-top: 1px solid var(--tt-border); padding: 4px 0; }
+    .tt-tf-group:first-child { border-top: none; }
+    .tt-tf-group-head {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; height: 36px; padding: 0 8px;
+      border: none; border-radius: 6px; background: none;
+      color: var(--tt-muted); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.05em; cursor: pointer;
+    }
+    .tt-tf-group-head:hover { background: var(--tt-hover); }
+    .tt-tf-row {
+      display: grid; grid-template-columns: minmax(0,1fr) 2rem 2rem;
+      align-items: center; border-radius: 6px;
+    }
+    .tt-tf-row:hover { background: var(--tt-hover); }
+    .tt-tf-row.selected { background: var(--tt-primary-dim); color: var(--tt-primary); }
+    .tt-tf-row-main {
+      min-height: 40px; padding: 0 8px; text-align: left; text-overflow: ellipsis;
+      overflow: hidden; white-space: nowrap;
+      border: none; border-radius: 6px; background: none; color: inherit; font-size: 13px; cursor: pointer;
+    }
+    .tt-tf-row-main[disabled] { opacity: 0.4; cursor: not-allowed; }
+    .tt-tf-star {
+      display: flex; align-items: center; justify-content: center;
+      width: 32px; height: 32px;
+      border: none; border-radius: 6px; background: none;
+      color: var(--tt-muted); cursor: pointer;
+    }
+    .tt-tf-star:hover { background: var(--tt-foreground10); }
+    .tt-tf-star.on { color: var(--tt-primary); }
+
+    /* ---- chart-type dropdown ---- */
+    .tt-ctype-wrap { position: relative; display: inline-flex; flex: none; }
+    .tt-sq-btn {
+      width: 28px; padding: 0;
+      justify-content: center; color: var(--tt-muted);
+    }
+    .tt-ctype-menu {
+      position: fixed; z-index: 90;
+      min-width: 230px; padding: 6px;
+      background: var(--tt-band);
+      border: 1px solid var(--tt-border-strong); border-radius: 10px;
+      box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+      display: none; flex-direction: column;
+    }
+    .tt-ctype-menu.open { display: flex; }
+    .tt-ctype-menu .tt-ctype-item {
+      display: flex; align-items: center; gap: 8px;
+      min-height: 36px; padding: 0 9px; border-radius: 6px; cursor: pointer;
+      color: var(--tt-text); text-align: left; border: 0; background: none; width: 100%;
+      font-size: 13px;
+    }
+    .tt-ctype-menu .tt-ctype-item svg { color: var(--tt-muted); flex: none; }
+    .tt-ctype-menu .tt-ctype-item:hover { background: var(--tt-hover); }
+    .tt-ctype-menu .tt-ctype-item.active { color: var(--tt-primary); background: var(--tt-primary-dim); }
+    .tt-ctype-menu .tt-ctype-item[disabled] { opacity: 0.42; cursor: not-allowed; }
+    .tt-ctype-menu .tt-ctype-gsep { height: 1px; background: var(--tt-border); margin: 5px 2px; }
+
+    /* qty field */
+    .tt-field { display: inline-flex; align-items: center; gap: 4px; color: var(--tt-muted); font-size: 11px; flex: none; }
+    .tt-qty {
+      height: 28px; padding: 0 7px; width: 64px; text-align: right;
+      border: 1px solid var(--tt-border); border-radius: var(--tt-radius);
+      background: var(--tt-input); color: var(--tt-text);
+    }
+    .tt-qty:focus { outline: none; border-color: var(--tt-primary-line); }
+    /* the canvas qty chip pulled focus here */
+    .tt-qty.flash { border-color: var(--tt-accent, #4f8cff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tt-accent, #4f8cff) 28%, transparent); }
+
+    /* ---- left drawing tools rail ---- */
+    .tt-left-rail {
+      position: absolute;
+      top: 10px; left: 10px;
+      z-index: 60;
+      display: flex; flex-direction: column; gap: 6px;
+      background: rgba(16, 20, 34, 0.7);
+      border: 1px solid var(--tt-border-strong);
+      border-radius: 8px;
+      padding: 8px;
+      backdrop-filter: blur(4px);
+    }
+    .tt-rail-btn {
+      width: 34px; height: 34px; border-radius: 6px;
+      border: 1px solid var(--tt-border);
+      background: var(--tt-input); color: var(--tt-text);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .tt-rail-btn:hover { background: var(--tt-hover); }
+    .tt-rail-btn.active { border-color: var(--tt-primary-line); background: var(--tt-primary-dim); color: var(--tt-primary); }
+    .tt-rail-sep { height: 1px; background: var(--tt-border); margin: 6px 0; }
+
+    /* ---- bottom time-range bar ---- */
+    .tt-rangebar {
+      flex: 0 0 28px; height: 28px;
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 10px;
+      background: var(--tt-band);
+      border-top: 1px solid var(--tt-border);
+      color: var(--tt-muted); font-size: 11px;
+      white-space: nowrap; overflow-x: auto;
+      flex-shrink: 0;
+    }
+    .tt-range-pill {
+      height: 20px; padding: 0 8px; border-radius: 10px;
+      border: 1px solid var(--tt-border);
+      background: var(--tt-input); color: var(--tt-text); cursor: pointer;
+      font-size: 11px; display: inline-flex; align-items: center;
+    }
+    .tt-range-pill:hover { background: var(--tt-hover); }
+    .tt-range-pill.active { background: var(--tt-primary-dim); color: var(--tt-primary); border-color: var(--tt-primary-line); }
+    .tt-range-go {
+      margin-left: auto; font-size: 11px; color: var(--tt-muted);
+    }
+    .tt-range-go input {
+      width: 56px; height: 20px; margin-left: 4px; padding: 0 6px;
+      border: 1px solid var(--tt-border); border-radius: 4px;
+      background: var(--tt-input); color: var(--tt-text); font-size: 11px;
+    }
+
+    /* camera menu */
+    .tt-cam-menu {
+      position: fixed; z-index: 90;
+      min-width: 210px; padding: 6px;
+      background: var(--tt-band);
+      border: 1px solid var(--tt-border-strong); border-radius: 10px;
+      box-shadow: 0 14px 44px rgba(0, 0, 0, 0.55);
+      display: none; flex-direction: column;
+    }
+    .tt-cam-menu.open { display: flex; }
+    .tt-cam-menu .tt-ctype-item svg { color: var(--tt-muted); flex: none; }
+
+    /* WS LED */
+    .tt-led { display: inline-flex; align-items: center; gap: 5px; color: var(--tt-muted); padding: 0 8px; font-size: 11px; flex: none; }
+    .tt-led i {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #56617c; display: inline-block;
+    }
+    .tt-led.on i { background: var(--tt-up); box-shadow: 0 0 6px rgba(20, 184, 135, 0.7); }
+    .tt-led.wait i { background: #d7a13a; box-shadow: 0 0 6px rgba(215, 161, 58, 0.6); }
+    .tt-led.off i { background: var(--tt-down); }
+    .tt-clock { font-variant-numeric: tabular-nums; color: var(--tt-muted); padding-right: 6px; flex: none; }
+
+    /* ---- chart pane ---- */
+    #tt-main { flex: 1 1 auto; min-height: 0; position: relative; padding: 8px; }
+    #terminal-pane {
+      position: relative;
+      width: 100%; height: 100%;
+      border: 1px solid var(--tt-border);
+      border-radius: 10px;
+      overflow: hidden;
+      outline: none;
+    }
+    #terminal-pane:focus-within {
+      border-color: var(--tt-primary-line);
+      box-shadow: 0 0 0 1px rgba(75, 123, 236, 0.35);
+    }
+    #terminal-pane .tt-host { position: absolute; inset: 0; }
+
+    /* chart-state overlay (ChartStateOverlay.tsx) */
+    .tt-tstate {
+      pointer-events: none;
+      position: absolute; inset: 0; z-index: 15;
+      display: flex; align-items: center; justify-content: center;
+      padding: 12px;
+    }
+    .tt-tstate-card {
+      max-width: min(22rem, 100%);
+      border-radius: 10px;
+      border: 1px solid var(--tt-border-strong);
+      background: rgba(16, 20, 34, 0.95);
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(4px);
+    }
+    .tt-tstate-loading { padding: 8px 12px; }
+    .tt-tstate-msg { padding: 12px 16px; pointer-events: auto; }
+    .tt-tstate-dots { display: flex; gap: 4px; justify-content: center; }
+    .tt-tstate-dots i {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--tt-muted);
+      animation: tt-bounce 1s infinite ease-in-out alternate;
+    }
+    @keyframes tt-bounce {
+      from { transform: translateY(0); }
+      to { transform: translateY(-4px); }
+    }
+    .tt-tstate-title { display: block; font-size: 12px; color: var(--tt-muted); }
+    .tt-tstate-msg .tt-tstate-title { font-size: 13px; font-weight: 600; color: var(--tt-text); }
+    .tt-tstate-text { margin: 4px 0 0; font-size: 11.5px; line-height: 1.55; color: var(--tt-muted); overflow-wrap: anywhere; }
+    .tt-tstate-actions { margin-top: 12px; display: flex; justify-content: center; gap: 8px; }
+    .tt-tstate-btn {
+      padding: 4px 8px; font-size: 12px;
+      border: 1px solid var(--tt-border-strong); border-radius: 6px;
+      background: transparent; color: var(--tt-text); cursor: pointer;
+    }
+    .tt-tstate-btn:hover { background: var(--tt-hover); }
+    @media (prefers-reduced-motion: reduce) {
+      .tt-tstate-dots i { animation: none; }
+    }
+
+    /* ---- bottom strip ---- */
+    .tt-bottom {
+      flex: 0 0 28px; height: 28px;
+      display: flex; align-items: center; gap: 14px;
+      padding: 0 10px;
+      background: var(--tt-band);
+      border-top: 1px solid var(--tt-border);
+      color: var(--tt-muted); font-size: 11px;
+      white-space: nowrap; overflow: hidden;
+    }
+
+    /* ---- dialogs (search + box settings + data export) ---- */
+    dialog.tt-dialog {
+      border: 1px solid var(--tt-border-strong);
+      border-radius: 10px;
+      background: var(--tt-band);
+      color: var(--tt-text);
+      padding: 10px;
+      width: 460px; max-width: 92vw;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+    }
+    dialog.tt-dialog::backdrop { background: rgba(4, 6, 12, 0.6); }
+    .tt-search-row { display: flex; gap: 6px; }
+    .tt-search-row input {
+      flex: 1; height: 30px; padding: 0 9px;
+      border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius);
+      background: var(--tt-input);
+    }
+    .tt-results { margin-top: 8px; max-height: 320px; overflow: auto; }
+    .tt-result {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    }
+    .tt-result:hover, .tt-result.sel { background: var(--tt-primary-dim); }
+    .tt-result .rs { font-weight: 600; }
+    .tt-result .rn { color: var(--tt-muted); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tt-result .rx { margin-left: auto; font-size: 9.5px; color: var(--tt-primary); font-weight: 700; }
+    .tt-empty { color: var(--tt-muted); padding: 10px 8px; }
+    /* box settings (terminal.mjs renders the dialog) */
+    .tt-box-head { padding: 2px 2px 8px; }
+    .tt-box-input {
+      width: 130px; height: 28px; padding: 0 8px;
+      border: 1px solid var(--tt-border-strong); border-radius: var(--tt-radius);
+      background: var(--tt-input);
+    }
+    .tt-box-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .tt-mutedlite { color: var(--tt-muted); font-size: 11px; }
+    /* data export dialog (chart_data_export.mjs) */
+    .tt-data-choices { display: flex; flex-direction: column; gap: 6px; }
+    .tt-data-choice {
+      display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+      padding: 9px 11px; text-align: left;
+      border: 1px solid var(--tt-border-strong); border-radius: 8px;
+      background: transparent; color: var(--tt-text); cursor: pointer;
+    }
+    .tt-data-choice:hover { background: var(--tt-hover); }
+    .tt-data-name { font-size: 12.5px; font-weight: 600; }
+    .tt-data-sub { font-size: 10.5px; color: var(--tt-muted); }
+
+    /* ---- hover tip (Tip.tsx) ---- */
+    .tt-tip {
+      position: fixed; z-index: 100;
+      max-width: 260px; padding: 4px 8px;
+      border: 1px solid var(--tt-border-strong); border-radius: 6px;
+      background: var(--tt-band); color: var(--tt-text);
+      font-size: 12px; line-height: 1.4;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+      pointer-events: none;
+    }
+    .tt-tip-name { font-weight: 600; }
+    .tt-tip-chord { margin-left: 8px; font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 11px; color: var(--tt-muted); }
+    .tt-tip-sub { display: block; margin-top: 2px; font-size: 11px; line-height: 1.3; color: var(--tt-muted); }
+
+    /* ---- toasts ---- */
+    #tt-toasts { position: fixed; right: 14px; bottom: 38px; z-index: 80; display: flex; flex-direction: column; gap: 6px; }
+    .tt-toast {
+      padding: 8px 12px; border-radius: 8px; font-size: 11.5px;
+      background: #161b2c; border: 1px solid var(--tt-border-strong);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      max-width: 380px;
+    }
+    .tt-toast.err { border-color: rgba(240, 82, 95, 0.5); }
+    .tt-toast.ok { border-color: rgba(20, 184, 135, 0.5); }
+  </style>
+</head>
+<body>
+  <header class="tt-topbar" id="ttTopbar">
+    <button class="tt-btn tt-sym-btn" id="btnSymbol" aria-label="Symbol search">
+      <span class="tt-sym-icon" data-icon="search"></span>
+      <span class="sym" id="symText">—</span>
+      <span class="tt-ex-badge" id="exBadge">—</span>
+    </button>
+    <span class="tt-sep"></span>
+    <div class="tt-tf-strip" id="tfStrip" role="toolbar" aria-label="Favorite intervals"></div>
+    <div id="tfAnchor"></div>
+    <span class="tt-sep"></span>
+    <div class="tt-ctype-wrap">
+      <button class="tt-btn" id="btnCtype" aria-label="Chart type">
+        <span id="ctypeIcon"></span>
+        <span id="ctypeLabel">Candles</span>
+        <span data-icon="chevron-down" data-icon-size="14"></span>
+      </button>
+      <button class="tt-btn tt-sq-btn" id="btnBoxSettings" aria-label="Box settings" style="display:none"></button>
+      <div class="tt-ctype-menu" id="ctypeMenu" aria-label="Chart types"></div>
+    </div>
+    <span class="tt-sep"></span>
+    <button class="tt-btn" id="btnProduct" aria-label="Product">MIS</button>
+    <label class="tt-field tb-wide">Qty
+      <input id="qtyInput" type="number" min="1" step="1" value="1" class="tt-qty" />
+    </label>
+    <span class="tt-sep"></span>
+    <button class="tt-btn" id="btnIndicators" aria-label="Indicators">
+      <span class="tt-field-icon" data-icon="indicators"></span>
+      <span class="tb-wide">Indicators</span>
+    </button>
+    <button class="tt-btn" id="btnAlerts" aria-label="Alerts">
+      <span class="tt-field-icon" data-icon="bell"></span>
+      <span class="tb-wide">Alerts</span>
+    </button>
+    <button class="tt-btn" id="btnReplay" aria-label="Replay">
+      <span class="tt-field-icon" data-icon="replay"></span>
+      <span class="tb-wide">Replay</span>
+    </button>
+    <span class="tt-growth"></span>
+    <button class="tt-btn tt-sq-btn" id="btnDrawTools" aria-label="Drawing tools">
+      <span data-icon="crosshair"></span>
+    </button>
+    <button class="tt-btn tt-sq-btn" id="btnCamera" aria-label="Chart snapshot" disabled></button>
+    <button class="tt-btn tt-sq-btn" id="btnFullscreen" aria-label="Full screen chart"></button>
+    <button class="tt-btn tt-sq-btn" id="btnLayout" aria-label="Layout" title="Layouts — their round">
+      <span data-icon="layout"></span>
+    </button>
+    <button class="tt-btn tt-sq-btn" id="btnSave" aria-label="Save chart" title="Save — their round">
+      <span data-icon="save"></span>
+    </button>
+    <div class="tt-cam-menu" id="camMenu" aria-label="Snapshot"></div>
+    <span class="tt-led" id="wsLed"><i></i><span id="wsLabel">WS</span></span>
+    <span class="tt-clock" id="ttClock">--:--:--</span>
+  </header>
+
+  <main id="tt-main">
+    <section id="terminal-pane" tabindex="0" aria-label="Chart pane">
+      <div class="tt-host" id="chartHost"></div>
+
+      <!-- left drawing tools rail -->
+      <div class="tt-left-rail" id="ttLeftRail"></div>
+    </section>
+  </main>
+
+  <!-- bottom time-range bar -->
+  <div class="tt-rangebar" id="ttRangeBar">
+    <button class="tt-range-pill" data-range="1D">1D</button>
+    <button class="tt-range-pill" data-range="5D">5D</button>
+    <button class="tt-range-pill" data-range="1M">1M</button>
+    <button class="tt-range-pill" data-range="3M">3M</button>
+    <button class="tt-range-pill" data-range="6M">6M</button>
+    <button class="tt-range-pill" data-range="YTD">YTD</button>
+    <button class="tt-range-pill" data-range="1Y">1Y</button>
+    <button class="tt-range-pill" data-range="5Y">5Y</button>
+    <button class="tt-range-pill" data-range="ALL">All</button>
+    <span class="tt-range-go">Go to <input id="rangeGoInput" type="text" placeholder="bars" /></span>
+  </div>
+
+  <footer class="tt-bottom">
+    <span id="stQuote">quote: —</span>
+    <span id="stSub">sub: —</span>
+    <span class="tt-growth"></span>
+    <span id="stTrade">orders: —</span>
+    <span id="stClockNote">IST Asia/Kolkata</span>
+  </footer>
+
+  <dialog class="tt-dialog" id="searchDlg">
+    <div class="tt-search-row">
+      <input id="searchInput" placeholder="Search symbol — e.g. BANKNIFTY, RELIANCE, CRUDEOIL" autocomplete="off" />
+      <button class="tt-btn" id="searchClose">Esc</button>
+    </div>
+    <div class="tt-results" id="searchResults"></div>
+  </dialog>
+
+  <!-- indicators picker (Round B) -->
+  <dialog class="tt-dialog" id="indicatorDlg" style="width:520px">
+    <div class="tt-search-row">
+      <input id="indSearchInput" placeholder="Search indicators — e.g. EMA, RSI, MACD" autocomplete="off" />
+      <button class="tt-btn" id="indClose">Esc</button>
+    </div>
+    <div class="tt-results" id="indResults" style="max-height:340px;overflow:auto"></div>
+    <div class="tt-box-row" style="margin-top:8px">
+      <span class="tt-growth"></span>
+      <span class="tt-mutedlite" id="indActiveCount">active: 0</span>
+    </div>
+  </dialog>
+
+  <div id="tt-toasts"></div>
+
+  <script type="module">
+    import { TerminalSocket, TerminalFeed, resolveToken, searchSymbols, registerTokens, lotSizeFor } from "/static/trading/terminal_feed.mjs";
+    import { createTradeLayer } from "/static/trading/trade_layer.mjs";
+    import { CHART_TYPE_GROUPS, CHART_TYPES, isBoxChartType } from "/static/trading/chart_types.mjs";
+    import { chromeIcon, chartTypeIcon } from "/static/trading/glyphs.mjs";
+    import { attachTip } from "/static/trading/tip.mjs";
+    import {
+      createChartStateGate,
+      mountChartStateOverlay,
+      chartLoadFailed,
+    } from "/static/trading/chart_state.mjs";
+    import { mountTimeframeControls } from "/static/trading/timeframes.mjs";
+    import { openDataDialog, csvOptions } from "/static/trading/chart_data_export.mjs";
+    import { createChartGrid } from "/static/vendor/openalgo-charts/openalgo-charts.widget.mjs";
+    import { withBarCache, darkTheme, lightTheme, getIndicator, registeredIndicators, indicatorDefaults, indicatorStyleInputs, exportChartDataCsv } from "/static/vendor/openalgo-charts/openalgo-charts.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-charts.draw.mjs";
+    import { CHART_GRID_LAYOUTS } from "/static/vendor/openalgo-charts/openalgo-charts.widget.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-charts.indicators.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-charts.transform.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-renko-adjacent.mjs";
+    import "/static/vendor/openalgo-charts/openalgo-linebreak-adjacent.mjs";
+
+    const el = (id) => document.getElementById(id);
+    const LS_LAST = "cognix_terminal_last";
+
+    function toast(msg, kind = "") {
+      const t = document.createElement("div");
+      t.className = `tt-toast ${kind}`;
+      t.textContent = msg;
+      el("tt-toasts").appendChild(t);
+      setTimeout(() => t.remove(), kind === "err" ? 8000 : 4000);
+    }
+    window.__terminalToast = toast;
+
+    // ------------------------------------------------------------
+    // state (restored from the last session)
+    // ------------------------------------------------------------
+    const saved = (() => {
+      try { return JSON.parse(localStorage.getItem(LS_LAST) || "null"); } catch { return null; }
+    })();
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ""));
+    const state = {
+      symbol: hash.get("symbol") || (saved && saved.symbol) || "NIFTY",
+      exchange: hash.get("exchange") || (saved && saved.exchange) || "NSE",
+      interval: hash.get("interval") || (saved && saved.interval) || "5m",
+      ctype: saved && saved.ctype && CHART_TYPES[saved.ctype] ? saved.ctype : "candlestick",
+      token: (saved && saved.token) || null,
+      product: (saved && saved.product) || "MIS",
+    };
+    const saveState = () => {
+      try { localStorage.setItem(LS_LAST, JSON.stringify(state)); } catch { /* off */ }
+    };
+    saveState();
+
+    // shared socket + chart grid (widget tier — same as /charts page)
+    const socket = new TerminalSocket();
+    socket.connect();
+
+    const INTERVAL_SECONDS = { "1m": 60, "3m": 180, "5m": 300, "10m": 600, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400 };
+    const NOREN_INTRV = { "1m": 1, "3m": 3, "5m": 5, "10m": 10, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "1d": "D" };
+
+    // Candle theme parity with /charts page
+    const CANDLE_PAIRS = { dark: { up: "#14b887", down: "#f0525f" }, light: { up: "#00855d", down: "#d42f34" } };
+    function chartTheme(modeName) {
+      const light = modeName === "light";
+      const base = light ? lightTheme : darkTheme;
+      const pair = CANDLE_PAIRS[light ? "light" : "dark"];
+      return { ...base, upColor: pair.up, downColor: pair.down, wickUpColor: pair.up, wickDownColor: pair.down, lastPriceUp: pair.up, lastPriceDown: pair.down, lastPriceText: light ? "#ffffff" : base.background, buy: pair.up, sell: pair.down };
+    }
+
+    const grid = createChartGrid(el("chartHost"), {
+      feed: () => withBarCache(new TerminalFeed(socket), { ttlMs: 60_000 }),
+      symbol: state.symbol,
+      exchange: state.exchange,
+      intervals: Object.keys(INTERVAL_SECONDS),
+      theme: chartTheme(document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark"),
+      preset: "1x1",
+      persist: "cognix_trading",
+      toolbar: false,
+      bottombar: false,
+      // ONE toolbar: this page's band is the ChartPane replication, so the
+      // cell's own topbar (symbol box, interval pills, chart-type picker,
+      // Add-indicator, Go to/Objects/Data, camera…) is pure duplication of
+      // the band's controls sitting INSIDE the chart. `topbar:false` is a cell
+      // widget option (the grid forwards every non-grid option); the widget's
+      // public methods keep everything reachable from the band:
+      // openIndicatorPicker()/openAlerts()/openSettings()/openObjects()/
+      // openDataWindow()/openDateNavigation().
+      topbar: false,
+      mobile: "auto",
+      // The package asks the feed for `lookbackBars` bars of wall-clock time
+      // (default 500 → 500×interval, i.e. ~41h on 5m). Across a weekend that
+      // window holds ONE session, and the cell's initial view is a fixed
+      // ~200-slot viewport right-anchored on the last bar — so the plot read
+      // as a sliver of candles with a huge empty left region. OpenAlgoNew's
+      // terminal loads per-interval `lookbackDays` instead; 2000 bars is the
+      // same idea (≈5 sessions of 5m, ≈2 sessions of 1m, ≈5y daily) and fills
+      // the plot at boot for every interval, on any weekday.
+      lookbackBars: 2000,
+      // Right-click trade rows (package context menu): the hook is what makes
+      // the "Trade" block render at all; the rows carry side/type/price.
+      onOrder: (req) => { void placeFromChart(req); },
+      // Index / quote-only instruments keep the rows visible but disabled.
+      tradingCapabilities: ({ symbol, exchange } = {}) =>
+        isTradable(exchange || state.exchange, symbol || state.symbol)
+          ? { supported: true }
+          : { supported: false, reason: "This instrument is quote-only — there is nothing to trade" },
+      tradingLocked: () => false,
+    });
+
+    // Wrapper exposing TradingTerminal-compatible interface backed by the grid widget.
+    // Every accessor resolves the ACTIVE cell: a multi-chart layout keeps one
+    // gridTerminal while the focused cell — and its widget — changes underneath.
+    let gridTerminal = null;
+    let firstWidget = null;
+    const w = () => activeWidget() || firstWidget;
+    async function bindGrid() {
+      const cell = grid.active();
+      firstWidget = cell && cell.widget;
+      gridTerminal = {
+        interval: state.interval,
+        ctype: state.ctype,
+        onChartState: null,
+        async boot(pick) {
+          gridTerminal.interval = pick.interval || state.interval;
+          gridTerminal.ctype = pick.ctype || state.ctype;
+          const widget = w();
+          if (widget && widget.setSymbol) await widget.setSymbol(pick.symbol, pick.exchange);
+          // The cell may boot on the package's default interval; the page's
+          // saved choice wins, and the chart type follows it.
+          if (widget && widget.setInterval) widget.setInterval(gridTerminal.interval);
+          if (widget && widget.setChartType) widget.setChartType(gridTerminal.ctype);
+          paintTypeChrome(gridTerminal.ctype);
+          if (gridTerminal.onChartState) gridTerminal.onChartState({ kind: "ready", symbol: pick.symbol, interval: gridTerminal.interval });
+        },
+        setInterval(iv) {
+          gridTerminal.interval = iv;
+          const widget = w();
+          if (widget && widget.setInterval) widget.setInterval(iv);
+          return iv;
+        },
+        setChartType(v) {
+          gridTerminal.ctype = v;
+          state.ctype = v;
+          saveState();
+          const widget = w();
+          if (widget && widget.setChartType) widget.setChartType(v);
+          paintTypeChrome(v);
+          return v;
+        },
+        openBoxSettings() { openBoxDialog(); },
+        async exportDataCsv(options) { return exportCsv(options); },
+        async screenshot() { return captureDownload(); },
+        async copyScreenshot() { return captureCopy(); },
+        async snapshotPng() { return captureDataUrl(); },
+        async indicatorCatalog() {
+          const reg = registeredIndicators();
+          return reg.map((d) => ({ id: d.id, name: d.name || d.id, category: d.category || "Studies" }));
+        },
+        listIndicators() {
+          const chart = activeChart();
+          if (!chart || !chart.indicators) return [];
+          return chart.indicators().map((i) => ({ id: i.id, indicatorId: i.indicatorId, name: i.name || i.indicatorId }));
+        },
+        async addIndicatorById(id) {
+          const chart = activeChart();
+          if (!chart || !chart.addIndicator) { toast("Indicator — chart not ready", "err"); return null; }
+          try { await import("/static/vendor/openalgo-charts/openalgo-charts.indicators.mjs"); } catch { /* */ }
+          const inst = chart.addIndicator(id, {});
+          gridTerminal.syncIndicators();
+          return inst;
+        },
+        removeIndicatorById(instanceId) {
+          const chart = activeChart();
+          if (chart && chart.removeIndicator) chart.removeIndicator(instanceId);
+          gridTerminal.syncIndicators();
+        },
+        async openIndicatorSettings(instanceId) {
+          const chart = activeChart();
+          if (!chart || !chart.indicators) { toast("Indicator settings — chart not ready", "err"); return; }
+          const inst = chart.indicators().find((i) => i.id === instanceId);
+          if (!inst) return;
+          const descriptor = getIndicator(inst.indicatorId);
+          if (!descriptor) return;
+          const fields = (indicatorStyleInputs(descriptor) || []).map((f) => ({
+            key: f.key, type: f.type, label: f.label || f.key, group: f.group, default: f.defaultValue,
+          }));
+          const settings = inst.settings ? inst.settings() : {};
+          gridTerminal.onIndicatorSettings?.({ instanceId, indicatorId: inst.indicatorId, fields, settings });
+        },
+        updateIndicatorSettings(instanceId, patch) {
+          const chart = activeChart();
+          if (!chart || !chart.indicators) return;
+          const inst = chart.indicators().find((i) => i.id === instanceId);
+          if (!inst || !inst.settings) return;
+          inst.settings({ ...inst.settings(), ...patch });
+          gridTerminal.syncIndicators();
+        },
+        syncIndicators() {
+          const chart = activeChart();
+          if (!chart || !chart.indicators) return;
+          const next = chart.indicators().map((i) => ({
+            instanceId: i.id,
+            indicatorId: i.indicatorId,
+            name: i.name || i.indicatorId,
+            settings: i.settings?.() ?? {},
+            visible: true,
+            paneIndex: 0,
+          }));
+          const announced = next.map(({ instanceId, name }) => ({ id: instanceId, name }));
+          gridTerminal.onIndicatorsChange?.(announced);
+        },
+        /* layouts — switch the grid preset */
+        setPreset(preset) {
+          try { grid.setPreset(preset); } catch { /* preset may not exist */ }
+          return preset;
+        },
+        /* drawing tools — the CELL's own controller (`widget.draw`, created by
+           the widget tier); attaching a second controller to the same chart
+           would double every pointer gesture. */
+        drawing() {
+          const widget = w();
+          return widget && widget.draw ? widget.draw : null;
+        },
+        setDrawTool(id) {
+          const d = gridTerminal.drawing();
+          if (!d) return false;
+          d.setTool(id ?? null);
+          gridTerminal.syncDrawStats();
+          return true;
+        },
+        undoDrawing() {
+          const d = gridTerminal.drawing();
+          return d ? d.undo() : false;
+        },
+        redoDrawing() {
+          const d = gridTerminal.drawing();
+          return d ? d.redo() : false;
+        },
+        syncDrawStats() {
+          const d = gridTerminal.drawing();
+          if (!d || !gridTerminal.onDrawStats) return;
+          gridTerminal.onDrawStats({
+            canUndo: typeof d.canUndo === "function" ? d.canUndo() : false,
+            canRedo: typeof d.canRedo === "function" ? d.canRedo() : false,
+            activeTool: typeof d.activeTool === "function" ? d.activeTool() : null,
+          });
+        },
+      };
+    }
+    await bindGrid();
+
+    // ------------------------------------------------------------
+    // Trade layer (OpenAlgoNew terminal.ts trading block, on the widget chart)
+    // ------------------------------------------------------------
+    // The grid owns the cells; the trade layer belongs to whichever cell is
+    // active. Switching cells (or a layout change that rebuilds them) tears the
+    // layer down and re-attaches it, because the order/position lines and the
+    // Buy/Sell panel hang off one chart instance.
+    const QUOTE_ONLY = new Set(["NSE_INDEX", "BSE_INDEX", "MCX_INDEX", "GLOBAL_INDEX"]);
+    /** Index names that ride NSE/BSE but have nothing to trade. */
+    const INDEX_SYMBOLS = new Set([
+      "NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50",
+      "SENSEX", "BANKEX", "SENSEX50",
+    ]);
+    let trade = null;
+    let tradeCell = null;
+    // Last quote frame seen for the active instrument — a trade layer created
+    // AFTER the quote arrived (boot order, cell switch) replays it so the
+    // Buy/Sell panel is price-marked immediately instead of after the next tick.
+    let lastQuoteFrame = null;
+    let tradeOffs = [];
+
+    /** "EXCH|SYM" -> { token, tick, lotSize }, filled lazily and reused. */
+    const instruments = new Map();
+    const instKey = (exchange, symbol) =>
+      `${String(exchange || "").toUpperCase()}|${String(symbol || "").toUpperCase()}`;
+
+    function activeCell() {
+      try { return grid.active ? grid.active() : null; } catch { return null; }
+    }
+    function activeWidget() {
+      const cell = activeCell();
+      return cell && cell.widget ? cell.widget : null;
+    }
+    function activeChart() {
+      const widget = activeWidget();
+      return widget && widget.chart ? widget.chart : null;
+    }
+
+    /** Whatever the ACTIVE cell is charting (its own topbar may have moved it). */
+    function cellInstrument() {
+      let exchange = state.exchange;
+      let symbol = state.symbol;
+      try {
+        const widget = activeWidget();
+        const picked = widget && typeof widget.symbol === "function" ? widget.symbol() : null;
+        if (picked && picked.symbol) {
+          symbol = picked.symbol;
+          exchange = picked.exchange || exchange;
+        }
+      } catch { /* widget gone */ }
+      return { symbol, exchange };
+    }
+
+    function isTradable(exchange = state.exchange, symbol = state.symbol) {
+      if (QUOTE_ONLY.has(exchange)) return false;
+      if ((exchange === "NSE" || exchange === "BSE") && INDEX_SYMBOLS.has(symbol)) {
+        return false;
+      }
+      return true;
+    }
+
+    /**
+     * Token + tick size + lot size for a symbol. Resolved once per symbol and
+     * shared by the trade layer and the band, so a cell the user retargeted in
+     * its own topbar still gets the right contract.
+     */
+    function ensureInstrument(exchange, symbol, knownToken = null) {
+      const key = instKey(exchange, symbol);
+      const hit = instruments.get(key);
+      if (hit) return hit;
+      const entry = {
+        token: knownToken || null,
+        tick: null,
+        lotSize: lotSizeFor(exchange, symbol),
+        exchange,
+      };
+      instruments.set(key, entry);
+      (async () => {
+        try {
+          const resolved = knownToken ? { token: knownToken, exchange } : await resolveToken(exchange, symbol);
+          if (!resolved || !resolved.token) return;
+          entry.token = resolved.token;
+          entry.exchange = resolved.exchange || exchange;
+          if (resolved.lotsize) entry.lotSize = resolved.lotsize;
+          const res = await fetch(
+            `/api/quotes?exchange=${encodeURIComponent(entry.exchange)}&token=${encodeURIComponent(entry.token)}`,
+            { method: "POST" }
+          );
+          const payload = await res.json();
+          const tick = payload && payload.data && payload.data.tick_size;
+          if (Number(tick) > 0) entry.tick = Number(tick);
+        } catch {
+          /* the 0.05 fallback keeps the drag usable */
+        } finally {
+          if (trade) {
+            try { trade.setContext(); } catch { /* gone */ }
+            // The resolved token is what the quote frame was waiting for — the
+            // panel can mark itself now instead of after the next tick.
+            if (lastQuoteFrame) { try { trade.onTick(lastQuoteFrame); } catch { /* gone */ } }
+          }
+        }
+      })();
+      return entry;
+    }
+
+    function tradeContext() {
+      const { symbol, exchange } = cellInstrument();
+      const info = ensureInstrument(exchange, symbol);
+      return {
+        symbol,
+        exchange,
+        token: info.token,
+        tick: info.tick,
+        lotSize: info.lotSize,
+        qty: Math.max(1, Number(el("qtyInput").value) || 1),
+        product: state.product,
+        tradable: isTradable(exchange, symbol),
+      };
+    }
+
+    function destroyTrade() {
+      for (const off of tradeOffs.splice(0)) {
+        try { off && off(); } catch { /* already gone */ }
+      }
+      if (trade) { try { trade.destroy(); } catch { /* chart gone */ } }
+      trade = null;
+      tradeCell = null;
+    }
+
+    function ensureTrade() {
+      const cell = activeCell();
+      const widget = cell && cell.widget ? cell.widget : null;
+      const chart = widget && widget.chart ? widget.chart : null;
+      if (!chart) return null;
+      if (trade && tradeCell === cell) return trade;
+      destroyTrade();
+      tradeCell = cell;
+
+      // The band follows the cell: a symbol typed into the cell's own topbar
+      // must move the page's symbol, the instrument facts and the trade layer.
+      if (widget && typeof widget.on === "function") {
+        tradeOffs.push(widget.on("symbol", ({ symbol, exchange }) => {
+          if (!symbol) return;
+          state.symbol = symbol;
+          state.exchange = exchange || state.exchange;
+          state.token = null;
+          saveState();
+          el("symText").textContent = symbol;
+          el("exBadge").textContent = state.exchange;
+          renderProduct();
+          const info = ensureInstrument(state.exchange, symbol);
+          if (info.token) state.token = info.token;
+          paintInstrument();
+          try { trade?.setContext(); } catch { /* gone */ }
+        }));
+        tradeOffs.push(widget.on("interval", ({ interval }) => {
+          if (!interval) return;
+          gridTerminal.interval = interval;
+          state.interval = interval;
+          saveState();
+          if (tfControls) tfControls.setCurrent(interval);
+          paintInstrument();
+        }));
+        // A type picked in the CELL's own topbar emits layout{reason:"chartType"}
+        // (the widget bus has no dedicated chartType event) — that is the only
+        // signal that keeps the band label/gear honest for off-band changes.
+        tradeOffs.push(widget.on("layout", (evt) => {
+          if (!evt || evt.reason !== "chartType") return;
+          const next = evt.chartType || currentCtype();
+          if (!CHART_TYPES[next]) return;
+          gridTerminal.ctype = next;
+          state.ctype = next;
+          saveState();
+          paintTypeChrome(next);
+        }));
+      }
+
+      const { symbol, exchange } = cellInstrument();
+      ensureInstrument(exchange, symbol);
+
+      trade = createTradeLayer({
+        chart,
+        socket,
+        getContext: tradeContext,
+        onToast: (msg, kind) => toast(msg, kind),
+        // The canvas qty chip opens the band's qty field (the package reports
+        // the hit; the editor itself is page chrome).
+        onQty: () => {
+          const input = el("qtyInput");
+          if (!input) return;
+          input.focus();
+          input.classList.add("flash");
+          setTimeout(() => input.classList.remove("flash"), 900);
+        },
+        onBooks: ({ tradable, working }) => {
+          el("stTrade").textContent =
+            tradable === false ? "orders: quote-only" : `orders: ${working} working`;
+        },
+      });
+      trade.startPolling(5000);
+      // The quote may have landed before this layer existed (boot seeds it, the
+      // cell switch re-creates the layer) — mark the panel right away.
+      if (lastQuoteFrame) trade.onTick(lastQuoteFrame);
+      return trade;
+    }
+
+    /** The chart's own right-click Trade rows. */
+    async function placeFromChart(req) {
+      const layer = ensureTrade();
+      if (!layer || !req) return;
+      const type = String(req.type || "MARKET").toUpperCase();
+      await layer.place(String(req.side || "BUY").toUpperCase(), type, req.price ?? null);
+    }
+
+    /** A layout change may hand back a rebuilt cell; the old layer must go. */
+    function refreshTrade() {
+      const cell = activeCell();
+      if (!cell) { destroyTrade(); return; }
+      if (trade && tradeCell !== cell) destroyTrade();
+      ensureTrade();
+    }
+
+    try { grid.on("active", () => refreshTrade()); } catch { /* older grid */ }
+    try { grid.on("layout", () => refreshTrade()); } catch { /* older grid */ }
+    ensureTrade();
+
+    // ------------------------------------------------------------
+    // Capture / data export (the widget's own Capture menu, band parity)
+    // ------------------------------------------------------------
+    function nextPaint() {
+      return new Promise((resolve) => {
+        let settled = false;
+        const finish = () => { if (!settled) { settled = true; resolve(); } };
+        const timer = setTimeout(finish, 250);
+        requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(timer); finish(); }));
+      });
+    }
+
+    function stamp() {
+      return new Date().toISOString().slice(0, 16).replace(/[T:]/g, "-");
+    }
+
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+
+    /**
+     * The chart as a canvas, with the trade affordances left out — the same
+     * exclusion terminal.ts applies through `screenshotExcluded` (a saved image
+     * carries the chart's content, not something that invites a click).
+     */
+    async function captureCanvas() {
+      const chart = activeChart();
+      if (!chart) throw new Error("The chart is not ready yet");
+      const excluded = trade ? trade.pngExcludedPrimitive : null;
+      if (excluded) { try { chart.removePrimitive(excluded); } catch { /* gone */ } }
+      await nextPaint();
+      let canvas = null;
+      try {
+        canvas = chart.takeScreenshot();
+      } finally {
+        if (excluded) { try { chart.addPrimitive(excluded, 0); } catch { /* gone */ } }
+      }
+      if (!canvas) throw new Error("This browser cannot capture the chart");
+      return canvas;
+    }
+
+    async function canvasBlob(canvas) {
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("The image could not be encoded"))), "image/png");
+      });
+    }
+
+    async function captureDownload() {
+      try {
+        const canvas = await captureCanvas();
+        const blob = await canvasBlob(canvas);
+        downloadBlob(blob, `${state.symbol}-${gridTerminal.interval}-${stamp()}.png`);
+        toast("Chart image saved", "ok");
+      } catch (e) {
+        toast(e.message || String(e), "err");
+      }
+    }
+
+    async function captureCopy() {
+      try {
+        if (!navigator.clipboard || !window.ClipboardItem) {
+          throw new Error("Copying images needs https or localhost");
+        }
+        const canvas = await captureCanvas();
+        const blob = await canvasBlob(canvas);
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast("Chart copied", "ok");
+      } catch (e) {
+        toast(e.message || String(e), "err");
+      }
+    }
+
+    async function captureDataUrl() {
+      try {
+        const canvas = await captureCanvas();
+        return canvas.toDataURL("image/png");
+      } catch {
+        return null;
+      }
+    }
+
+    /** The chart's bars as CSV (the package's own writer, chartDataExport parity). */
+    function exportCsv(options = {}) {
+      const chart = activeChart();
+      if (!chart) throw new Error("The chart is not ready yet");
+      const bars = chart.primaryBars();
+      if (!bars || !bars.length) throw new Error("No bars are loaded to export");
+      const opts = csvOptions(chart, { range: options.range === "visible" ? "visible" : "all" });
+      return exportChartDataCsv(bars, opts);
+    }
+
+    /** Box / chart-type settings: the widget's own dialog for the cell. */
+    function openBoxDialog() {
+      const cell = activeCell();
+      // The cell topbar is off (one-toolbar round): its gear is normally not in
+      // the DOM, so the public settings dialog is the live path. The gear click
+      // stays as the first choice in case the topbar is ever re-enabled.
+      const gear = cell && cell.element
+        ? cell.element.querySelector(".oac-topbar__type-settings")
+        : null;
+      if (gear && !gear.hidden) {
+        gear.click();
+        return;
+      }
+      const widget = activeWidget();
+      const open =
+        widget && typeof widget.openSettings === "function"
+          ? widget.openSettings.bind(widget)
+          : widget && typeof widget._openDialog === "function"
+            ? () => widget._openDialog("settings", el("btnBoxSettings"))
+            : null;
+      if (open) {
+        open();
+        return;
+      }
+      toast("This chart type has no box settings", "");
+    }
+
+
+    function setLed(s) {
+      const led = el("wsLed");
+      led.classList.remove("on", "wait", "off");
+      const txt = { open: "WS live", connecting: "WS …", closed: "WS down" }[s] || "WS";
+      if (s === "open") led.classList.add("on");
+      else if (s === "connecting") led.classList.add("wait");
+      else led.classList.add("off");
+      el("wsLabel").textContent = txt;
+    }
+    socket.onState(setLed);
+    setLed("connecting");
+
+    socket.onOrderUpdate((row) => {
+      // Books stay readable; live order frames refill the chart's order lines.
+      el("stTrade").textContent = `orders: ${row.status || row.stat || "update"} #${row.norenorderno || row.order_id || ""}`.trim();
+      if (trade) void trade.poll();
+    });
+    socket.subscribeOrders();
+
+    /** Band readout: the active instrument's LTP and change, from live frames. */
+    function paintQuote(frame) {
+      const data = frame && frame.data;
+      if (!data) return;
+      const ltp = Number(data.ltp);
+      if (!Number.isFinite(ltp)) return;
+      lastQuoteFrame = frame;
+      const { symbol, exchange } = cellInstrument();
+      const tick = instruments.get(instKey(exchange, symbol))?.tick;
+      const dp = tick ? Math.min(4, Math.max(0, String(tick).split(".")[1]?.length ?? 2)) : 2;
+      const pct = Number(data.change_percent);
+      const pctText = Number.isFinite(pct) ? ` (${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%)` : "";
+      el("stQuote").textContent = `ltp ${ltp.toFixed(dp)}${pctText}`;
+    }
+
+    /** Band readout: what the active cell is actually charting. */
+    function paintInstrument() {
+      const { symbol, exchange } = cellInstrument();
+      el("stSub").textContent = `${exchange}:${symbol} · ${gridTerminal.interval}`;
+    }
+
+    /** One REST quote right after a symbol switch: the WS only pushes on trade,
+     *  so outside market hours (or before the broker's first snapshot) the band
+     *  and the Buy/Sell panel would sit blank. Mirrors OpenAlgo's on-select
+     *  quote fetch; a failure is silent — the socket still delivers when it
+     *  can. */
+    async function seedQuote(exchange, token) {
+      if (!token) return;
+      try {
+        const url = `/api/quotes?exchange=${encodeURIComponent(exchange)}&token=${encodeURIComponent(token)}`;
+        const res = await fetch(url, { method: "POST" });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const data = payload && payload.data;
+        if (!data || !Number(data.ltp)) return;
+        // The quote is the cheapest place to learn the contract's tick size.
+        const { symbol } = cellInstrument();
+        const info = instruments.get(instKey(exchange, symbol));
+        if (info && !info.tick && Number(data.tick_size) > 0) info.tick = Number(data.tick_size);
+        const frame = { exchange, token: String(token), data };
+        paintQuote(frame);
+        if (trade) trade.onTick(frame);
+      } catch { /* transient — the live feed takes over */ }
+    }
+
+    socket.onTick((frame) => {
+      const { symbol, exchange } = cellInstrument();
+      const info = instruments.get(instKey(exchange, symbol));
+      if (!info || !info.token || String(frame.token) !== String(info.token)) return;
+      // The feed carries the real tick size — cheaper and fresher than the quote.
+      if (!info.tick && Number(frame.data?.tick_size) > 0) {
+        info.tick = Number(frame.data.tick_size);
+        if (trade) { try { trade.setContext(); } catch { /* gone */ } }
+      }
+      paintQuote(frame);
+      // The trade layer marks the Buy/Sell panel with this instrument's LTP.
+      if (trade) trade.onTick(frame);
+    });
+
+    // IST clock (the band's corner; the axis clock is the engine's sessionClock)
+    setInterval(() => {
+      el("ttClock").textContent = new Date().toLocaleTimeString("en-IN", { hour12: false, timeZone: "Asia/Kolkata" });
+    }, 1000);
+
+    // ------------------------------------------------------------
+    // terminal callbacks
+    // ------------------------------------------------------------
+    // The cell's own canvas legend is the widget tier's job; the band only
+    // shows the live quote and what the active cell is charting.
+
+    // chart state: gate (timing) + overlay (DOM)
+    const overlay = mountChartStateOverlay(el("terminal-pane"), {
+      onRetry: () => {
+        const widget = activeWidget();
+        if (widget && typeof widget.reload === "function") widget.reload();
+      },
+      onDismiss: () => gate.dismiss(),
+    });
+    const gate = createChartStateGate((view) => overlay.show(view));
+    gridTerminal.onChartState = (view) => gate.set(view);
+    paintInstrument();
+
+    // ------------------------------------------------------------
+    // band icons (the engine's chrome set)
+    // ------------------------------------------------------------
+    for (const slot of document.querySelectorAll("[data-icon]")) {
+      const built = chromeIcon(slot.dataset.icon, Number(slot.dataset.iconSize || 16));
+      if (built) slot.replaceWith(built);
+    }
+    el("btnCamera").replaceChildren(chromeIcon("camera", 16));
+    el("btnFullscreen").replaceChildren(chromeIcon("fullscreen", 16));
+
+    // hover tips (Tip.tsx wording)
+    const tips = [
+      [el("btnSymbol"), { title: "Symbol search", chord: "F", sub: "Type a letter" }],
+      [el("btnCtype"), { title: "Chart type" }],
+      [el("btnProduct"), { title: "Product MIS", sub: "Click for NRML" }],
+      [el("btnIndicators"), { title: "Indicators", sub: "Add studies to this chart" }],
+      [el("btnAlerts"), { title: "Alerts", sub: "Condition alerts — their round" }],
+      [el("btnReplay"), { title: "Replay", sub: "Play the session back bar by bar from a bar you pick" }],
+      [el("btnCamera"), { title: "Chart snapshot", chord: "Alt+Shift+S", sub: "Save or copy an image, or download the data" }],
+      [el("btnFullscreen"), { title: "Full screen chart" }],
+      [el("btnBoxSettings"), { title: "Box settings" }],
+    ];
+    for (const [control, spec] of tips) attachTip(control, spec);
+
+    // ------------------------------------------------------------
+    // timeframe controls (TimeframeMenu.tsx port)
+    // ------------------------------------------------------------
+    let tfControls = null;
+    let servedIntervals = [];
+    try {
+      const res = await fetch("/api/intervals");
+      const j = await res.json();
+      servedIntervals = (j.intervals || []).map((i) => i.code);
+    } catch { /* fall back below */ }
+    if (!servedIntervals.length) servedIntervals = ["1m", "3m", "5m", "10m", "15m", "30m", "1h", "2h", "4h", "1d"];
+    const servedSet = new Set(servedIntervals);
+    const canSelectInterval = (code) => servedSet.has(code) || code === gridTerminal.interval;
+
+    function applyInterval(code) {
+      if (gridTerminal.interval === code) return;
+      gridTerminal.setInterval(code);
+      state.interval = gridTerminal.interval;
+      saveState();
+      tfControls.setCurrent(gridTerminal.interval);
+      paintInstrument();
+      syncRangePills();
+    }
+
+    tfControls = mountTimeframeControls({
+      strip: el("tfStrip"),
+      anchor: el("tfAnchor"),
+      groups: servedIntervals,
+      canSelectInterval,
+      onSelect: applyInterval,
+    });
+    tfControls.setCurrent(gridTerminal.interval);
+
+    // ------------------------------------------------------------
+    // chart-type dropdown from the catalog (icons via chartTypeIcon)
+    // ------------------------------------------------------------
+    function placeUnderMenu(btn, menu) {
+      const r = btn.getBoundingClientRect();
+      menu.style.left = `${Math.round(r.left)}px`;
+      menu.style.top = `${Math.round(r.bottom + 4)}px`;
+    }
+    /** What the active cell is charting right now (its own topbar may have changed it). */
+    function currentCtype() {
+      const widget = activeWidget();
+      let live = null;
+      try {
+        live = widget && typeof widget.chartType === "function" ? widget.chartType() : null;
+      } catch { live = null; }
+      if (live && CHART_TYPES[live]) return live;
+      return gridTerminal.ctype;
+    }
+    /** Band chrome for the chart type: label, icon, box-settings gear. Kept apart
+     *  from renderCtypeMenu so ANY path that changes the type (band menu, the
+     *  cell's own topbar, a preset restore) can repaint without rebuilding rows. */
+    function paintTypeChrome(current) {
+      const type = CHART_TYPES[current] ? current : "candlestick";
+      el("ctypeLabel").textContent = CHART_TYPES[type]?.label || "Candles";
+      const iconEl = chartTypeIcon(CHART_TYPES[type]?.iconKey || "chart-candlestick");
+      if (iconEl) {
+        iconEl.style.width = "16px";
+        iconEl.style.height = "16px";
+        el("ctypeIcon").replaceChildren(iconEl);
+      }
+      el("btnBoxSettings").style.display = isBoxChartType(type) ? "" : "none";
+    }
+    function renderCtypeMenu() {
+      const menu = el("ctypeMenu");
+      const current = currentCtype();
+      menu.innerHTML = "";
+      for (const group of CHART_TYPE_GROUPS) {
+        for (const def of group) {
+          const item = document.createElement("button");
+          item.className = "tt-ctype-item" + (def.value === current ? " active" : "");
+          const icon = chartTypeIcon(def.iconKey);
+          if (icon) {
+            icon.style.width = "16px";
+            icon.style.height = "16px";
+            item.appendChild(icon);
+          }
+          const label = document.createElement("span");
+          label.textContent = def.label;
+          item.appendChild(label);
+          if (def.pending) {
+            item.disabled = true;
+            item.title = "Profile layers — their round";
+          }
+          item.onclick = () => {
+            menu.classList.remove("open");
+            const v = gridTerminal.setChartType(def.value);
+            state.ctype = v;
+            saveState();
+            renderCtypeMenu();
+          };
+          menu.appendChild(item);
+        }
+        if (group !== CHART_TYPE_GROUPS[CHART_TYPE_GROUPS.length - 1]) {
+          const sep = document.createElement("div");
+          sep.className = "tt-ctype-gsep";
+          menu.appendChild(sep);
+        }
+      }
+      paintTypeChrome(current);
+    }
+    renderCtypeMenu();
+
+    el("btnCtype").onclick = (e) => {
+      e.stopPropagation();
+      const menu = el("ctypeMenu");
+      // Pick up a type the widget changed internally before the menu opens.
+      renderCtypeMenu();
+      menu.classList.toggle("open");
+      if (menu.classList.contains("open")) placeUnderMenu(el("btnCtype"), menu);
+    };
+    el("btnBoxSettings").onclick = () => gridTerminal.openBoxSettings();
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest?.(".tt-ctype-wrap")) el("ctypeMenu").classList.remove("open");
+    });
+    window.addEventListener("scroll", () => el("ctypeMenu").classList.remove("open"), true);
+
+    // ------------------------------------------------------------
+    // product toggle (MIS ↔ NRML/CNC by segment; visual until the order round)
+    // ------------------------------------------------------------
+    const FNO_PRODUCTS = new Set(["NFO", "BFO", "MCX", "CDS"]);
+    function alternateProduct() {
+      return FNO_PRODUCTS.has(state.exchange) ? "NRML" : "CNC";
+    }
+    function renderProduct() {
+      const btn = el("btnProduct");
+      btn.textContent = state.product;
+      btn.setAttribute("aria-pressed", state.product === "MIS" ? "true" : "false");
+      const spec = tips[2][1];
+      spec.title = `Product ${state.product}`;
+      spec.sub = `Click for ${alternateProduct()}`;
+    }
+    el("btnProduct").onclick = () => {
+      state.product = alternateProduct();
+      saveState();
+      renderProduct();
+    };
+    renderProduct();
+
+    // ------------------------------------------------------------
+    // camera menu (their snapshot menu: save / copy / data)
+    // ------------------------------------------------------------
+    async function downloadDataCsv() {
+      const answer = await openDataDialog({ instrument: state.symbol });
+      if (!answer) return;
+      try {
+        const csv = await gridTerminal.exportDataCsv({ range: answer.range });
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 16).replace(/[T:]/g, "-");
+        a.href = url;
+        a.download = `${state.symbol}-${gridTerminal.interval}-${stamp}.csv`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast("Data downloaded", "ok");
+      } catch (e) {
+        toast(e.message || String(e), "err");
+      }
+    }
+    function renderCamMenu() {
+      const menu = el("camMenu");
+      menu.innerHTML = "";
+      const rows = [
+        ["download", "Save image", "PNG with the readout painted in", async () => { menu.classList.remove("open"); await gridTerminal.screenshot(); }],
+        ["copy", "Copy image", "Paste it anywhere (localhost counts as secure)", async () => { menu.classList.remove("open"); await gridTerminal.copyScreenshot(); }],
+        ["save", "Download data", "The chart's bars as CSV", async () => { menu.classList.remove("open"); await downloadDataCsv(); }],
+      ];
+      for (const [icon, name, sub, act] of rows) {
+        const item = document.createElement("button");
+        item.className = "tt-ctype-item";
+        const ic = chromeIcon(icon, 16);
+        if (ic) item.appendChild(ic);
+        const wrap2 = document.createElement("span");
+        wrap2.style.display = "flex";
+        wrap2.style.flexDirection = "column";
+        wrap2.style.alignItems = "flex-start";
+        const nm = document.createElement("span");
+        nm.textContent = name;
+        const sb = document.createElement("span");
+        sb.style.fontSize = "10.5px";
+        sb.style.color = "var(--tt-muted)";
+        sb.textContent = sub;
+        wrap2.append(nm, sb);
+        item.appendChild(wrap2);
+        item.onclick = () => void act();
+        menu.appendChild(item);
+      }
+    }
+    renderCamMenu();
+    el("btnCamera").onclick = (e) => {
+      e.stopPropagation();
+      el("camMenu").classList.toggle("open");
+      if (el("camMenu").classList.contains("open")) placeUnderMenu(el("btnCamera"), el("camMenu"));
+    };
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest?.("#btnCamera")) el("camMenu").classList.remove("open");
+    });
+    window.addEventListener("scroll", () => el("camMenu").classList.remove("open"), true);
+
+    // ------------------------------------------------------------
+    // fullscreen (pane-level, their fullscreen round parity)
+    // ------------------------------------------------------------
+    function syncFullscreenIcon() {
+      const on = document.fullscreenElement === el("terminal-pane");
+      el("btnFullscreen").replaceChildren(chromeIcon(on ? "fullscreen-exit" : "fullscreen", 16));
+    }
+    function toggleFullscreen() {
+      const pane = el("terminal-pane");
+      if (document.fullscreenElement === pane) void document.exitFullscreen();
+      else void pane.requestFullscreen().catch(() => {});
+    }
+    el("btnFullscreen").onclick = toggleFullscreen;
+    document.addEventListener("fullscreenchange", () => {
+      syncFullscreenIcon();
+      // Fullscreen exits put nothing over the chart: close any open menu.
+      el("camMenu").classList.remove("open");
+      el("ctypeMenu").classList.remove("open");
+    });
+    syncFullscreenIcon();
+    document.addEventListener("keydown", (e) => {
+      if (e.altKey && e.shiftKey && (e.key === "S" || e.key === "s")) {
+        e.preventDefault();
+        void gridTerminal.screenshot();
+      }
+    });
+
+    // ------------------------------------------------------------
+    // Round A — visual parity: drawing rail, Buy/Sell panel,
+    // time-range bar, enabled Indicators / Alerts / Replay (stubs)
+    // ------------------------------------------------------------
+
+    /* drawing tools rail — ids are the package's own tool ids
+       (DrawingController.setTool throws on anything else); "select" is
+       setTool(null), the package's deselect. */
+    const DRAW_TOOLS = [
+      ["select", "cursor", "Select"],
+      ["trend-line", "crosshair", "Trend line"],
+      ["horizontal-line", "line-dashed", "Horizontal line"],
+      ["rectangle", "bracket", "Rectangle"],
+      ["ellipse", "fill", "Ellipse"],
+      ["text", "text", "Text"],
+      ["measure", "measure", "Measure"],
+      ["brush", "brush", "Brush"],
+      ["undo", "undo", "Undo"],
+      ["redo", "redo", "Redo"],
+    ];
+    const rail = el("ttLeftRail");
+    const activeToolBtns = new Map();
+    /** Repaint the rail from the cell's controller (the source of truth). */
+    function paintRail(active) {
+      for (const [id, btn] of activeToolBtns) {
+        btn.classList.toggle("active", active !== null && id === active);
+      }
+      if (active === null && activeToolBtns.has("select")) {
+        activeToolBtns.get("select").classList.add("active");
+      }
+    }
+    for (const [id, icon, title] of DRAW_TOOLS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tt-rail-btn";
+      b.dataset.tool = id;
+      b.setAttribute("aria-label", title);
+      const ic = chromeIcon(icon, 14);
+      if (ic) b.appendChild(ic);
+      else b.textContent = title.slice(0, 1);
+      b.onclick = (e) => {
+        e.stopPropagation();
+        if (id === "undo" || id === "redo") {
+          const done = id === "undo" ? gridTerminal.undoDrawing() : gridTerminal.redoDrawing();
+          if (!done) toast(`Nothing to ${id}`, "");
+          gridTerminal.syncDrawStats();
+          return;
+        }
+        // "select" is the package's null tool; the rest arm a drawing tool.
+        gridTerminal.setDrawTool(id === "select" ? null : id);
+        gridTerminal.syncDrawStats();
+      };
+      activeToolBtns.set(id, b);
+      rail.appendChild(b);
+    }
+    gridTerminal.onDrawStats = ({ activeTool }) => paintRail(activeTool ?? null);
+    paintRail(null);
+    el("btnDrawTools").onclick = (e) => {
+      e.stopPropagation();
+      rail.style.display = rail.style.display === "none" ? "" : "none";
+    };
+
+    /* layouts picker — widget grid.setPreset */
+    async function openLayoutPicker() {
+      const dlg = document.createElement("dialog");
+      dlg.className = "tt-dialog";
+      dlg.style.width = "340px";
+      const presets = Object.entries(CHART_GRID_LAYOUTS).filter(([k]) => /^\d+x\d+$/.test(k));
+      dlg.innerHTML = `
+        <div class="tt-search-row">
+          <div style="font-weight:600">Layout</div>
+          <button class="tt-btn" id="layoutClose">Esc</button>
+        </div>
+        <div id="layoutGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 0"></div>
+        <div class="tt-box-row" style="margin-top:10px">
+          <span class="tt-growth"></span>
+          <button class="tt-btn" id="layoutCancel">Cancel</button>
+        </div>`;
+      document.body.appendChild(dlg);
+      dlg.showModal();
+      const gridEl = el("layoutGrid");
+      for (const [name, spec] of presets) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tt-btn";
+        b.textContent = name;
+        b.onclick = () => {
+          gridTerminal.setPreset(name);
+          dlg.close();
+        };
+        gridEl.appendChild(b);
+      }
+      const close = () => dlg.close();
+      dlg.addEventListener("close", () => dlg.remove());
+      el("layoutClose").onclick = close;
+      el("layoutCancel").onclick = close;
+    }
+    el("btnLayout").onclick = (e) => {
+      e.stopPropagation();
+      openLayoutPicker();
+    };
+
+    /* drawing tools — widget DrawingController on the cell's chart */
+    const pane = el("terminal-pane");
+    // DrawingController is attached lazily on first tool pick (see gridTerminal.setDrawTool)
+
+    // The SELL / qty / BUY panel is the package's own `BuySellButtons` primitive
+    // (the trade layer adds it to the chart, terminal.ts parity) — no DOM
+    // duplicate. The band's qty box drives its chip.
+    const qtyInput = el("qtyInput");
+    qtyInput.oninput = () => { if (trade) trade.setContext(); };
+
+    /* Indicators / Alerts — the widget tier's own dialogs (band is the only
+       toolbar now that the cell topbar is off; both are PUBLIC widget API) */
+    el("btnIndicators").onclick = () => {
+      const widget = activeWidget();
+      const open =
+        widget && typeof widget.openIndicatorPicker === "function"
+          ? widget.openIndicatorPicker.bind(widget)
+          : widget && typeof widget._openDialog === "function"
+            ? () => widget._openDialog("indicatorPicker", el("btnIndicators"))
+            : null;
+      if (open) {
+        open(el("btnIndicators"));
+        return;
+      }
+      void openIndicatorPicker();
+    };
+    el("btnAlerts").onclick = () => {
+      const widget = activeWidget();
+      const open =
+        widget && typeof widget.openAlerts === "function"
+          ? widget.openAlerts.bind(widget)
+          : widget && typeof widget._openAlerts === "function"
+            ? widget._openAlerts.bind(widget)
+            : null;
+      if (open) {
+        open(el("btnAlerts"));
+        return;
+      }
+      toast("Alerts need a live chart — wait for the data to load", "err");
+    };
+    el("btnReplay").onclick = () => toast("Replay — session round", "");
+
+    /* indicators picker wiring */
+    gridTerminal.onIndicatorsChange = (list) => {
+      el("indActiveCount").textContent = `active: ${list.length}`;
+      // Re-render the picker if it's open
+      if (el("indicatorDlg").open) renderIndicatorPicker();
+    };
+    gridTerminal.onIndicatorSettings = async ({ instanceId, indicatorId, fields, settings }) => {
+      // Lightweight settings dialog: one row per field
+      await import("/static/trading/chart_data_export.mjs"); // ensure dialog css loaded
+      const dlg = document.createElement("dialog");
+      dlg.className = "tt-dialog";
+      dlg.innerHTML = `
+        <div class="tt-search-row">
+          <div style="font-weight:600">Settings — ${indicatorId}</div>
+          <button class="tt-btn" id="indSettingsClose">Esc</button>
+        </div>
+        <div id="indSettingsFields" style="max-height:300px;overflow:auto"></div>
+        <div class="tt-box-row" style="margin-top:10px">
+          <span class="tt-growth"></span>
+          <button class="tt-btn" id="indSettingsCancel">Cancel</button>
+          <button class="tt-btn" id="indSettingsApply">Apply</button>
+        </div>`;
+      document.body.appendChild(dlg);
+      dlg.showModal();
+      const fieldsBox = el("indSettingsFields");
+      fieldsBox.innerHTML = "";
+      for (const f of fields) {
+        const row = document.createElement("div");
+        row.className = "tt-field";
+        row.style.margin = "6px 0";
+        row.innerHTML = `<label style="font-size:11px;color:var(--tt-muted);display:block;margin-bottom:2px">${f.label || f.key}</label>`;
+        const input = document.createElement("input");
+        input.type = f.type === "number" ? "number" : "text";
+        input.value = settings[f.key] !== undefined ? settings[f.key] : (f.default ?? "");
+        input.style.width = "120px";
+        input.style.padding = "2px 6px";
+        input.style.fontSize = "11px";
+        row.appendChild(input);
+        fieldsBox.appendChild(row);
+      }
+      const close = () => dlg.close();
+      dlg.addEventListener("close", () => dlg.remove());
+      el("indSettingsClose").onclick = close;
+      el("indSettingsCancel").onclick = close;
+      el("indSettingsApply").onclick = () => {
+        const patch = {};
+        for (const row of fieldsBox.querySelectorAll("input")) {
+          const label = row.previousElementSibling?.textContent?.trim() || row.placeholder || "";
+          const f = fields.find((x) => (x.label || x.key) === label);
+          if (f) patch[f.key] = f.type === "number" ? Number(row.value) : row.value;
+        }
+        gridTerminal.updateIndicatorSettings(instanceId, patch);
+        close();
+      };
+    };
+
+    async function openIndicatorPicker() {
+      const dlg = el("indicatorDlg");
+      dlg.showModal();
+      await renderIndicatorPicker();
+    }
+    async function renderIndicatorPicker() {
+      const box = el("indResults");
+      const input = el("indSearchInput");
+      const cat = await gridTerminal.indicatorCatalog();
+      let items = cat;
+      input.oninput = () => {
+        const q = input.value.toLowerCase();
+        items = cat.filter((c) => (c.name + " " + c.id).toLowerCase().includes(q));
+        renderIndicatorPicker();
+      };
+      const active = new Set((gridTerminal.activeIndicators || []).map((r) => r.indicatorId));
+      box.innerHTML = "";
+      for (const c of items) {
+        const row = document.createElement("div");
+        row.className = "tt-result";
+        row.style.padding = "6px 8px";
+        row.style.cursor = "pointer";
+        row.innerHTML = `<span class="rs">${c.name}</span><span class="rn">${c.id}</span><span class="rx">${c.category}</span>`;
+        if (active.has(c.id)) row.classList.add("sel");
+        row.onclick = async () => {
+          if (active.has(c.id)) {
+            gridTerminal.removeIndicatorById(activeIndicatorInstanceId(c.id));
+          } else {
+            await gridTerminal.addIndicatorById(c.id);
+          }
+          dlg.close ? null : null;
+          renderIndicatorPicker();
+        };
+        box.appendChild(row);
+      }
+    }
+    function activeIndicatorInstanceId(indicatorId) {
+      return (gridTerminal.activeIndicators || []).find((r) => r.indicatorId === indicatorId)?.instanceId;
+    }
+    el("indClose").onclick = () => el("indicatorDlg").close();
+
+    /* Save — workspace round (the grid already autosaves its own workspace) */
+    el("btnSave").onclick = () => toast("The desk autosaves itself — nothing to save", "");
+
+    /* bottom time-range bar — the widget's own range controller per cell */
+    const rangeBar = el("ttRangeBar");
+    /** The pill state mirrors the CELL's own range: a manual interval pick
+        clears the range in the package, so no pill may stay lit then. */
+    function syncRangePills() {
+      const widget = activeWidget();
+      let live = null;
+      try { live = widget && typeof widget.range === "function" ? widget.range() : null; } catch { live = null; }
+      rangeBar.querySelectorAll(".tt-range-pill").forEach((x) => {
+        x.classList.toggle("active", !!live && x.dataset.range === live);
+      });
+    }
+    async function applyRange(id) {
+      const widget = activeWidget();
+      const setRange =
+        widget && typeof widget.setRange === "function"
+          ? widget.setRange.bind(widget)
+          : widget && widget._bottombar && typeof widget._bottombar.setRange === "function"
+            ? widget._bottombar.setRange.bind(widget._bottombar)
+            : null;
+      if (!setRange) {
+        toast("The chart is not ready yet", "err");
+        return;
+      }
+      rangeBar.querySelectorAll(".tt-range-pill").forEach((x) => {
+        x.classList.toggle("active", x.dataset.range === id);
+      });
+      const answer = await setRange(id);
+      if (answer && answer.status === "invalid") {
+        toast(`Range ${id} is not available on this instrument`, "err");
+      } else if (answer && answer.status === "no-data") {
+        toast(`No bars for ${id}`, "");
+      }
+      // A range also picks its interval (1D→1m … 6M→1d): keep the band in step.
+      const widget2 = activeWidget();
+      if (widget2 && typeof widget2.interval === "function") {
+        gridTerminal.interval = widget2.interval();
+        state.interval = gridTerminal.interval;
+        saveState();
+        tfControls.setCurrent(gridTerminal.interval);
+      }
+      syncRangePills();
+    }
+    for (const pill of rangeBar.querySelectorAll(".tt-range-pill")) {
+      pill.onclick = () => { void applyRange(pill.dataset.range); };
+    }
+    el("rangeGoInput").onkeypress = (e) => {
+      if (e.key !== "Enter") return;
+      const widget = activeWidget();
+      const open =
+        widget && typeof widget.openDateNavigation === "function"
+          ? widget.openDateNavigation.bind(widget)
+          : widget && typeof widget._openGoTo === "function"
+            ? widget._openGoTo.bind(widget)
+            : null;
+      if (open) {
+        open(el("rangeGoInput"));
+        return;
+      }
+      toast("The chart is not ready yet", "err");
+    };
+
+    // ------------------------------------------------------------
+    // symbol search
+    // ------------------------------------------------------------
+    let searchTimer = null;
+    function openSearch() {
+      const dlg = el("searchDlg");
+      dlg.showModal();
+      const input = el("searchInput");
+      input.value = "";
+      el("searchResults").innerHTML = `<div class="tt-empty">Type to search…</div>`;
+      input.focus();
+      input.oninput = () => {
+        clearTimeout(searchTimer);
+        const q = input.value.trim();
+        if (!q) return;
+        searchTimer = setTimeout(() => runSearch(q), 250);
+      };
+    }
+
+    async function runSearch(q) {
+      const box = el("searchResults");
+      box.innerHTML = `<div class="tt-empty">searching…</div>`;
+      let rows = [];
+      try { rows = await searchSymbols(q); } catch { /* all failed → empty */ }
+      if (!rows.length) { box.innerHTML = `<div class="tt-empty">No matches for “${q}”</div>`; return; }
+      box.innerHTML = "";
+      for (const row of rows) {
+        const d = document.createElement("div");
+        d.className = "tt-result";
+        d.innerHTML = `<span class="rs">${row.symbol}</span>` +
+          `<span class="rn">${row.name || ""}</span>` +
+          `<span class="rx">${row.exchange}</span>`;
+        d.onclick = () => {
+          el("searchDlg").close();
+          state.symbol = row.symbol;
+          state.exchange = row.exchange;
+          state.token = row.token || null;
+          saveState();
+          renderProduct();
+          el("symText").textContent = row.symbol;
+          el("exBadge").textContent = row.exchange;
+          bootSymbol(row.exchange, row.symbol, row.token || null);
+        };
+        box.appendChild(d);
+      }
+    }
+
+    el("btnSymbol").onclick = () => openSearch();
+    el("searchClose").onclick = () => el("searchDlg").close();
+
+    document.addEventListener("keydown", (e) => {
+      if (document.activeElement && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+      if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        openSearch();
+      }
+      if (e.key === "Escape") { try { el("searchDlg").close(); } catch { /* */ } }
+    });
+
+    // ------------------------------------------------------------
+    // boot
+    // ------------------------------------------------------------
+    async function bootSymbol(exchange, symbol, knownToken) {
+      el("symText").textContent = symbol;
+      el("exBadge").textContent = exchange;
+      try {
+        // A search row already carries the resolved token — resolving again
+        // would issue four broker searches per click for nothing.
+        const resolved = knownToken
+          ? { token: String(knownToken), exchange: String(exchange).toUpperCase(), tsym: symbol }
+          : await resolveToken(exchange, symbol);
+        socket.mdSubscribe(resolved.exchange, resolved.token);
+        state.token = resolved.token;
+        // Seed the trade layer's contract facts the moment the token is known:
+        // lot size and tick size decide the order quantity and drag snapping.
+        ensureInstrument(resolved.exchange, resolved.tsym || symbol, resolved.token);
+        saveState();
+        el("btnCamera").disabled = false;
+        await gridTerminal.boot({ symbol: resolved.tsym || symbol, exchange: resolved.exchange, token: resolved.token });
+        paintInstrument();
+        void seedQuote(resolved.exchange, resolved.token);
+      } catch (e) {
+        gate.set(chartLoadFailed(symbol, gridTerminal.interval, e.message || String(e)));
+        toast(e.message || String(e), "err");
+      }
+    }
+
+    try {
+      const res = await fetch("/api/symbols");
+      const payload = await res.json();
+      registerTokens(Array.isArray(payload) ? payload : (payload.symbols || []));
+    } catch { /* optional seeding */ }
+
+    bootSymbol(state.exchange, state.symbol, state.token);
+
+    // Debug surface for the E2E harness.
+    window.__terminalDebug = () => ({
+      state,
+      ctype: gridTerminal.ctype,
+      interval: gridTerminal.interval,
+      socket: socket.state,
+      instruments: [...instruments.entries()].map(([k, v]) => ({ key: k, token: v.token, tick: v.tick, lotSize: v.lotSize })),
+      tradable: isTradable(),
+      orders: trade ? trade.books() : null,
+      drawing: !!gridTerminal.drawing(),
+    });
+    window.__terminalApi = {
+      terminal: gridTerminal,
+      socket,
+      grid,
+      tf: tfControls,
+      gate,
+      overlay,
+      servedIntervals,
+      setType: (v) => gridTerminal.setChartType(v),
+      openBox: () => gridTerminal.openBoxSettings(),
+      shotPng: () => gridTerminal.snapshotPng(),
+      tupleExport: () => gridTerminal.exportDataCsv(),
+      activeChart: () => activeChart(),
+      trade: () => trade,
+      setDrawTool: (id) => gridTerminal.setDrawTool(id),
+      applyRange: (id) => applyRange(id),
+      applyInterval: (id) => applyInterval(id),
+      setSymbol: (ex, sym) => bootSymbol(ex, sym),
+    };
+  </script>
+</body>
+</html>

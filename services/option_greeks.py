@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Local Black-76 (options-on-futures) pricing engine for the option chain.
+"""Option pricing for the option chain: Black-76 and spot Black-Scholes.
 
 Why this exists: Flattrade's PiConnect exposes /GetOptionGreek, but it takes
 implied volatility as an INPUT — no Flattrade endpoint returns IV. To display
-IV + Greeks per leg you must invert the leg's market price first, so the
-volatility is computed here regardless. Once IV exists, every Greek follows
-from the same closed-form expressions PiConnect's engine also evaluates, so
-the panel refreshes them locally on every chain load (zero extra broker
-round-trips) while /api/optionchain/greek routes single legs through the
-official PiConnect call for on-demand checks.
+IV + Greeks per leg the leg's market price must be inverted first, so the
+volatility is computed here regardless; /GetOptionGreek then supplies the
+Greeks for that volatility from the broker's own engine (the chain route
+calls it per leg, see api/routes.py optionchain_chain), with the local
+closed-form values as the fallback when a leg's call is refused.
 
-The underlying used by the chain is always a futures scrip, so its LTP is a
-forward price and Black-76 (with F given, r only discounting) is the correct
-model.
+Two models live here:
+- `black76` / `implied_vol` — options-on-futures, F given, r only discounts.
+  Correct when the reference price is the underlying FUTURES LTP (the chain's
+  ATM anchor is a futures quote).
+- `black_scholes` / `implied_vol_spot` — the SPOT model PiConnect's
+  GetOptionGreek evaluates (its `sptprc` is a spot; live-probed, see the
+  section comment below). The chain inverts IV with this one whenever the
+  underlying index spot is resolvable, so the broker's Greeks line up with
+  the market price.
 
 Conventions:
 - theta is returned PER DAY (divided by 365), as traders read it.
@@ -175,4 +180,109 @@ def compute_leg_greeks(spot, strike, t_years, optt, price, rate=None):
     g = black76(spot, strike, t_years, iv, rate, optt)
     if g:
         out.update({k: g[k] for k in ("delta", "gamma", "theta", "vega", "rho")})
+    return out
+
+
+# ============================================================
+# Spot-based Black-Scholes — the model PiConnect's GetOptionGreek evaluates
+# ============================================================
+# GetOptionGreek's `sptprc` is a SPOT, not a forward: live-probed on
+# BANKNIFTY23NOV26C54500 (S 54,541.2, K 54,500, T 0.0706y, r 6.5%, vol 0.16)
+# it answers cal_price 1,103.18 / cal_delta 0.5595 / cal_gamma 0.000166 /
+# cal_theta -22.58 / cal_vega 58.52 — a plain Black-Scholes call, not the
+# Black-76 call on the futures price (941.14 / 0.5132 / 0.000171). Feeding a
+# futures LTP into `sptprc` therefore shifts every Greek by the rT drift.
+#
+# The option-chain route inverts each leg's market price with THIS model and
+# then asks GetOptionGreek for the Greeks, so the panel's numbers come from
+# the broker's own engine and agree with Flattrade's UI. Conventions match
+# black76 exactly (theta per day, vega/rho per 1%) — live-verified against
+# the same probe.
+
+
+def _bs_price(S, K, T, sigma, r, optt):
+    d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    d2 = d1 - sigma * math.sqrt(T)
+    df = math.exp(-r * T)
+    if optt == "C":
+        return S * _n(d1) - K * df * _n(d2)
+    return K * df * _n(-d2) - S * _n(-d1)
+
+
+def black_scholes(S, K, T, sigma, r, optt):
+    """Price + Greeks for one leg under the spot model. Same keys and
+    conventions as black76; None when the inputs leave the model's domain."""
+    optt = "C" if str(optt).upper().startswith("C") else "P"
+    if S is None or K is None or T is None or sigma is None:
+        return None
+    if S <= 0 or K <= 0 or T <= 0 or sigma <= 0:
+        return None
+    df = math.exp(-r * T)
+    d1 = (math.log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * math.sqrt(T))
+    d2 = d1 - sigma * math.sqrt(T)
+    if optt == "C":
+        price = S * _n(d1) - K * df * _n(d2)
+        delta = _n(d1)
+        theta_r = -r * K * df * _n(d2)
+        rho = K * T * df * _n(d2) / 100.0
+    else:
+        price = K * df * _n(-d2) - S * _n(-d1)
+        delta = -_n(-d1)
+        theta_r = r * K * df * _n(-d2)
+        rho = -K * T * df * _n(-d2) / 100.0
+    gamma = _phi(d1) / (S * sigma * math.sqrt(T))
+    vega = S * _phi(d1) * math.sqrt(T) / 100.0
+    theta = -(S * _phi(d1) * sigma / (2.0 * math.sqrt(T))) / 365.0 + theta_r / 365.0
+    return {"price": price, "delta": delta, "gamma": gamma,
+            "theta": theta, "vega": vega, "rho": rho}
+
+
+def implied_vol_spot(S, K, T, price, r, optt):
+    """Inverse of black_scholes — same bracketing bisection as implied_vol,
+    so both models refuse (None) rather than invent a volatility for a price
+    outside the arbitrage band."""
+    optt = "C" if str(optt).upper().startswith("C") else "P"
+    if S is None or K is None or T is None or price is None or price <= 0:
+        return None
+    if S <= 0 or K <= 0 or T <= 0:
+        return None
+    df = math.exp(-r * T)
+    lo = max(0.0, S - K * df) if optt == "C" else max(0.0, K * df - S)
+    hi = S if optt == "C" else K * df
+    if price < lo - 1e-9 or price > hi + 1e-9:
+        return None
+
+    def err(sigma):
+        return _bs_price(S, K, T, sigma, r, optt) - price
+
+    a, b = _VOL_MIN, _VOL_MAX
+    fa, fb = err(a), err(b)
+    if fa > 0 or fb < 0:
+        return None
+    for _ in range(80):
+        mid = 0.5 * (a + b)
+        e = err(mid)
+        if abs(e) < 1e-10:
+            return mid
+        if e < 0:
+            a = mid
+        else:
+            b = mid
+    return 0.5 * (a + b)
+
+
+def compute_leg_greeks_spot(spot, strike, t_years, optt, price, rate=None):
+    """One leg's IV + Greeks under the spot model (GetOptionGreek parity).
+    Returns {iv, price, delta, gamma, theta, vega, rho}; iv is a DECIMAL
+    fraction (0.16 = 16%) — the unit GetOptionGreek's `volatility` takes."""
+    rate = _RISK_FREE if rate is None else rate
+    out = {"iv": None, "price": None, "delta": None, "gamma": None,
+           "theta": None, "vega": None, "rho": None}
+    iv = implied_vol_spot(spot, strike, t_years, price, rate, optt)
+    if iv is None:
+        return out
+    out["iv"] = iv
+    g = black_scholes(spot, strike, t_years, iv, rate, optt)
+    if g:
+        out.update(g)
     return out

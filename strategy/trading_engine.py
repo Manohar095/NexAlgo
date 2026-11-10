@@ -43,7 +43,7 @@ from queue import Queue, Empty
 
 import pytz
 
-from strategy.renko import LiveRenko
+from strategy.renko import LiveRenko, wilder_atr
 
 
 class TradingEngine:
@@ -56,7 +56,15 @@ class TradingEngine:
         self.on_log = on_log    # callback(instance_id, level, message)
         self.on_status = on_status # callback(instance_id, status_dict)
 
-        self.renko = LiveRenko(cfg.brick_size, cfg.green_to_red_rev, cfg.red_to_green_rev)
+        # ── Brick SIZE is a method now (renko_multi parity): ATR resolves
+        # from intraday history at start, LTP % reads per-band sizes, fixed
+        # uses brick_size. Until the ATR lands the engine holds every tick —
+        # the chain must not form on a size that is about to change.
+        self.brick_method = cfg.brick_method if cfg.brick_method in ("fixed", "atr", "ltp_pct") else "fixed"
+        self._await_size = self.brick_method == "atr"
+        self.renko = LiveRenko(cfg.brick_size, cfg.green_to_red_rev, cfg.red_to_green_rev,
+                               mode=self.brick_method,
+                               tick_size=cfg.tick_size, ltp_percent=cfg.ltp_percent)
 
         # ---- Trading state ----
         self.position_qty     = 0
@@ -221,6 +229,13 @@ class TradingEngine:
         self._stop_event.clear()
         self.status = "RUNNING"
 
+        # ATR method: seed the size ONCE, before any tick can form a brick
+        # (renko_multi _resolve_brick_size parity). A blocking broker REST
+        # call is fine here — start() already runs off the ASGI loop — and
+        # registering the feed only after it keeps every tick on the settled
+        # size. A failed history leaves the configured brick_size in place.
+        self._resolve_brick_size()
+
         self.broker.register_feed(self.cfg.exchange, self.cfg.token, self.feed_handler)
         self.broker.register_order_handler(self.cfg.exchange, self.cfg.trading_symbol, self.order_handler)
         self.broker.start_websocket()  # no-op if already started
@@ -271,7 +286,79 @@ class TradingEngine:
         self._push_status()
 
         self._push_thread.join(timeout=3)   # <-- added
-        
+
+    # ================= BRICK SIZE METHOD (renko_multi parity) =================
+    def _brick_size_now(self):
+        """Effective brick size at the engine's current edge: the configured
+        size for fixed/ATR, the edge's price-band size for LTP %. Falls back
+        to the configured brick_size before the first level exists."""
+        renko = self.renko
+        edge = renko.last_close
+        if edge is not None:
+            try:
+                return renko._size_at(edge)
+            except Exception:
+                return renko.brick_size
+        return renko.brick_size
+
+    def _resolve_brick_size(self):
+        """
+        ATR method: seed the engine's brick size once, at start, from the
+        instrument's own intraday candles — Wilder ATR x multiplier, snapped
+        onto the tick. The chain must not re-base mid-session, so this runs
+        exactly here and never again; a failed history leaves the configured
+        brick_size in place with a warning.
+        """
+        if not self._await_size:
+            return          # fixed / ltp_pct / already resolved: nothing to seed
+        size = self._atr_brick_size()
+        if size is not None:
+            self.renko.brick_size = size
+            self._log("INFO", f"📐 ATR brick = ATR(5m, {self.cfg.atr_period}) "
+                              f"x {self.cfg.atr_multiplier} = {size}")
+        else:
+            self._log("WARNING", f"⚠️ ATR unavailable → falling back to fixed brick size "
+                                 f"{self.cfg.brick_size}")
+        self._await_size = False
+
+    def _atr_brick_size(self):
+        atr = self._atr_from_history()
+        if not (atr and atr > 0):
+            return None
+        tick = self.cfg.tick_size or 0
+        size = atr * self.cfg.atr_multiplier
+        if tick > 0:
+            size = max(tick, round(round(size / tick) * tick, 10))
+        return round(size, 10)
+
+    def _atr_from_history(self):
+        """Wilder ATR over completed 5-minute candles of the last ~week
+        (Noren TPSeries — the SDK collapses every refusal to None, so a
+        failed read is returned as None, never an exception)."""
+        c = self.cfg
+        try:
+            end = int(time.time())
+            start = end - 7 * 86400
+            rows = self.broker.get_time_price_series(
+                exchange=c.exchange, token=str(c.token),
+                starttime=start, endtime=end, interval=5)
+            if not isinstance(rows, list):
+                return None
+            bars = []
+            prev_close = [None]
+            for row in rows:
+                if not isinstance(row, dict):
+                    continue
+                high = row.get("inth", row.get("inoh"))
+                low = row.get("intl", row.get("inol"))
+                close = row.get("intc", row.get("into"))
+                if not (high and low and close):
+                    continue
+                bars.append((float(high), float(low), float(close)))
+            return wilder_atr(bars, self.cfg.atr_period)
+        except Exception:
+            return None
+
     def restart(self):
         self._log("INFO", "🔄 Restarting...")
         self.stop()
@@ -460,7 +547,7 @@ class TradingEngine:
                 self.pending_buy_origin_price = None
             elif self.pending_buy_origin_price is None and self.pending_buy_trigger_price:
                 self.pending_buy_origin_price = self._round_price(
-                    self.pending_buy_trigger_price + self.cfg.brick_size
+                    self.pending_buy_trigger_price + self._brick_size_now()
                 )
                 self._log(
                     "WARNING",
@@ -472,7 +559,7 @@ class TradingEngine:
                 self.pending_sell_origin_price = None
             elif self.pending_sell_origin_price is None and self.pending_sell_trigger_price:
                 self.pending_sell_origin_price = self._round_price(
-                    self.pending_sell_trigger_price - self.cfg.brick_size
+                    self.pending_sell_trigger_price - self._brick_size_now()
                 )
                 self._log(
                     "WARNING",
@@ -1293,10 +1380,10 @@ class TradingEngine:
                 # instead of falling back again.
                 self.entry_price = ref_price
             if self.position_qty > 0:
-                sl_limit = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                sl_limit = self._round_price(ref_price - self.cfg.sl_trail_brick_number * self._brick_size_now())
                 sl_side = "S"
             else:
-                sl_limit = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                sl_limit = self._round_price(ref_price + self.cfg.sl_trail_brick_number * self._brick_size_now())
                 sl_side = "B"
 
             self._log(
@@ -1312,6 +1399,12 @@ class TradingEngine:
 
         ltp = float(msg["lp"])
         self.last_ltp = ltp
+
+        if self._await_size:
+            # ATR not resolved yet (defensive — start() resolves before the
+            # feed is attached): hold the tick, the stored LTP last_ltp
+            # seeds the chain as soon as the size is known.
+            return
 
         now = time.time()
         if now - self._last_ltp_push >= self._ltp_push_interval:
@@ -1382,13 +1475,13 @@ class TradingEngine:
             # an order anymore.
             with self.state_lock:
                 if self.pending_buy_order_id and color == "Red":
-                    gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
+                    gap = self.cfg.entry_trail_brick_number * self._brick_size_now()
                     candidate_limit   = brick_price + gap
                     candidate_trigger = candidate_limit - self.cfg.tick_size
                     self.trail_pending_entry("B", candidate_trigger, candidate_limit)
 
                 if self.pending_sell_order_id and color == "Green":
-                    gap = self.cfg.entry_trail_brick_number * self.cfg.brick_size
+                    gap = self.cfg.entry_trail_brick_number * self._brick_size_now()
                     candidate_limit   = brick_price - gap
                     candidate_trigger = candidate_limit + self.cfg.tick_size
                     self.trail_pending_entry("S", candidate_trigger, candidate_limit)
@@ -1396,9 +1489,9 @@ class TradingEngine:
             # ===== TRAIL SL EVERY BRICK WHILE POSITION OPEN =====
             if self.position_qty != 0:
                 if self.position_qty > 0:
-                    candidate_limit = brick_price - (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                    candidate_limit = brick_price - (self.cfg.sl_trail_brick_number * self._brick_size_now())
                 else:
-                    candidate_limit = brick_price + (self.cfg.sl_trail_brick_number * self.cfg.brick_size)
+                    candidate_limit = brick_price + (self.cfg.sl_trail_brick_number * self._brick_size_now())
                 self.trail_sl(candidate_limit)
 
             # ===== ENTRY SIGNALS — BUY and SELL are independent in LONG_SHORT =====
@@ -1415,7 +1508,7 @@ class TradingEngine:
             # pending order on one side to sit alongside an open position
             # from the other side having already filled (Test D/E).
             if color == "Green" and brick_no == self.cfg.buy_brick_no:
-                limit   = round(brick_price + (self.cfg.limit_price_buy_brick_no * self.cfg.brick_size), 2)
+                limit   = round(brick_price + (self.cfg.limit_price_buy_brick_no * self._brick_size_now()), 2)
                 trigger = round(limit - self.cfg.tick_size, 2)
 
                 if self.cfg.trade_mode in ("LONG_ONLY", "LONG_SHORT"):
@@ -1426,7 +1519,7 @@ class TradingEngine:
                         self.place_order("B", trigger, limit)
 
             if color == "Red" and brick_no == self.cfg.sell_brick_no:
-                limit   = round(brick_price - (self.cfg.limit_price_sell_brick_no * self.cfg.brick_size), 2)
+                limit   = round(brick_price - (self.cfg.limit_price_sell_brick_no * self._brick_size_now()), 2)
                 trigger = round(limit + self.cfg.tick_size, 2)
 
                 if self.cfg.trade_mode in ("SHORT_ONLY", "LONG_SHORT"):

@@ -120,6 +120,25 @@ class BrokerSession:
         self._last_msg_time = 0
         self._reconnecting = threading.Event()
         self._watchdog_started = False
+        # Every SDK ``run_forever`` thread this process started. The vendored
+        # ``NorenApiPy.start_websocket()`` spawns a NEW thread per call and
+        # never retires the previous ones, so we track and join them ourselves
+        # (see ``_retire_sdk_ws_loop``). Without this, a socket that closes on
+        # its own leaves a thread behind; the next start re-binds the socket
+        # and the stop event, and N threads then hammer one WebSocketApp — the
+        # ``socket is already opened`` storm that starves the whole process.
+        self._ws_start_lock = threading.RLock()
+        self._sdk_ws_threads = []
+        # Every ``__stop_event`` a start created. ``start_websocket()`` REBINDS
+        # the attribute, so setting only the current one leaves older loops
+        # (which still hold their own, now orphaned Event object) redialing the
+        # broker every 100 ms forever — the log flood that survives every
+        # retirement. Keep them all and set every one on retire.
+        self._sdk_stop_events = []
+        self._ws_failures = []
+        self._ws_opened_at = 0.0
+        self._ws_started_at = 0.0
+        self._reconnect_failures = 0
 
         # -------- access token bookkeeping --------
         self._token_updated_at = None  # set whenever this process applies a new token
@@ -615,6 +634,7 @@ class BrokerSession:
 
     def _on_socket_open(self):
         self.ws_connected = True
+        self._ws_opened_at = time.time()
         self._last_msg_time = time.time()
         logging.info("🚀 [Broker] WebSocket connected — resubscribing all symbols")
         self._resubscribe_all_feed_types()
@@ -622,20 +642,183 @@ class BrokerSession:
     def _on_socket_close(self, *args, **kwargs):
         was_connected = self.ws_connected
         self.ws_connected = False
-        if was_connected:
+        quiet = self._note_ws_failure()
+        if was_connected and not quiet:
             logging.warning("🔌 [Broker] WebSocket closed → %s", args or kwargs or "no reason given")
         self._schedule_reconnect()
 
     def _on_socket_error(self, *args, **kwargs):
         self.ws_connected = False
-        logging.error("⚡ [Broker] WebSocket error → %s", args or kwargs)
+        quiet = self._note_ws_failure()
+        if not quiet:
+            logging.error("⚡ [Broker] WebSocket error → %s", args or kwargs)
         self._schedule_reconnect()
 
     # -------- reconnect --------
+    RAPID_FAILURE_WINDOW = 10.0
+    RAPID_FAILURE_LIMIT = 5
+    # A socket that opens and is closed within this many seconds was REFUSED
+    # (code 1008 / auth rejected), not dropped — the SDK's 100 ms redial would
+    # just be refused again, so the spin is stopped immediately.
+    REFUSAL_WINDOW = 2.0
+
+    def _note_ws_failure(self):
+        """Count handshake failures in a short window.
+
+        The SDK's ``__ws_run_forever`` re-dials every 100 ms on its own. When
+        the broker refuses the handshake (``code 1008`` — duplicate session /
+        expired token / rate limit) that spin runs at ~10 attempts per second
+        forever, flooding the log. Once the burst is clearly not transient the
+        SDK's stop event is set: its loop exits after the current attempt and
+        ``_reconnect_loop`` retakes ownership with a proper backoff.
+
+        A close that lands within ``REFUSAL_WINDOW`` of the socket opening is
+        a REFUSAL, not a transient drop — the SDK's fast redial only makes it
+        worse (every retry is refused too), so the spin is stopped right away
+        instead of after five wasted attempts.
+
+        Returns True when this failure is part of a burst (callers keep quiet).
+        """
+        now = time.time()
+        self._ws_failures = [t for t in self._ws_failures if now - t < self.RAPID_FAILURE_WINDOW]
+        self._ws_failures.append(now)
+        refused = bool(self._ws_started_at) and (now - self._ws_started_at) < self.REFUSAL_WINDOW
+        if refused or len(self._ws_failures) >= self.RAPID_FAILURE_LIMIT:
+            if refused or len(self._ws_failures) == self.RAPID_FAILURE_LIMIT:
+                logging.warning(
+                    "🛑 [Broker] Websocket handshake refused (%s) — stopping the "
+                    "SDK reconnect spin and backing off",
+                    "closed %.2fs after start" % (now - self._ws_started_at) if refused
+                    else "%d failures in %.0fs" % (len(self._ws_failures), self.RAPID_FAILURE_WINDOW),
+                )
+            self._ws_opened_at = 0
+            self._stop_sdk_ws_loops()
+            return True
+        return len(self._ws_failures) > 1
+
+    @staticmethod
+    def _sdk_private(api, name, default=None):
+        """Read a NorenApi private attribute whatever its mangling.
+
+        ``__stop_event`` / ``__websocket`` / ``__ws_thread`` are declared on
+        the vendored base class ``NorenRestApiPy.NorenApi.NorenApi``, so Python
+        mangles them to ``_NorenApi__<name>``. Reading ``_NorenApiPy__<name>``
+        (the subclass's spelling) always answers ``None`` — which silently
+        disabled the whole retirement / thread-tracking machinery and let the
+        SDK spawn one ``run_forever`` loop per reconnect: the
+        ``socket is already opened`` storm.
+        """
+        for prefix in ("_NorenApi__", "_NorenApiPy__"):
+            value = getattr(api, prefix + name, None)
+            if value is not None:
+                return value
+        return default
+
+    def _stop_sdk_ws_loops(self):
+        """Set every SDK stop event this process created (see _sdk_stop_events)."""
+        stop = self._sdk_private(self.api, "stop_event")
+        events = [stop] + list(self._sdk_stop_events)
+        for ev in events:
+            try:
+                if ev is not None:
+                    ev.set()
+            except Exception:
+                pass
+
     def _schedule_reconnect(self):
         if self._reconnecting.is_set():
             return  # a reconnect loop is already running
         threading.Thread(target=self._reconnect_loop, daemon=True, name="broker-reconnect").start()
+
+    def _retire_sdk_ws_loop(self, timeout=3.0):
+        """Retire every SDK websocket loop before starting a new one.
+
+        ``NorenApiPy.start_websocket()`` spawns a BRAND NEW ``run_forever``
+        thread on every call and never retires the previous ones: each call
+        re-binds ``__stop_event`` (so every old loop keeps seeing an *unset*
+        event) and re-binds ``__websocket`` (so every old loop drives the
+        SAME WebSocketApp). Call it twice and you get N threads fighting over
+        one socket — a ``websocket run forever ended in exception, socket is
+        already opened`` storm at ~10/s per thread that burns the GIL and
+        starves the ASGI event loop until the whole app stops answering.
+
+        ``close_websocket()`` alone is NOT enough: it returns early whenever
+        ``__websocket_connected`` is already False (which is exactly the case
+        after a broker-side close), leaving its ``run_forever`` thread alive.
+        So: set the current stop event, close the raw WebSocketApp so any
+        blocked ``run_forever`` returns, then join every thread we started.
+
+        Returns True when no SDK loop is left alive.
+        """
+        api = self.api
+        self._stop_sdk_ws_loops()
+        self._sdk_stop_events = []
+        ws = self._sdk_private(api, "websocket")
+        try:
+            if ws is not None:
+                ws.close()
+        except Exception:
+            pass
+        try:
+            api.close_websocket()
+        except Exception:
+            pass
+
+        survivors = []
+        for thread in list(self._sdk_ws_threads):
+            if thread is threading.current_thread():
+                continue
+            if thread.is_alive():
+                thread.join(timeout)
+            if thread.is_alive():
+                survivors.append(thread)
+        self._sdk_ws_threads = survivors
+        if survivors:
+            logging.warning(
+                "🧹 [Broker] %d SDK websocket thread(s) survived retirement — "
+                "not starting another loop yet", len(survivors),
+            )
+            return False
+        return True
+
+    def _start_sdk_ws_locked(self):
+        """Start exactly one SDK websocket loop (caller holds ``_ws_start_lock``)."""
+        if not self._retire_sdk_ws_loop():
+            return False
+        self.api.start_websocket(
+            subscribe_callback=self._central_feed_handler,
+            order_update_callback=self._central_order_handler,
+            socket_open_callback=self._on_socket_open,
+            **self._optional_close_error_kwargs()
+        )
+        # Record the Event this loop will watch (see ``_sdk_stop_events``).
+        self._ws_started_at = time.time()
+        ev = self._sdk_private(self.api, "stop_event")
+        if ev is not None:
+            self._sdk_stop_events.append(ev)
+        thread = self._sdk_private(self.api, "ws_thread")
+        if thread is not None:
+            self._sdk_ws_threads.append(thread)
+        return True
+
+    # Consecutive failed restarts before we stop restarting for a while. The
+    # SDK's own ``run_forever`` loop keeps reconnecting on its own, so backing
+    # off here costs nothing — it only stops us from piling up extra threads
+    # when the broker keeps refusing the handshake (e.g. code 1008).
+    RECONNECT_MAX_FAILURES = 6
+    RECONNECT_COOLDOWN = 300
+
+    def _sdk_loop_alive(self):
+        """True while at least one SDK ``run_forever`` thread is running.
+
+        The SDK reconnects on its own every 100 ms, so a live loop means the
+        socket will come back by itself. Restarting it in that state is what
+        killed healthy sessions: ``start_websocket`` rebinds the socket and
+        the broker answers the abandoned session with ``1008`` — the socket we
+        just replaced then dies too, and the cycle never ends.
+        """
+        self._sdk_ws_threads = [t for t in self._sdk_ws_threads if t.is_alive()]
+        return bool(self._sdk_ws_threads)
 
     def _reconnect_loop(self):
         self._reconnecting.set()
@@ -649,21 +832,56 @@ class BrokerSession:
                     return
 
                 logging.warning("🔄 [Broker] Reconnecting in %ss...", backoff)
-                time.sleep(backoff)
+                # Sleep in slices: the SDK's own loop may bring the socket back
+                # at any moment, and a forced restart of a healthy session is
+                # exactly what the broker punishes with 1008.
+                deadline = time.time() + backoff
+                while time.time() < deadline:
+                    if self.ws_connected:
+                        break
+                    time.sleep(0.25)
+                if self.ws_connected:
+                    logging.info("✅ [Broker] Reconnected")
+                    self._reconnect_failures = 0
+                    break
+
+                if self._reconnect_failures >= self.RECONNECT_MAX_FAILURES:
+                    logging.warning(
+                        "⏸️ [Broker] %d failed websocket restarts — cooling down %ss "
+                        "before trying again",
+                        self._reconnect_failures, self.RECONNECT_COOLDOWN,
+                    )
+                    self._reconnect_failures = 0
+                    time.sleep(self.RECONNECT_COOLDOWN)
+                    backoff = RECONNECT_BACKOFF_START
+                    continue
+
+                if self._sdk_loop_alive():
+                    # The SDK is already retrying — let it. Escalate the wait so
+                    # a broker-side refusal is not hammered.
+                    self._reconnect_failures += 1
+                    backoff = min(backoff * 2, RECONNECT_BACKOFF_MAX)
+                    continue
 
                 try:
-                    self.login(force=True)
-                    self.api.start_websocket(
-                        subscribe_callback=self._central_feed_handler,
-                        order_update_callback=self._central_order_handler,
-                        socket_open_callback=self._on_socket_open,
-                        **self._optional_close_error_kwargs()
-                    )
-                    time.sleep(2)  # give the SDK a moment to actually open the socket
+                    self.login()
+                    with self._ws_start_lock:
+                        started = self._start_sdk_ws_locked()
+                    if not started:
+                        self._reconnect_failures += 1
+                        backoff = min(backoff * 2, RECONNECT_BACKOFF_MAX)
+                        continue
+                    # Wait for the open callback instead of guessing at a delay.
+                    open_deadline = time.time() + 10
+                    while time.time() < open_deadline and not self.ws_connected:
+                        time.sleep(0.25)
                     if self.ws_connected:
                         logging.info("✅ [Broker] Reconnected successfully")
+                        self._reconnect_failures = 0
                         break
+                    self._reconnect_failures += 1
                 except Exception as e:
+                    self._reconnect_failures += 1
                     logging.error("Reconnect attempt failed → %s", e)
 
                 backoff = min(backoff * 2, RECONNECT_BACKOFF_MAX)
@@ -728,12 +946,16 @@ class BrokerSession:
             self._ws_started = True
 
         self.login()
-        self.api.start_websocket(
-            subscribe_callback=self._central_feed_handler,
-            order_update_callback=self._central_order_handler,
-            socket_open_callback=self._on_socket_open,
-            **self._optional_close_error_kwargs()
-        )
+        with self._ws_start_lock:
+            started = self._start_sdk_ws_locked()
+        if not started:
+            # A previous SDK loop is still shutting down — leave the session
+            # marked unstarted so the next subscribe (or the reconnect loop)
+            # tries again instead of silently running without a feed.
+            with self._lock:
+                self._ws_started = False
+            logging.warning("⚠️ [Broker] Websocket start deferred — previous SDK loop still alive")
+            return
         self._start_watchdog()
 
     # -------- REST passthroughs used by trading_engine --------
@@ -792,6 +1014,44 @@ class BrokerSession:
                 exd=exd, strprc=strprc, sptprc=sptprc,
                 int_rate=int_rate, volatility=volatility, optt=optt)
         return resp
+
+    def get_time_price_series(self, exchange, token, starttime, endtime, interval):
+        """TPSeries candles for the chart history route.
+
+        Noren answers errors (session expired, throttle, transient socket
+        failure) as a JSON OBJECT, and the SDK collapses EVERY non-list
+        answer to None — the real emsg never reaches the caller. None
+        therefore means "retryable failure", not "no data": force a fresh
+        session and try once more before the chart gets Not_Ok (the same
+        force-login + single-retry shape get_pi_option_greek uses).
+        """
+        self.login()
+        rows = self.api.get_time_price_series(
+            exchange=exchange, token=str(token),
+            starttime=starttime, endtime=endtime, interval=interval)
+        if rows is None:
+            logging.warning("[Broker] TPSeries returned no series — re-applying session and retrying once")
+            self.login(force=True)
+            rows = self.api.get_time_price_series(
+                exchange=exchange, token=str(token),
+                starttime=starttime, endtime=endtime, interval=interval)
+        return rows
+
+    def get_eod_chart_data(self, exchange, tsym, start_ts, end_ts):
+        """EODChartData daily candles (openalgo parity): packets go out keyed
+        on exchange:tsym — one force-login + single retry on refusal, like
+        get_time_price_series. Returns the raw row list on success, or the
+        {"stat","emsg"} refusal object."""
+        self.login()
+        rows = self.api.pi_get_eod_chart_data(
+            f"{str(exchange).upper()}:{str(tsym)}", start_ts, end_ts)
+        if not isinstance(rows, list):
+            logging.warning("[Broker] EODChartData refused (%s) — re-applying session and retrying once",
+                            (rows.get("emsg") if isinstance(rows, dict) else "unknown"))
+            self.login(force=True)
+            rows = self.api.pi_get_eod_chart_data(
+                f"{str(exchange).upper()}:{str(tsym)}", start_ts, end_ts)
+        return rows
 
     def get_scrip_info(self, exchange, token):
         """GetSecurityInfo — the chain expiry (`exd`) comes from the
