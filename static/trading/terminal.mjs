@@ -125,7 +125,7 @@ export class TradingTerminal {
     this.onChartState = null;
     this.screenshotExcluded = [];
 
-    this.tickColors = { up: "#14b887", down: "#f0525f" };
+    this.tickColors = { up: "#00958a", down: "#F23645" };
 
     // ── indicators (Round B) ──────────────────────────────────────────
     this.onIndicatorsChange = null;

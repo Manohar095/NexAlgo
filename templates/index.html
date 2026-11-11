@@ -520,11 +520,29 @@
       flex: 1;
       min-width: 0;
     }
-    .board-grid .watchlist-col {
-      width: 25%;
-      min-width: 180px;
-      flex-shrink: 0;
+
+    /* The algo-host carries the right_panel's Algo Symbols panel as a full
+       column widget: the panel shell fills the host (it normally sits at a
+       remembered 340-760px rail width) and the drag hairline has no rail
+       to resize against. */
+    .algo-host {
+      display: flex;
+      align-items: stretch;
+      height: min(66vh, 640px);
+      min-height: 420px;
+      border-radius: 12px;
+      overflow: hidden;
     }
+    .algo-host .panel-shell {
+      width: 100% !important;
+      max-width: 100% !important;
+      flex: 1 1 auto;
+      border-left: none;
+      border: 1px solid rgba(59, 59, 74, 0.55);
+    }
+    .algo-host .panel-drag { display: none; }
+    /* The draft-watchlist/pichain tabs stay in the DOM but are never opened
+       in algoOnly mode — no rail exists to un-hide them. */
 
     .board-section-title {
       display: flex;
@@ -585,17 +603,6 @@
       min-width: 600px;
     }
     
-    .watchlist-table {
-      min-width: 0;
-      table-layout: fixed;
-    }
-
-    .watchlist-table thead th,
-    .watchlist-table tbody td {
-      padding: 8px 6px;
-      font-size: 11px;
-    }
-
     .board-table thead th {
       background: var(--table-header-grad);
       color: var(--text-main);
@@ -636,56 +643,6 @@
       display: flex;
       gap: 6px;
       flex-wrap: wrap;
-    }
-
-    /* Watchlist specific styles */
-    .watchlist-symbol {
-      font-weight: 600;
-      color: var(--text-main);
-    }
-
-    .watchlist-exch {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .watchlist-ltp {
-      font-weight: 600;
-      font-size: 13px;
-      color: var(--text-main);
-    }
-
-    .watchlist-change-positive {
-      color: #48bb78;
-      font-weight: 600;
-      font-size: 12px;
-    }
-
-    .watchlist-change-negative {
-      color: #fc8181;
-      font-weight: 600;
-      font-size: 12px;
-    }
-
-    .watchlist-change-flat {
-      color: var(--text-muted);
-      font-size: 12px;
-    }
-
-    .watchlist-remove-btn {
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size: 14px;
-      padding: 4px 8px;
-      transition: color 0.2s;
-      border-radius: 4px;
-    }
-
-    .watchlist-remove-btn:hover {
-      color: #fc8181;
-      background: rgba(252, 129, 129, 0.1);
     }
 
     .btn-action {
@@ -1482,10 +1439,6 @@
         flex-direction: column;
         gap: 20px;
       }
-      .board-grid .watchlist-col {
-        width: 100%;
-        flex-shrink: 1;
-      }
     }
 
     @media (max-width: 768px) {
@@ -1586,6 +1539,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/static/panels/right_panel.css" />
 
 </head>
 <body>
@@ -1612,69 +1566,24 @@
         <span id="connLabel" class="conn-label">connecting…</span>
 
         <a href="/logs" class="btn btn-ghost">📋 Logs</a>
-        <a href="/charts" class="btn">📈 Charts</a>
         <a href="/trading" class="btn">⚡ Trading</a>
 
         <button id="btnBrokerToken" class="btn">🔑 Access Token</button>
-        <button id="btnSearchSymbol" class="btn">🔍 Search & Add Symbol</button>
         <button id="btnLogout" class="btn btn-ghost" title="Sign out">⎋ Logout</button>
       </div>
     </header>
 
     <!-- ============================================================
-    TWO COLUMN DASHBOARD: STRATEGY TABLE + WATCHLIST
+    DASHBOARD: STRATEGY COLUMN (full width)
     ============================================================ -->
     <main class="board">
       <div class="board-grid">
-        <!-- Left Column: Strategy Symbols (flexible) -->
+        <!-- Algo Symbols PANEL (algoOnly mount of the same right_panel.mjs
+             the trading desks use — enable/disable switches, brick-method
+             configs via /strategy-hub, styled confirms). -->
         <div class="strategy-col">
-          <div class="board-section-title">
-            <h3>📊 Strategy Symbols</h3>
-            <span class="count" id="strategyCount">0 symbols</span>
-          </div>
-          <div class="table-wrapper">
-            <table class="board-table">
-              <thead>
-                <tr>
-                  <th>Symbol Name</th><th>LTP</th><th>Bar</th><th>Trend</th>
-                  <th>Position</th><th>Entry</th><th>Stop Loss</th>
-                  <th>Qty</th><th>Mode</th><th>Status</th>
-                  <th>Updated</th><th></th>
-                </tr>
-              </thead>
-              <tbody id="boardBody">
-                <!-- Dynamic rows rendered by app.js -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Right Column: Watchlist -->
-        <div class="watchlist-col">
-          <div class="board-section-title" style="margin-bottom: 8px;">
-            <h3 style="font-size: 14px; font-weight: 600; color: var(--text-main); margin: 0;">⭐ Watchlist</h3>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <span class="count" id="watchlistCount" style="font-size: 12px; color: var(--text-muted);">0</span>
-              <button id="refreshWatchlistBtn" class="refresh-btn" style="padding: 4px 10px; font-size: 11px; background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 6px; cursor: pointer; transition: all 0.2s;">⟳</button>
-            </div>
-          </div>
-          <div class="table-wrapper" style="max-height: 500px; overflow-y: auto; border-radius: 8px; border: 1px solid var(--border-color);">
-            <table class="board-table watchlist-table" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-              <thead>
-                <tr>
-                  <th style="width: 45%; text-align: left; padding: 12px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); background: var(--table-header-grad); border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10;">SYMBOL</th>
-                  <th style="width: 25%; text-align: center; padding: 12px 20px 12px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); background: var(--table-header-grad); border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10;">LTP</th>
-                  <th style="width: 30%; text-align: right; padding: 12px 32px 12px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-main); background: var(--table-header-grad); border-bottom: 2px solid var(--border-color); position: sticky; top: 0; z-index: 10;">CHANGE</th>
-                </tr>
-              </thead>
-              <tbody id="watchlistBody">
-                <tr>
-                  <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
-                    No symbols in watchlist
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="algo-host oa-panel-scope" id="algoHost">
+            <!-- populated by static/panels/right_panel.mjs (mount script below) -->
           </div>
         </div>
       </div>
@@ -1973,5 +1882,21 @@
   </script>
 
   <script src="/static/app.js"></script>
+
+  <script type="module">
+    // The strategy column IS the trading desks' Algo Symbols panel — one
+    // shared module, mounted without the rail or the floating OC window.
+    // LTP/brick/status come from /strategy-hub/api/overview (3s poll); live
+    // engine frames ride app.js's WebSocket and are bridged via onStatus().
+    import { mountRightPanel } from "/static/panels/right_panel.mjs";
+    window.__algoPanel = mountRightPanel({
+      host: document.getElementById("algoHost"),
+      algoOnly: true,
+      // No adapter: the module opens its OWN quote client (one /ws, desired-
+      // state subscribe, 45s ping / 60s reconnect watchdog, 5s REST fallback)
+      // so the table's LTP column paints per tick instead of waiting for the
+      // 3s overview poll — charts-speed quotes.
+    });
+  </script>
 </body>
 </html>

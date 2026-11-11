@@ -1158,7 +1158,7 @@ export class LtpTag implements IPrimitive {
   /** The last committed brick's close, the pill's stacking anchor. */
   anchor: number | null = null
   /** Axis pill fill: the trend colour of the tick. */
-  color = '#26a69a'
+  color = '#00958a'
   /** Pill text: the true LTP, at the instrument's precision. */
   text = ''
 
@@ -1507,6 +1507,11 @@ export class TradingTerminal {
   } | null = null
   private shownCount = 0
   private liveBucket: number | null = null
+  // Outage-gap self-heal (see onTick): Date.now() of the last socket (re)open —
+  // a candle gap is only backfilled right after a reconnect, so sparse symbols
+  // and the overnight session gap never trigger it.
+  private wsReopenedAt = 0
+  private gapReloadAt = 0
   private lastLtp: number | null = null
   /**
    * The `ghost brick` — the shaded live-LTP slot drawn one column past the
@@ -2543,7 +2548,7 @@ export class TradingTerminal {
     return this.chart!.addPriceLine(
       {
         price: o.triggerPrice ?? o.price,
-        color: o.side === 'BUY' ? '#26a69a' : '#ef5350',
+        color: o.side === 'BUY' ? '#00958a' : '#F23645',
         lineWidth: 1,
         dashed: true,
         id: `order:${o.id}`,
@@ -6997,6 +7002,27 @@ export class TradingTerminal {
         return
       } // A late after-hours quote must not open a new session candle.
       if (u) {
+        // Outage-gap self-heal (same method as the /charts desk): a bucket
+        // roll that jumps several intervals past the last live bucket, right
+        // after the socket came back, means the feed was silent mid-session —
+        // the live path cannot invent the missing candles, so reload the
+        // symbol's history once. The trigger window is bounded to just-after
+        // a reconnect and once per minute, so session-boundary jumps
+        // (23:54 → 09:00) and sparse symbols never fire it; replay owns the
+        // display then, a reload would kill it, so it is skipped there too.
+        const prevBucket = this.liveBucket
+        if (
+          prevBucket != null &&
+          u.bar.time - prevBucket > 2 * (intervalSeconds(this.interval) ?? 300) &&
+          Date.now() - this.wsReopenedAt < 90_000 &&
+          Date.now() - this.gapReloadAt > 60_000 &&
+          !this.replayOwnsDisplay()
+        ) {
+          this.gapReloadAt = Date.now()
+          setTimeout(() => {
+            if (!this.destroyed) this.reloadCurrent()
+          }, 300)
+        }
         this.liveBucket = u.bar.time
         // Key the upsert on time rather than the builder's isNew flag, so a
         // builder that ever disagrees with rawBars about the current bucket
@@ -8635,6 +8661,7 @@ export class TradingTerminal {
       // own bar first, which marks the bucket it opens next as provisional: the
       // first tick after a gap is not that bucket's open.
       if (s === 'open') {
+        this.wsReopenedAt = Date.now()
         const current = this.builder?.current()
         if (current) this.builder?.seed(current)
         this.reconcileNow()

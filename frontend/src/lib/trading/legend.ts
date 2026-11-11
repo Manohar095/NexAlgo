@@ -15,8 +15,8 @@
  */
 
 /** Candle direction colours, shared by the OHLC legend and the last-price line. */
-export const UP = '#26a69a'
-export const DN = '#ef5350'
+export const UP = '#00958a'
+export const DN = '#F23645'
 /** Last-price colour before any bar exists to take a direction from. */
 export const LTP_NEUTRAL = '#e0b020'
 

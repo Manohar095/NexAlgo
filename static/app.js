@@ -485,11 +485,6 @@ async function performSearch() {
                   <button class="btn btn-sm" onclick="event.stopPropagation(); getQuotes('${escapeHTML(item.exch || 'NSE')}', '${escapeHTML(item.token || '')}', '${escapeHTML(item.tsym || '')}')" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #dadde6; border: 1px solid rgba(82, 81, 82, 0.4); cursor: pointer; white-space: nowrap; transition: all 0.2s;">
                     Quotes
                   </button>
-                  <button class="btn btn-sm" onclick="event.stopPropagation(); addToWatchlistFromSearch(${index})" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: transparent; color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); cursor: pointer; white-space: nowrap; transition: all 0.2s;" 
-                    onmouseover="this.style.background='rgba(251, 191, 36, 0.1)'" 
-                    onmouseout="this.style.background='transparent'">
-                    ⭐
-                  </button>
                   <button class="btn btn-sm" onclick="event.stopPropagation(); selectSearchResult(${index})" style="padding: 4px 12px; font-size: 11px; border-radius: 6px; background: var(--btn-add-grad, linear-gradient(135deg, #00d4ff 0%, #7b2ffc 50%, #ff2d95 100%)); color: #ffffff; border: none; cursor: pointer; white-space: nowrap; transition: all 0.2s;">
                     Add Symbol
                   </button>
@@ -948,351 +943,6 @@ if (logFilter) {
 }
 
 // =====================================================================
-// WATCHLIST - LTP now updates exactly like the Strategy table: a
-// websocket tick mutates the in-memory item and calls renderWatchlist()
-// directly, with zero API calls in that hot path.
-//
-// Previous Close is fetched ONCE per token (on load / on add) and
-// cached in `previousCloseCache`. Every later LTP update — whether
-// from the initial fetch or from a websocket tick — reuses that
-// cached value to compute Change / Change% locally. It is never
-// re-fetched for the lifetime of that token in the watchlist.
-// =====================================================================
-
-// Watchlist data
-let watchlistData = {};
-
-// token (string) -> previous close price. Populated once, reused forever.
-const previousCloseCache = {};
-
-function cachePrevClose(token, prevClose) {
-  if (token === undefined || token === null || token === '') return;
-  const key = String(token);
-  const val = parseFloat(prevClose);
-  // Only set it if we don't already have one — this is the "fetch once" guarantee.
-  if (!(key in previousCloseCache) && !isNaN(val) && val > 0) {
-    previousCloseCache[key] = val;
-  }
-}
-
-function getPrevClose(token) {
-  return previousCloseCache[String(token)];
-}
-
-function clearPrevClose(token) {
-  delete previousCloseCache[String(token)];
-}
-
-// Single, shared update path for BOTH the initial REST fetch and every
-// websocket tick — mirrors how renderBoard() is the single update path
-// for the Strategy table.
-function applyLTPUpdate(item, ltp) {
-  if (!item || ltp === null || ltp === undefined || isNaN(ltp)) return;
-
-  const prevClose = getPrevClose(item.token);
-
-  let change = 0;
-  let changePercent = 0;
-  if (prevClose && prevClose > 0) {
-    change = ltp - prevClose;
-    changePercent = (change / prevClose) * 100;
-  }
-
-  item.ltp = ltp;
-  item.change = change;
-  item.changePercent = changePercent;
-  item.lastUpdated = new Date().toLocaleTimeString();
-
-  renderWatchlist();
-}
-
-// Load watchlist from localStorage
-function loadWatchlist() {
-  try {
-    const saved = localStorage.getItem('cognix_watchlist');
-    if (saved) {
-      const items = JSON.parse(saved);
-      watchlistData = {};
-      items.forEach(item => {
-        const id = `wl_${Date.now()}_${Math.random()}`;
-        watchlistData[id] = {
-          id: id,
-          symbol: item.symbol,
-          exchange: item.exchange,
-          token: item.token,
-          ltp: null,
-          change: 0,
-          changePercent: 0,
-          lastUpdated: null
-        };
-      });
-    } else {
-      watchlistData = {};
-    }
-  } catch (e) {
-    console.error('Error loading watchlist:', e);
-    watchlistData = {};
-  }
-  
-  updateWatchlistCount();
-  renderWatchlist();
-
-  // Seed previous-close cache + initial LTP exactly once per symbol,
-  // right when the watchlist loads — same idea as loadSymbols() pulling
-  // initial live_status for the Strategy table on page load.
-  Object.keys(watchlistData).forEach(id => fetchWatchlistLTP(id));
-}
-
-// Save watchlist to localStorage
-function saveWatchlist() {
-  try {
-    const items = Object.values(watchlistData).map(item => ({
-      symbol: item.symbol,
-      exchange: item.exchange,
-      token: item.token
-    }));
-    localStorage.setItem('cognix_watchlist', JSON.stringify(items));
-  } catch (e) {
-    console.error('Error saving watchlist:', e);
-  }
-  updateWatchlistCount();
-}
-
-function updateWatchlistCount() {
-  const countEl = document.getElementById('watchlistCount');
-  if (countEl) {
-    countEl.textContent = Object.keys(watchlistData).length;
-  }
-}
-
-// Add symbol to watchlist
-function addToWatchlist(symbol, exchange, token) {
-  // Check if already exists
-  const exists = Object.values(watchlistData).some(item => 
-    String(item.token) === String(token) && item.exchange === exchange
-  );
-  
-  if (exists) {
-    showAlert('Symbol already in watchlist', 'info');
-    return;
-  }
-  
-  const id = `wl_${Date.now()}_${Math.random()}`;
-  watchlistData[id] = {
-    id: id,
-    symbol: symbol,
-    exchange: exchange,
-    token: token,
-    ltp: null,
-    change: 0,
-    changePercent: 0,
-    lastUpdated: null
-  };
-  
-  saveWatchlist();
-  renderWatchlist();
-  showAlert(`Added ${symbol} to watchlist`, 'success');
-  
-  // Fetch initial LTP + cache Previous Close ONCE for this token.
-  fetchWatchlistLTP(id);
-  // Live updates ride the page WebSocket now.
-  wsSubscribeSymbols([{ exchange, token, symbol }]);
-}
-
-// Remove symbol from watchlist
-function removeFromWatchlist(id) {
-  if (!id) return;
-  
-  const item = watchlistData[id];
-  if (!item) return;
-  
-  if (confirm(`Remove "${item.symbol}" from watchlist?`)) {
-    const token = item.token;
-    delete watchlistData[id];
-
-    // Drop the cached previous close only if no other watchlist row
-    // still references this token.
-    const stillUsed = Object.values(watchlistData).some(w => String(w.token) === String(token));
-    if (!stillUsed) {
-      clearPrevClose(token);
-      // Nobody needs this token on this page anymore — release the feed.
-      wsUnsubscribeSymbol(item.exchange, token);
-    }
-
-    saveWatchlist();
-    renderWatchlist();
-    showAlert(`Removed ${item.symbol} from watchlist`, 'info');
-  }
-}
-
-// Fetch LTP for watchlist item — this is the ONLY place Previous Close
-// is ever pulled from the API, and cachePrevClose() makes even repeated
-// calls here a no-op once a value is cached for that token.
-async function fetchWatchlistLTP(id) {
-  const item = watchlistData[id];
-  if (!item) return;
-  
-  try {
-    const response = await fetch(`/api/get-quotes?exchange=${encodeURIComponent(item.exchange)}&token=${encodeURIComponent(item.token)}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const data = await response.json();
-    
-    if (data.success && data.data) {
-      const quote = data.data;
-      const ltp = parseFloat(quote.lp) || 0;
-
-      // Cache previous close ONCE. If it's already cached, this no-ops.
-      const prevCloseFromQuote = parseFloat(quote.c) || parseFloat(quote.o) || 0;
-      cachePrevClose(item.token, prevCloseFromQuote);
-
-      applyLTPUpdate(item, ltp);
-    }
-  } catch (e) {
-    console.error(`Failed to fetch LTP for ${item.symbol}:`, e);
-  }
-}
-
-// Render watchlist
-function renderWatchlist() {
-  const tbody = document.getElementById('watchlistBody');
-  if (!tbody) return;
-  
-  const items = Object.values(watchlistData);
-  if (items.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="3" style="text-align: center; padding: 20px 14px; color: var(--text-muted); font-size: 13px;">
-          No symbols in watchlist
-        </td>
-      </tr>
-    `;
-    return;
-  }
-  
-  let html = '';
-  items.forEach(item => {
-    const ltpDisplay = item.ltp !== null && item.ltp !== undefined 
-      ? (typeof item.ltp === "number" ? item.ltp.toFixed(2) : item.ltp)
-      : "⌛";
-    
-    const changeColor = item.change > 0 ? '#48bb78' : (item.change < 0 ? '#fc8181' : 'var(--text-muted)');
-    const changeArrow = item.change > 0 ? '▲' : (item.change < 0 ? '▼' : '');
-    
-    const changeDisplay = item.change !== 0 ? 
-      `<span style="display: inline-flex; align-items: center; gap: 2px;">
-        <span style="font-size: 11px;">${changeArrow}</span>
-        <span>${item.change > 0 ? '+' : ''}${item.change.toFixed(2)}</span>
-      </span>` : 
-      '<span>--</span>';
-    
-    const percentDisplay = (item.changePercent !== 0) ?
-      `${item.changePercent > 0 ? '+' : ''}${item.changePercent.toFixed(2)}%` :
-      '';
-    
-    html += `
-      <tr>
-        <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); vertical-align: middle; text-align: left;">
-          <span style="font-weight: 600; color: var(--text-main);">${escapeHTML(item.symbol)}</span>
-          <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">${escapeHTML(item.exchange)}</span>
-          ${item.lastUpdated ? `<span style="font-size: 9px; color: var(--text-muted); margin-left: 8px; opacity: 0.5;">${item.lastUpdated}</span>` : ''}
-        </td>
-        <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: var(--text-main); text-align: right; font-weight: 600; vertical-align: middle;">
-          ${ltpDisplay}
-        </td>
-        <td style="padding: 8px 12px; font-size: 13px; border-bottom: 1px solid var(--border-color); color: ${changeColor}; text-align: right; font-weight: 600; position: relative; vertical-align: middle; padding-right: 32px;">
-          <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3;">
-            ${changeDisplay}
-            ${percentDisplay ? `<span style="font-size: 11px; opacity: 0.8; font-weight: 500;">${percentDisplay}</span>` : ''}
-          </div>
-          <button 
-            onclick="removeFromWatchlist('${item.id}')"
-            title="Remove from watchlist"
-            style="position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; line-height: 1; opacity: 0.3;"
-            onmouseover="this.style.color='#fc8181'; this.style.background='rgba(252, 129, 129, 0.15)'; this.style.opacity='1';"
-            onmouseout="this.style.color='var(--text-muted)'; this.style.background='transparent'; this.style.opacity='0.3';"
-          >
-            ✕
-          </button>
-        </td>
-      </tr>
-    `;
-  });
-  
-  tbody.innerHTML = html;
-}
-
-// Update watchlist from WebSocket — SIMPLE AND DIRECT, exactly like the
-// Strategy table's `status` handler: find the row, mutate it, render.
-// NO API calls happen here. Previous Close comes from the cache only.
-function updateWatchlistFromWebSocket(data) {
-  if (!data || !data.token) return;
-  
-  const token = String(data.token);
-  
-  // Find matching watchlist item
-  let targetItem = null;
-  for (const id in watchlistData) {
-    if (String(watchlistData[id].token) === token) {
-      targetItem = watchlistData[id];
-      break;
-    }
-  }
-  
-  if (!targetItem) return;
-
-  const ltp = parseFloat(data.lp ?? data.ltp ?? data.last_price ?? 0);
-  if (!ltp || isNaN(ltp)) return;
-
-  // Edge case only: a tick arrives before the initial REST fetch has
-  // completed, so the cache is still empty. Seed it from whatever the
-  // feed itself provides — this fires at most once per token, since
-  // cachePrevClose() never overwrites an existing cached value.
-  if (getPrevClose(token) === undefined) {
-    const seed = parseFloat(data.c ?? data.prev_close ?? data.o ?? data.open ?? 0);
-    if (seed > 0) cachePrevClose(token, seed);
-  }
-
-  // Single shared path — no extra fetch, no recomputation from message
-  // fields beyond the seed-once fallback above.
-  applyLTPUpdate(targetItem, ltp);
-}
-
-// Watchlist Modal functions
-function openWatchlistModal() {
-  const overlay = document.getElementById("watchlistModalOverlay");
-  if (overlay) {
-    overlay.classList.remove("hidden");
-    // Refresh all watchlist items — cachePrevClose() no-ops if already
-    // cached, so this only ever re-pulls LTP, never re-fetches Previous Close.
-    Object.keys(watchlistData).forEach(id => fetchWatchlistLTP(id));
-  }
-}
-
-function closeWatchlistModal() {
-  const overlay = document.getElementById("watchlistModalOverlay");
-  if (overlay) {
-    overlay.classList.add("hidden");
-  }
-}
-
-// Add to Watchlist from Search Results
-function addToWatchlistFromSearch(index) {
-  const item = searchResultsData[index];
-  if (!item) return;
-  
-  const symbol = item.tsym || item.symbol || '';
-  const exchange = item.exch || item.exchange || '';
-  const token = item.token || '';
-  
-  if (symbol && exchange && token) {
-    addToWatchlist(symbol, exchange, token);
-  } else {
-    showAlert('Invalid symbol data', 'error');
-  }
-}
-
 // Alert function
 function showAlert(message, type = 'info') {
   const alertDiv = document.createElement('div');
@@ -1339,57 +989,8 @@ function showAlert(message, type = 'info') {
   }, 4000);
 }
 
-// Make functions globally accessible
-window.removeFromWatchlist = removeFromWatchlist;
-window.addToWatchlist = addToWatchlist;
-window.addToWatchlistFromSearch = addToWatchlistFromSearch;
-window.openWatchlistModal = openWatchlistModal;
-window.closeWatchlistModal = closeWatchlistModal;
-
-// Refresh Watchlist Button
-const refreshBtn = document.getElementById('refreshWatchlistBtn');
-if (refreshBtn) {
-  refreshBtn.addEventListener('click', () => {
-    Object.keys(watchlistData).forEach(id => fetchWatchlistLTP(id));
-  });
-}
-
-// Watchlist Modal button
-const watchlistBtn = document.getElementById('btnWatchlist');
-if (watchlistBtn) {
-  watchlistBtn.addEventListener('click', openWatchlistModal);
-}
-
-
-
 // ---------------- WebSocket ----------------
 let boardWS = null;
-
-// OpenAlgo-parity WS market data: the dashboard declares WHICH instruments
-// it wants via {action:"subscribe"}; the server fans market_data frames
-// only to sockets that asked for them, and frees the broker feed refcount
-// automatically when this socket drops.
-function wsSubscribeSymbols(list, mode = "quote") {
-  const symbols = (list || []).map(i => ({ exchange: i.exchange, token: String(i.token), symbol: i.symbol }));
-  if (!symbols.length) return;
-  try {
-    if (boardWS && boardWS.readyState === 1) {
-      boardWS.send(JSON.stringify({ action: "subscribe", mode, symbols }));
-    }
-  } catch (e) { /* socket just dropped — reconnect resubscribes */ }
-}
-
-function wsUnsubscribeSymbol(exchange, token) {
-  try {
-    if (boardWS && boardWS.readyState === 1) {
-      boardWS.send(JSON.stringify({ action: "unsubscribe", symbols: [{ exchange, token: String(token) }] }));
-    }
-  } catch (e) { /* best effort */ }
-}
-
-function wsSubscribeWatchlist() {
-  wsSubscribeSymbols(Object.values(watchlistData));
-}
 
 function connectWS() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -1398,7 +999,6 @@ function connectWS() {
   boardWS.onopen = () => {
     connDot.className = "conn-dot live";
     connLabel.textContent = "live";
-    wsSubscribeWatchlist();            // desired-state replay (idempotent)
     try {
       boardWS.send(JSON.stringify({ action: "subscribe_orders" }));
     } catch (e) { /* ignore */ }
@@ -1418,6 +1018,12 @@ function connectWS() {
 
       // --- STATUS MESSAGES (Strategy Updates) ---
       if (msg.type === "status") {
+        // Hub-managed symbols (strategy_hub rows, instance_id "hub_<id>") live
+        // in the Algo Symbols panel now — bridge the engine frame straight in.
+        if (String(msg.instance_id || "").startsWith("hub_")) {
+          window.__algoPanel?.onStatus?.(msg);
+          return;
+        }
         if (symbols[msg.instance_id]) {
           symbols[msg.instance_id].live_status = msg.status;
           renderBoard();
@@ -1433,22 +1039,6 @@ function connectWS() {
       // --- ORDER STREAM (subscribe_orders) — refresh the strategy board ---
       else if (msg.type === "order_update") {
         loadSymbols();
-      }
-
-      // --- REAL-TIME MARKET DATA for WATCHLIST ---
-      else if (msg.type === "quote" || msg.type === "ltp" || msg.type === "tick" ||
-              msg.type === "depth" || msg.type === "df" || msg.type === "dk" ||
-              msg.type === "market_data") {
-
-        // market_data frames keep token/exchange at the frame level and the
-        // normalized quote under data — flatten them for the handler.
-        const data = msg.type === "market_data"
-          ? { token: msg.token, exchange: msg.exchange, ...(msg.data || {}) }
-          : (msg.data || msg);
-        if (data && data.token) {
-          // Update watchlist with the data
-          updateWatchlistFromWebSocket(data);
-        }
       }
 
     } catch (error) {
@@ -1480,7 +1070,6 @@ if (logoutBtn) {
 
   await loadSymbols();
   await loadInitialLogs();
-  loadWatchlist();
   connectWS();
   setInterval(loadSymbols, 15000);
 })();

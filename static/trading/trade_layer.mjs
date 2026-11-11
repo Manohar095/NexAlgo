@@ -39,9 +39,9 @@ import {
   TickSchedule,
 } from "/static/vendor/openalgo-charts/openalgo-charts.mjs";
 
-/** OpenAlgo's candle pair, the same tones the chart theme uses. */
-const UP = "#14b887";
-const DOWN = "#f0525f";
+/** The chart theme's candle pair (fixed palette, 2026-11-11). */
+const UP = "#00958a";
+const DOWN = "#F23645";
 
 /** Minimum gap between two armed fires (terminal.ts ORDER_COOLDOWN_MS). */
 export const ORDER_COOLDOWN_MS = 120;

@@ -23,6 +23,11 @@
  *          panel.refreshAlgoSymbols()
  *          panel.destroy()
  *
+ * `algoOnly: true` mounts the shell + dialogs WITHOUT the icon rail or the
+ * floating OC window, opens the Algo symbols tab permanently (no Esc close,
+ * no panel-remembering localStorage) and starts its 3s overview poll at
+ * boot — the dashboard embeds the panel body as its strategy widget.
+ *
  * adapter (all optional — each falls back to the module's own client/no-op):
  *   subscribe(exchange, token)            unsubscribe(exchange, token)
  *   connected() -> boolean                addChartToken(exchange, tsym, token)
@@ -142,8 +147,7 @@ export const RIGHT_PANEL_MARKUP = `      <aside class="panel-shell" id="rightPan
                 <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></svg>
                 <span>Add symbol</span>
               </button>
-            </div>
-          </div>
+            </div>          </div>
           <p class="algo-byline" id="algoError" hidden></p>
           <div class="algo-body" id="algoList">
             <p class="algo-load">Loading…</p>
@@ -199,10 +203,15 @@ export const RIGHT_PANEL_MARKUP = `      <aside class="panel-shell" id="rightPan
             <button class="oa-btn primary" id="algoConfirmAction">OK</button>
           </div>
         </div>
-      </div>
+      </div>`
 
-      <!-- RIGHT RAIL (OpenAlgo RightRail.tsx) -->
-      <div id="rightRail">
+/**
+ * The icon rail is a separate export so page variants can mount the panel
+ * WITHOUT it — the dashboard embeds the panel body (Algo symbols) alone,
+ * where rails of watchlist/chain toggles have nothing to point at. The desk
+ * mounts inject it after the shell, so the flex row keeps shell → rail order.
+ */
+export const RAIL_MARKUP = `<div id="rightRail">
         <div class="rail-item">
           <button class="rail-btn" data-panel="watchlist" id="railWatchlist" aria-label="Watchlist" aria-expanded="false">
             <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></svg>
@@ -325,6 +334,9 @@ function createQuoteClient(onFrame) {
   function startFallback() {
     if (fallbackTimer) return
     fallbackTimer = setInterval(async () => {
+      if (isOpen()) return  // socket healthy — ticks are the live path; a REST
+                            // quote here would paint an OLDER price over the
+                            // fresh cell (REST roundtrip > tick latency)
       const symbols = [...wanted.values()].map(({ exchange, token }) => ({ exchange, token }))
       if (!symbols.length) return
       try {
@@ -429,12 +441,19 @@ function createQuoteClient(onFrame) {
  * Mount the panel into `host` (the host must be the flex row that also holds
  * the chart: the shell and the rail are injected as its last children).
  */
-export function mountRightPanel({ host, adapter = {} } = {}) {
+export function mountRightPanel({ host, adapter = {}, algoOnly = false } = {}) {
   if (!host) throw new Error('mountRightPanel: a host element is required')
   host.insertAdjacentHTML('beforeend', RIGHT_PANEL_MARKUP)
+  if (!algoOnly) host.insertAdjacentHTML('beforeend', RAIL_MARKUP)
+  // The dashboard has no charts, so the Algo panel's "This chart" shortcut has
+  // nothing to read there — the button is not rendered at all on that mount.
+  const chartFocusBtn = document.getElementById("algoChartFocusBtn")
+  if (algoOnly && chartFocusBtn) chartFocusBtn.remove()
   // The floating Option chain window is appended to <body>, OUTSIDE the page's
   // flex host: a fixed-position child of a scrolling ancestor would be clipped
-  // by it, and every page already imports the stylesheet.
+  // by it, and every page already imports the stylesheet. ALWAYS mounted (the
+  // whole OC tab lives inside it) — in algoOnly it stays hidden forever, an
+  // inert 1-node the band toggle never sets.
   document.body.insertAdjacentHTML('beforeend', OC_WINDOW_MARKUP)
 
   // ---------- global listeners, collected for destroy() --------------------
@@ -476,6 +495,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     ];
     const rightPanel = document.getElementById("rightPanel");
     let activePanel = (function () {
+      if (algoOnly) return "algo";  // the dashboard: the panel body itself is the widget
       // Storage outlives a release: a remembered id must still name a panel.
       const saved = localStorage.getItem("cognix_panel");
       return RAIL_PANELS.some(p => p.id === saved) ? saved : null;
@@ -501,6 +521,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     function setRailState() {
       RAIL_PANELS.forEach(p => {
         const btn = document.getElementById(p.btn);
+        if (!btn) return;  // no rail mounted (the dashboard's algo-only host)
         btn.classList.toggle("active", activePanel === p.id);
         btn.setAttribute("aria-expanded", String(activePanel === p.id));
       });
@@ -517,7 +538,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
       RAIL_PANELS.forEach(p => { document.getElementById(p.tab).hidden = p.id !== id; });
       setRailState();
       applyPanelWidth();
-      localStorage.setItem("cognix_panel", id);
+      if (!algoOnly) localStorage.setItem("cognix_panel", id);
       if (id === "algo") { refreshAlgoSymbols(); startAlgoPolling(); }
       if (id === "watchlist") startWlRefresh();
       if (id === "pichain") {
@@ -535,7 +556,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
       activePanel = null;
       rightPanel.hidden = true;
       setRailState();
-      localStorage.removeItem("cognix_panel");
+      if (!algoOnly) localStorage.removeItem("cognix_panel");
       stopAlgoPolling();
       stopWlRefresh();  // the 30s quote fill has no reason to run hidden
       stopPiOiPoll();   // the Pi chain's 30s poll has no reason to run hidden
@@ -625,6 +646,8 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
       const win = document.getElementById("ocWindow");
       const bar = document.getElementById("ocWinBar");
       const resizer = document.getElementById("ocWinResizer");
+      const closer = document.getElementById("ocWinClose");
+      if (!win || !bar || !resizer || !closer) return;  // no window mounted (algoOnly)
       const ocCurrentRect = () => ({
         w: win.offsetWidth || 760, h: win.offsetHeight || 560,
         x: parseFloat(win.style.left) || 0, y: parseFloat(win.style.top) || 0,
@@ -658,7 +681,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
       on(window, "pointerup", () => {
         if (ocWinDrag) { ocWinDrag = null; saveOcWinRect(); }
       });
-      document.getElementById("ocWinClose").addEventListener("click", () => hideOcWindow());
+      closer.addEventListener("click", () => hideOcWindow());
       // A window resized/moved off a shrunken viewport must come back in.
       on(window, "resize", () => {
         if (ocWinVisible) applyOcWinRect(clampRect(ocCurrentRect()));
@@ -666,11 +689,14 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     })();
 
     RAIL_PANELS.forEach(p => {
-      document.getElementById(p.btn).addEventListener("click", () => openPanel(p.id));
+      const btn = document.getElementById(p.btn);
+      if (btn) btn.addEventListener("click", () => openPanel(p.id));
     });
     on(document, "keydown", (e) => {
       if (e.key === "Escape" && ocWinVisible) { hideOcWindow(); return; }  // topmost first
-      if (e.key === "Escape" && activePanel) closePanel();
+      // The dashboard's panel is the page's strategy widget — Esc must not
+      // collapse the whole column away.
+      if (e.key === "Escape" && activePanel && !algoOnly) closePanel();
     });
 
     // ---------- drag-to-resize: the hairline that only announces itself ----
@@ -695,7 +721,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     }
 
     rpDrag.addEventListener("pointerdown", (e) => {
-      if (e.button !== 0 || !activePanel) return;
+      if (e.button !== 0 || !activePanel || algoOnly) return;
       e.preventDefault();
       const spec = RAIL_PANELS.find(p => p.id === activePanel);
       panelDrag = { spec, startX: e.clientX, startW: rightPanel.getBoundingClientRect().width };
@@ -1367,7 +1393,9 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
       // by itself (OpenAlgo re-runs the effect on pane width change).
       repinCallScroll();
     }
-    new ResizeObserver(ocMeasurePanes).observe(ocBodyEl);
+    // The OC/Pi bodies live in the floating window (absent in algoOnly
+    // mounts) — a null observe() kills the whole mount.
+    if (ocBodyEl) new ResizeObserver(ocMeasurePanes).observe(ocBodyEl);
 
     /* Open the call table fully scrolled right: its columns render
        reversed, so LTP is the LAST cell in DOM order and only scrollLeft
@@ -2245,7 +2273,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
       }
       repinPiCallScroll();
     }
-    new ResizeObserver(pcMeasurePanes).observe(pcBodyEl);
+    if (pcBodyEl) new ResizeObserver(pcMeasurePanes).observe(pcBodyEl);
 
     /* The call side renders reversed, so open it fully scrolled right —
        its LTP column sits against the strike. rAF for fresh layout. */
@@ -3175,6 +3203,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     //   3. Last brick / Long-Short / Pending B-S / SL  (heading over value)
     // ============================================================
     const algoRows = new Map(); // id (String) -> merged record (hub row + mapped status)
+    const algoFeedKeys = new Set(); // "EXCH|TOKEN" the embed subscribes for live LTP ticks
     let algoTimer = null;
     let algoBusy = new Set();
     let algoProcesses = [];     // per-exchange managed-process lines from the overview
@@ -3246,6 +3275,31 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
         }
         document.getElementById("algoError").hidden = true;
         renderAlgo();
+        // Live LTP for algo rows — the SAME path the option-chain legs use:
+        // every enabled row is subscribed to the platform feed (the OC
+        // subscribes its legs the same way via the page adapter), so
+        // paintAlgoLtp paints each tick in place. Refcount-safe on both the
+        // desks' shared client and the embed's own quote client.
+        {
+          const want = new Set();
+          for (const rec of algoRows.values()) {
+            if (rec.enabled && !rec.stale && rec.exchange && rec.token) {
+              want.add(`${String(rec.exchange).toUpperCase()}|${String(rec.token)}`);
+            }
+          }
+          for (const key of want) {
+            if (algoFeedKeys.has(key)) continue;
+            const [exch, tok] = key.split("|");
+            subKey(exch, tok);
+            algoFeedKeys.add(key);
+          }
+          for (const key of [...algoFeedKeys]) {
+            if (want.has(key)) continue;
+            const [exch, tok] = key.split("|");
+            unsubKey(exch, tok);
+            algoFeedKeys.delete(key);
+          }
+        }
       } catch (e) {
         const err = document.getElementById("algoError");
         err.textContent = "Could not reach the server";
@@ -3315,6 +3369,35 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
               </div>`;
     }
 
+    /** Live LTP for algo rows — the SAME method paintOcLegs uses for the
+     *  option-chain legs: match by exchange|token, merge the frame's ltp into
+     *  the row's status and set the value element in place (no re-render).
+     *  Works for BOTH renderers — cards on the desks and the dashboard's
+     *  table — because both stamp [data-algo-row][data-id] and carry .c-ltp
+     *  on the LTP value element. A full renderAlgo per tick would kill open
+     *  kebab menus and be pointless: only the number changes. */
+    function paintAlgoLtp(md) {
+      const exch = String(md.exchange || "").toUpperCase();
+      const tok = String(md.token ?? "");
+      if (!tok) return;
+      const ltp = md.data && md.data.ltp != null ? Number(md.data.ltp) : null;
+      if (ltp == null || isNaN(ltp) || ltp <= 0) return;
+      for (const rec of algoRows.values()) {
+        if (!rec.enabled) continue;
+        if (String(rec.exchange || "").toUpperCase() !== exch || String(rec.token) !== tok) continue;
+        if (Number(rec.status?.ltp) === ltp) continue;
+        if (!rec.status) rec.status = {};
+        rec.status.ltp = ltp;
+        // Freshness marker: the 3s overview poll and the manager's status row
+        // can both be a poll-cycle behind; the renderer prefers this value so
+        // a re-render never rolls the cell back to an older price.
+        rec.tick_ltp = ltp;
+        rec.tick_at = Date.now();
+        const cell = document.querySelector(`[data-algo-row][data-id="${rec.id}"] .c-ltp`);
+        if (cell) cell.textContent = fmt(ltp);
+      }
+    }
+
     function renderAlgo() {
       const list = document.getElementById("algoList");
       const entries = [...algoRows.values()];
@@ -3333,14 +3416,34 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
         badge.textContent = "Mode unknown";
       }
 
-      const procHtml = algoProcesses.length ? algoProcesses.map(algoProcessLine).join("") : "";
+      // The dashboard embed drops the per-exchange process strip — the rows
+      // are the table, and the processes still auto-run per schedules.
+      const procHtml = algoOnly ? "" : (algoProcesses.length ? algoProcesses.map(algoProcessLine).join("") : "");
 
       if (!entries.length && !procHtml) {
-        list.innerHTML = `<div class="algo-empty">No symbols yet. Use <span style="font-weight:600;">Add</span> to search a symbol, or <span style="font-weight:600;">This chart</span> to add the one you are looking at.</div>`;
+        list.innerHTML = algoOnly
+          ? `<div class="algo-empty">No symbols yet. Use <span style="font-weight:600;">Add</span> to search a symbol and configure it.</div>`
+          : `<div class="algo-empty">No symbols yet. Use <span style="font-weight:600;">Add</span> to search a symbol, or <span style="font-weight:600;">This chart</span> to add the one you are looking at.</div>`;
         return;
       }
 
-      list.innerHTML = procHtml + entries.map(r => {
+      if (algoOnly) {
+        // The dashboard embed renders the rows as the wide reference TABLE
+        // (symbol-first, one row per strategy) instead of the desks' cards.
+        list.innerHTML = procHtml + `
+          <div class="algo-table-wrap">
+            <table class="algo-table">
+              <thead><tr>
+                <th>Symbol</th><th>Status</th><th>Mode</th><th class="ta-r">Qty</th>
+                <th class="ta-r">Brick</th><th class="ta-r">LTP</th><th>Last brick</th><th>Trend</th>
+                <th>Long / Short</th><th>Pending B/S</th><th class="ta-r">Entry</th><th class="ta-r">SL</th>
+                <th>Updated</th><th class="ta-r"></th>
+              </tr></thead>
+              <tbody>${entries.map(algoTableRow).join("")}</tbody>
+            </table>
+          </div>`;
+      } else {
+        list.innerHTML = procHtml + entries.map(r => {
         // OpenAlgo gates the live fields to enabled && !stale — a disabled or
         // waiting row shows dashes everywhere `st` is read.
         const st = (r.enabled && !r.stale) ? (r.status || null) : null;
@@ -3354,7 +3457,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
         const pend = (v) => v == null ? "-" : String(v);
         const hasPos = ((Number(st?.long_qty) || 0) !== 0) || ((Number(st?.short_qty) || 0) !== 0);
         return `
-        <div class="algo-card" data-id="${r.id}">
+        <div class="algo-card" data-algo-row data-id="${r.id}">
           <div class="algo-l1">
             <span class="algo-sym" title="${escAlgo(r.exchange)}:${escAlgo(r.tsym)} · ${escAlgo(r.product)}">${escAlgo(r.tsym)}</span>
             <button class="oa-switch ${r.enabled ? "on" : ""}" data-toggle="1" aria-label="${r.enabled ? "Disable" : "Enable"} ${escAlgo(r.tsym)}" ${isBusy ? "disabled" : ""}></button>
@@ -3374,7 +3477,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
             ${algoField("Mode", escAlgo(r.trade_mode || "-"))}
             ${algoField("Qty", r.quantity ?? "-")}
             ${algoField("Brick", escAlgo(brickText))}
-            ${algoField("LTP", st?.ltp != null ? fmt(st.ltp) : "-")}
+            ${algoField("LTP", st?.ltp != null ? fmt(st.ltp) : "-", "c-ltp")}
           </div>
           <div class="algo-grid" style="grid-template-columns: 1.1fr 0.85fr 1.2fr 1.2fr;">
             ${algoField("Last brick", st?.brick_color
@@ -3386,9 +3489,10 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
           </div>
           ${st?.message ? `<div class="algo-errmsg">${escAlgo(st.message)}</div>` : ""}
         </div>`;
-      }).join("");
+        }).join("");
+      }
 
-      list.querySelectorAll(".algo-card").forEach(cardEl => {
+      list.querySelectorAll("[data-algo-row]").forEach(cardEl => {
         const id = cardEl.dataset.id;
         const r = algoRows.get(id);
 
@@ -3547,6 +3651,89 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     }
 
     function runningNow(r) { return !!r && r.enabled; }
+
+    // ---- reference TABLE (the dashboard's embed view) ------------------------
+    /** IST clock for the Updated column: the engine frame carries its own
+     *  string; the overview's symbol_status row carries an epoch (updated_at). */
+    function algoFmtUpdated(st) {
+      if (st && st.last_updated) return String(st.last_updated);
+      if (st && st.updated_at) {
+        try {
+          return new Date(Number(st.updated_at) * 1000).toLocaleTimeString(
+            "en-IN", { timeZone: "Asia/Kolkata", hour12: false });
+        } catch (e) { /* fall through */ }
+      }
+      return "-";
+    }
+    /** The reference wording — a disabled row is "Stopped", not "Disabled". */
+    function algoTableBadge(r) {
+      if (!r.enabled) return `<span class="oa-badge off">Stopped</span>`;
+      if (r.stale) return `<span class="oa-badge warn" title="Enabled, waiting for the strategy process to start">Waiting</span>`;
+      const s = (r.status && r.status.state) || null;
+      if (s === "RUNNING") {
+        return r.trades_blocked
+          ? `<span class="oa-badge warn" title="Squareoff ran — disable and re-enable to resume">Halted</span>`
+          : `<span class="oa-badge run">Running</span>`;
+      }
+      if (s === "HALTED") return `<span class="oa-badge warn" title="${escAlgo((r.status && r.status.message) || "")}">Halted</span>`;
+      if (s === "ERROR") return `<span class="oa-badge err" title="${escAlgo((r.status && r.status.message) || "")}">Error</span>`;
+      return `<span class="oa-badge off">${escAlgo(s || "Starting")}</span>`;
+    }
+    function algoTableRow(r) {
+      const st = r.status || {};
+      const isBusy = algoBusy.has(r.id);
+      const brickText = r.brick_method === "atr"
+        ? `ATR ${r.atr_period ?? "?"}×${r.atr_multiplier ?? "?"}`
+        : r.brick_method === "ltp_pct"
+          ? `LTP ${r.ltp_percent ?? "?"}%`
+          : r.brick_size ?? "-";
+      const pend = (v) => v == null ? "-" : String(v);
+      const color = st.brick_color;
+      const lastBrick = color
+        ? `<span class="${color === "Green" ? "up" : "down"}">${color} #${st.brick_no ?? 0}</span>`
+        : "-";
+      const trendShown = color || (st.trend === "Green" || st.trend === "Red" ? st.trend : null);
+      const sl = st.sl_long ?? st.sl_short;
+      const entry = (st.entry_price != null && st.entry_price !== "") ? fmt(st.entry_price) : "-";
+      // LTP display prefers the freshest live tick (paintAlgoLtp stamps
+      // tick_ltp/tick_at): the overview poll and the manager's status row lag
+      // the tape, so a re-render must never roll the cell back to an older
+      // price. Falls back to the status value 10s after ticks stop (disabled /
+      // market closed — the engine's own last price is then the truth).
+      const tickFresh = r.tick_ltp != null && r.tick_at && (Date.now() - r.tick_at) < 10000;
+      const ltpShown = tickFresh ? r.tick_ltp : st.ltp;
+      return `
+      <tr data-algo-row data-id="${r.id}">
+        <td class="c-sym" title="${escAlgo(r.exchange)}:${escAlgo(r.tsym)} · ${escAlgo(r.product)}">${escAlgo(r.tsym)}</td>
+        <td>${algoTableBadge(r)}</td>
+        <td class="c-mut">${escAlgo(r.trade_mode || "-")}</td>
+        <td class="ta-r">${r.quantity ?? "-"}</td>
+        <td class="ta-r">${escAlgo(brickText)}</td>
+        <td class="ta-r c-ltp">${ltpShown != null ? fmt(ltpShown) : "-"}</td>
+        <td>${lastBrick}</td>
+        <td>${trendShown ? `<span class="${trendShown === "Green" ? "up" : "down"}">${trendShown}</span>` : "-"}</td>
+        <td class="c-vals">${pend(st.long_qty ?? 0)} / ${pend(st.short_qty ?? 0)}</td>
+        <td class="c-vals">${pend(st.buy_pending)} / ${pend(st.sell_pending)}</td>
+        <td class="ta-r">${entry}</td>
+        <td class="ta-r">${sl != null ? fmt(sl) : "-"}</td>
+        <td class="c-mut">${algoFmtUpdated(st)}</td>
+        <td class="c-act">
+          <span class="row-ctl">
+            <button class="oa-switch ${r.enabled ? "on" : ""}" data-toggle="1" aria-label="${r.enabled ? "Disable" : "Enable"} ${escAlgo(r.tsym)}" ${isBusy ? "disabled" : ""}></button>
+            <span class="kekku">
+              <button class="oa-icon-btn" data-menu="1" aria-label="${escAlgo(r.tsym)} actions">${svg("kebab")}</button>
+              <div class="oa-menu" hidden>
+                <button class="oa-menu-item" data-act="edit" ${r.enabled ? "disabled" : ""}>Edit settings</button>
+                <button class="oa-menu-item" data-act="clone">Clone to new symbol</button>
+                <button class="oa-menu-item destructive" data-act="squareoff" ${!r.enabled || r.stale ? "disabled" : ""}>Square off</button>
+                <div class="oa-menu-sep"></div>
+                <button class="oa-menu-item destructive" data-act="remove" ${r.enabled ? "disabled" : ""}>Remove</button>
+              </div>
+            </span>
+          </span>
+        </td>
+      </tr>`;
+    }
 
     // ============================================================
     // SYMBOL SETTINGS DIALOG (algo-hub/SymbolSettingsDialog.tsx — hub fields)
@@ -4012,7 +4199,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     // "This chart": read the focused chart's symbol (adapter.getChartContext —
     // widget.symbol()/exchange() on /charts, the focused pane's key on /trading)
     // and open the Add dialog with it preselected (readChartSymbol parity).
-    document.getElementById("algoChartFocusBtn").addEventListener("click", () => {
+    chartFocusBtn?.addEventListener("click", () => {
       let found = null;
       try { found = readChartInstr(getChartContext()); } catch { found = null; }
       if (!found) {
@@ -4068,6 +4255,10 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
           sl_long: sl != null && pos > 0 ? sl : null,
           sl_short: sl != null && pos < 0 ? sl : null,
           trades_blocked: st.trades_blocked ? 1 : 0,
+          // enrichments the table view shows and the overview row omits
+          entry_price: st.entry_price ?? null,
+          trend: st.trend ?? null,
+          last_updated: st.last_updated ?? null,
         },
         trades_blocked: !!st.trades_blocked,
       };
@@ -4083,6 +4274,7 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     // before they reach here.
     const onTick = (md) => {
       updateWatchlistTick(md);
+      paintAlgoLtp(md);   // the embed's table LTP at tick speed
       const d = md.data || {};
       const ltp = d.ltp != null ? Number(d.ltp) : null;
       if (ocLiveKey && `${md.exchange}|${md.token}` === ocLiveKey) {
@@ -4116,22 +4308,36 @@ export function mountRightPanel({ host, adapter = {} } = {}) {
     // ============================================================
     // INIT
     // ============================================================
-    // openPanel is a toggle (OpenAlgo behaviour), so clear the remembered
-    // id before restoring — otherwise the boot would immediately "close" it.
-    const restorePanel = activePanel;
-    activePanel = null;
-    if (restorePanel) openPanel(restorePanel);
-    seedWatchlistFromPlatform().then(() => { if (!wlItems.length) renderWatchlist(); })
-      .then(() => fillWlQuotes());  // boot fill: the remembered rows show last prices immediately
-    renderWatchlist();
+    if (algoOnly) {
+      // The dashboard host: the panel BODY is the widget — show the algo tab
+      // directly (no rail, no open/close cycle, no remembered-panel store) and
+      // keep the 3s overview poll running from boot.
+      rightPanel.hidden = false;
+      RAIL_PANELS.forEach(p => { const t = document.getElementById(p.tab); if (t) t.hidden = p.id !== "algo"; });
+      // Width is the host column's own (CSS), not the remembered rail width.
+      rightPanel.style.width = "";
+      rightPanel.style.maxWidth = "";
+      refreshAlgoSymbols();
+      startAlgoPolling();
+    } else {
+      // openPanel is a toggle (OpenAlgo behaviour), so clear the remembered
+      // id before restoring — otherwise the boot would immediately "close" it.
+      const restorePanel = activePanel;
+      activePanel = null;
+      if (restorePanel) openPanel(restorePanel);
+      seedWatchlistFromPlatform().then(() => { if (!wlItems.length) renderWatchlist(); })
+        .then(() => fillWlQuotes());  // boot fill: the remembered rows show last prices immediately
+      renderWatchlist();
+    }
 
   tickSink = onTick
 
   // Band buttons on both desks toggle the chain window without holding a
   // module reference (on /trading the button lives inside the React chart
   // component, which cannot import this vanilla module). RightPanel.tsx
-  // clears it on unmount; on /charts nothing unmounts.
-  window.__oaChainToggle = toggleOcWindow
+  // clears it on unmount; on /charts nothing unmounts. Only when the window
+  // actually exists — the dashboard's algo-only host mounts none.
+  if (!algoOnly) window.__oaChainToggle = toggleOcWindow
 
   return {
     onTick,

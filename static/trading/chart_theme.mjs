@@ -10,11 +10,13 @@
 import { darkTheme, lightTheme } from "/static/vendor/openalgo-charts/openalgo-charts.mjs";
 
 /**
- * The candle pair for each ground — identical to theirs: tuned per background.
+ * The candle pair for each ground — fixed to the user's palette since
+ * 2026-11-11: green `#00958a`, red `#F23645` on BOTH grounds, identical to
+ * the React desk's chartTheme.ts.
  */
 export const CANDLE_PAIRS = {
-  dark: { up: "#14b887", down: "#f0525f" },
-  light: { up: "#00855d", down: "#d42f34" },
+  dark: { up: "#00958a", down: "#F23645" },
+  light: { up: "#00958a", down: "#F23645" },
 };
 
 /** How far the grid sits from the background towards the text colour. */

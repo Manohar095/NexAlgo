@@ -103,17 +103,15 @@ export function isLightTheme(mode: ThemeMode, appMode: AppMode): boolean {
 /**
  * The candle pair for each ground.
  *
- * Tuned rather than taken from the engine's defaults, which are one pair for
- * every host. On a near-black or navy ground both colours sit at the same
- * lightness, so neither direction shouts over the other, and both clear 6:1
- * against the background. On white they are a step darker, because the
- * last-price tag prints white text on them and has to stay readable (4.6:1
- * and 4.9:1). The analyzer shares the dark pair: the mode is told by its
- * violet chrome, and an up candle must mean the same thing in both.
+ * Fixed to the user's palette since 2026-11-11 — green `#00958a`, red
+ * `#F23645` on BOTH grounds (TradingView-style tones). The old per-ground
+ * tuning ( #14b887/#f0525f dark, #00855d/#d42f34 light) is gone: one pair
+ * everywhere so an up candle means the same colour on every desk and in
+ * every chart type.
  */
 export const CANDLE_PAIRS = {
-  dark: { up: '#14b887', down: '#f0525f' },
-  light: { up: '#00855d', down: '#d42f34' },
+  dark: { up: '#00958a', down: '#F23645' },
+  light: { up: '#00958a', down: '#F23645' },
 } as const
 
 /** How far the grid sits from the background towards the text colour. */

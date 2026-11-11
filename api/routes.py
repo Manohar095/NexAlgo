@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 api/routes.py
 ==============
@@ -18,7 +18,6 @@ from models.symbol_config import SymbolConfig
 from services import access_token_generator
 from services import option_greeks
 from services import scrip_master
-from services.chart_feed import chart_feed_manager
 from services.instance_manager import instance_manager
 from utils.session_auth import create_session_token, verify_login, SESSION_MAX_AGE_SECONDS
 
@@ -455,13 +454,6 @@ def intervals():
     }
 
 
-@router.get("/charts")
-async def get_charts():
-    from fastapi.responses import FileResponse
-    return FileResponse("templates/charts.html")
-
-# Add these new routes after the existing get_quotes route
-
 # ============================================================
 # ORDERBOOK ROUTES
 # ============================================================
@@ -811,13 +803,6 @@ _CHART_MAX_DAYS = 8
 _IST = pytz.timezone("Asia/Kolkata")
 
 
-class ChartWatchPayload(BaseModel):
-    exchange: str
-    token: str
-    action: str  # "sub" | "unsub"
-    client: str = "default"  # per-tab id so two tabs don't kill each other's feed
-
-
 def _noren_row_to_bar(row: dict):
     """Normalize one TPSeries row into an openalgo-charts Bar.
 
@@ -870,6 +855,17 @@ def _noren_row_to_bar(row: dict):
         high = max(open_, close)
     if low is None:
         low = min(open_, close)
+    # Malformed broker prints DO exist (e.g. RELIANCE 5m 07-Nov-2026:
+    # into 1324.0 / inth 1320.0 / intc 1320.0 — high below open). The chart
+    # package's history validator throws "History contains an invalid candle"
+    # on a single such bar and refuses to paint the WHOLE chart (fresh
+    # /trading profiles boot RELIANCE-EQ, and the ?symbol= link effect waits
+    # for a terminal that never mounts — the link symbol never loads either),
+    # so widen hi/lo to contain open/close — the same treatment
+    # _eod_row_to_bar already gives the daily series (BSE-index quirk).
+    # Well-formed bars pass through unchanged (max/min are no-ops on them).
+    high = max(high, open_, close)
+    low = min(low, open_, close)
 
     volume = _num("intv", "inivot", "iv")
     if volume is None:
@@ -1884,26 +1880,3 @@ def pichain_greeks(payload: PiGreeksPayload):
     except Exception as e:
         logging.error(f"Pichain greeks error {payload.exchange} → {e}")
         return {"stat": "Not_Ok", "emsg": str(e), "greeks": {}}
-
-
-@router.post("/chart/watch")
-def chart_watch(payload: ChartWatchPayload):
-    """
-    Subscribe / unsubscribe the chart's broker funnel for a symbol that
-    is open in the charts page but not necessarily part of any engine.
-    Refcounted — two tabs on the same instrument share one broker feed.
-    """
-    try:
-        if payload.action == "sub":
-            count = chart_feed_manager.subscribe(payload.exchange, payload.token, payload.client)
-        elif payload.action == "unsub":
-            count = chart_feed_manager.unsubscribe(payload.exchange, payload.token, payload.client)
-        else:
-            raise ValueError("action must be 'sub' or 'unsub'")
-        # Ensure the shared broker websocket exists before relying on it.
-        if payload.action == "sub":
-            instance_manager.broker.start_websocket()
-        return {"stat": "Ok", "viewers": count}
-    except Exception as e:
-        logging.error(f"Chart watch error {payload.exchange}|{payload.token} → {e}")
-        return {"stat": "Not_Ok", "emsg": str(e)}

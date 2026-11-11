@@ -150,7 +150,17 @@ def _instrument_of(row):
 
 
 def _date_to_epoch(value, end_of_day=False):
-    """'YYYY-MM-DD' (or an epoch) → UTC seconds on the IST session grid."""
+    """'YYYY-MM-DD' (or an epoch) → UTC seconds on the IST session grid.
+
+    Localize with the FIXED +5:30 offset (`_IST`), never with a pytz zone:
+    `naive.replace(tzinfo=pytz_zone)` does NOT localize — pytz attaches the
+    zone's LMT entry (+5:53:20 for Asia/Kolkata), shifting every
+    date-derived epoch ~23 minutes early. The old code's end_date
+    "15:30 IST" became 15:07 IST, which chopped the day's tail AND made the
+    whole MCX/CDS evening session unreachable through the date path (the
+    /trading desk's candles stopped at 15:07 while the broker served the
+    evening fine).
+    """
     if value in (None, ""):
         return None
     if isinstance(value, (int, float)):
@@ -162,8 +172,17 @@ def _date_to_epoch(value, end_of_day=False):
         except ValueError:
             continue
         if end_of_day and fmt == "%Y-%m-%d":
-            naive = naive.replace(hour=15, minute=30)
-        return naive.replace(tzinfo=IST).timestamp()
+            # Session end, not the NSE close: MCX trades to 23:30/23:55 and
+            # CDS to 17:05 — cap the day at its last second so an evening
+            # session's candles are reachable through the date path. The
+            # broker answers bars ≤ et and NSE has none after 15:30 anyway.
+            naive = naive.replace(hour=23, minute=59, second=59)
+        ts = naive.replace(tzinfo=_IST).timestamp()
+        if end_of_day:
+            # et is "today" in practice; a future et would be refused by
+            # some broker builds — cap at now.
+            ts = min(ts, time.time())
+        return ts
     return None
 
 

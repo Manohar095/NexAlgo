@@ -209,7 +209,7 @@ class RevalidatedStaticFiles(StaticFiles):
     StaticFiles ships Last-Modified/ETag but no Cache-Control, so browsers
     apply heuristic caching (~10% of the file's age) and can serve a stale
     JS module for hours/days without ever asking the server — that is how a
-    rebuilt `right_panel.mjs` or a stale `/charts` page stays invisible until
+    rebuilt `right_panel.mjs` or a stale desk page stays invisible until
     a hard reload. `no-cache` allows the byte-level 304s; every load asks.
     """
 
@@ -225,7 +225,7 @@ app.mount("/static", RevalidatedStaticFiles(directory="static"), name="static")
 def _page(path: str) -> FileResponse:
     """A Jinja-independent HTML page (templates are read per request): the
     response must revalidate for the same reason the static mounts do —
-    a heuristically cached /charts or /trading index hides every server-side
+    a heuristically cached /trading index hides every server-side
     page edit behind a hard reload."""
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
@@ -245,12 +245,6 @@ async def logs_page():
     return _page("templates/logs.html")
 
 
-@app.get("/charts")
-async def charts_page():
-    """Live broker charts page"""
-    return _page("templates/charts.html")
-
-
 @app.get("/trading")
 async def trading_page():
     """OpenAlgoNew's own trading page, compiled as a sub-app (React).
@@ -266,11 +260,6 @@ async def trading_page():
 async def trading_page_legacy():
     """The previous vanilla chart desk, kept for side-by-side comparison."""
     return _page("templates/trading.html")
-
-
-@app.get("/option-chain")
-async def option_chain_page():
-    return _page("templates/option_chain.html")
 
 
 @app.websocket("/ws")

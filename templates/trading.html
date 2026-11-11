@@ -14,8 +14,8 @@
       --tt-border-strong: rgba(255, 255, 255, 0.14);
       --tt-text: #e6ecf5;
       --tt-muted: #8d99b8;
-      --tt-up: #14b887;
-      --tt-down: #f0525f;
+      --tt-up: #00958a;
+      --tt-down: #F23645;
       --tt-accent: #4b7bec;
       --tt-primary: #9db8ff;
       --tt-primary-dim: rgba(75, 123, 236, 0.14);
@@ -584,8 +584,8 @@
     const INTERVAL_SECONDS = { "1m": 60, "3m": 180, "5m": 300, "10m": 600, "15m": 900, "30m": 1800, "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400 };
     const NOREN_INTRV = { "1m": 1, "3m": 3, "5m": 5, "10m": 10, "15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "1d": "D" };
 
-    // Candle theme parity with /charts page
-    const CANDLE_PAIRS = { dark: { up: "#14b887", down: "#f0525f" }, light: { up: "#00855d", down: "#d42f34" } };
+    // Candle theme — fixed palette (2026-11-11): green #00958a, red #F23645
+    const CANDLE_PAIRS = { dark: { up: "#00958a", down: "#F23645" }, light: { up: "#00958a", down: "#F23645" } };
     function chartTheme(modeName) {
       const light = modeName === "light";
       const base = light ? lightTheme : darkTheme;
